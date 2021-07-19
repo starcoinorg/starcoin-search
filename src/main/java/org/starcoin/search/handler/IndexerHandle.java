@@ -56,7 +56,6 @@ public class IndexerHandle extends QuartzJobBean {
                 elasticSearchHandler.setRemoteOffset(localOffset);
                 logger.info("init offset ok: {}", localOffset);
             }
-
         } catch (JSONRPC2SessionException e) {
             logger.error("set current header error:", e);
         }
@@ -66,13 +65,13 @@ public class IndexerHandle extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
         //read current offset
         if (localOffset == null || currentHandleHeader == null) {
-            logger.warn("local offset error, reset it.");
+            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
             initOffset();
         }
         Offset remoteOffset = elasticSearchHandler.getRemoteOffset();
         logger.info("current remote offset: {}", remoteOffset);
         if (remoteOffset == null) {
-            logger.warn("offset must not null!!");
+            logger.warn("offset must not null, please check blocks.mapping!!");
             return;
         }
         if (remoteOffset.getBlockHeight() > localOffset.getBlockHeight()) {
@@ -120,38 +119,10 @@ public class IndexerHandle extends QuartzJobBean {
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());
             elasticSearchHandler.setRemoteOffset(localOffset);
+            logger.info("indexer update success: {}", localOffset);
         } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);
         }
-
-//        try {
-//            PendingTransaction txn = transactionRPCClient.getTransaction("0x19ee1bb9bc881cb7e88be257e792107674cf2001b24e8e0c1e015ed3779686e9");
-//            System.out.println(txn);
-//        } catch (JSONRPC2SessionException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-////            Block block = blockRPCClient.getBlockByHash("0x002600028fd0d0bd9163366ec265595f61979907eb4532952321afe8a41f1859");
-////            List<Block> blocks = blockRPCClient.getBlockListFromHeight(982348, 10);
-////            for (Block block1: blocks) {
-////                logger.info(String.valueOf(block1));
-////            }
-//            BlockHeader head = blockRPCClient.getChainHeader();
-//            logger.info(head.toString());
-//            List<Transaction> transactions = transactionRPCClient.getBlockTransactions("0xce2c6b3813239af2a6ed60d4877296fcca0d93dc192dc9fceede4e31486c77e8");
-//            for( Transaction transaction: transactions) {
-//                logger.info(transaction.toString());
-//                Transaction txn = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
-//                logger.info(txn.toString());
-//                List<Event> events = transactionRPCClient.getTransactionEvents(transaction.getTransactionHash());
-//                for(Event event: events) {
-//                    logger.info(event.toString());
-//                }
-//            }
-//        } catch (JSONRPC2SessionException e) {
-//            e.printStackTrace();
-//        }
-        logger.info("runing...");
     }
 
 }

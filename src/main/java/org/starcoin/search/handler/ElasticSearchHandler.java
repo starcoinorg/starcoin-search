@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -27,7 +28,6 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cglib.beans.BeanMap;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
@@ -41,7 +41,7 @@ import java.util.Map;
 @Service
 public class ElasticSearchHandler {
 
-    public static final String BLOCK_INDEX = "head_block_chain";
+    public static final String BLOCK_INDEX = "block_ids";
     public static final String BLOCK_CONTENT_INDEX = "blocks";
     public static final String UNCLE_BLOCK_INDEX = "uncle_blocks";
     public static final String TRANSACTION_INDEX = "txn_infos";
@@ -86,7 +86,6 @@ public class ElasticSearchHandler {
                 Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<?, ?>) meta).get("tip");
                 String blockHash = tip.get("block_hash").toString();
                 Integer blockHeight = (Integer) tip.get("block_number");
-                logger.info("remote offset: {} {}", blockHash, blockHeight);
                 return new Offset(blockHeight.longValue(), blockHash);
             }
         } catch (Exception e) {
@@ -96,7 +95,7 @@ public class ElasticSearchHandler {
     }
 
     public void setRemoteOffset(Offset offset) {
-        String offsetIndex = ServiceUtils.getIndex(network, BLOCK_INDEX);
+        String offsetIndex = ServiceUtils.getIndex(network, BLOCK_CONTENT_INDEX);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -185,38 +184,40 @@ public class ElasticSearchHandler {
         String uncleIndex = ServiceUtils.getIndex(network, UNCLE_BLOCK_INDEX);
         String txnIndex = ServiceUtils.getIndex(network, TRANSACTION_INDEX);
         String eventIndex = ServiceUtils.getIndex(network, EVENT_INDEX);
+        String pendingIndex = ServiceUtils.getIndex(network, PENDING_TXN_INDEX);
 
         for (Block block : blockList) {
-            //add main chain height index(height-> hash)
+            //add block ids
             bulkRequest.add(buildBlockRequest(block, blockIndex));
             //  add block content
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
             bulkRequest.add(blockContent);
-//            //add txns
-//            for (Transaction transaction : block.getTransactionList()) {
-//                IndexRequest transactionReq = new IndexRequest(TRANSACTION_INDEX);
-//                transactionReq.id(transaction.getTransactionHash()).source(JSON.toJSONString(transaction), XContentType.JSON);
-//                bulkRequest.add(transactionReq);
-//                //delete pending txn
-//                DeleteRequest deleteRequest = new DeleteRequest(PENDING_TXN_INDEX);
-//                deleteRequest.id(transaction.getTransactionHash());
-//                bulkRequest.add(deleteRequest);
-//                //add events
-//                for (Event event : transaction.getEvents()) {
-//                    IndexRequest eventReq = new IndexRequest(EVENT_INDEX);
-//                    eventReq.id(event.getEventKey()).source(JSON.toJSONString(event), XContentType.JSON);
-//                    bulkRequest.add(eventReq);
-//                }
-//            }
-//            //add uncles
-//            for (BlockHeader uncle : block.getUncles()) {
-//                bulkRequest.add(buildUncleRequest(uncle, block.getHeader().getHeight(), UNCLE_BLOCK_INDEX));
-//            }
+            //add txns
+            for (Transaction transaction : block.getTransactionList()) {
+                IndexRequest transactionReq = new IndexRequest(txnIndex);
+                transactionReq.id(transaction.getTransactionHash()).source(JSON.toJSONString(transaction), XContentType.JSON);
+                bulkRequest.add(transactionReq);
+                //delete pending txn
+                DeleteRequest deleteRequest = new DeleteRequest(pendingIndex);
+                deleteRequest.id(transaction.getTransactionHash());
+                bulkRequest.add(deleteRequest);
+                //add events
+                for (Event event : transaction.getEvents()) {
+                    IndexRequest eventReq = new IndexRequest(eventIndex);
+                    eventReq.id(event.getEventKey()).source(JSON.toJSONString(event), XContentType.JSON);
+                    bulkRequest.add(eventReq);
+                }
+            }
+            //add uncles
+            for (BlockHeader uncle : block.getUncles()) {
+                bulkRequest.add(buildUncleRequest(uncle, block.getHeader().getHeight(), uncleIndex));
+            }
         }
         try {
-            client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            logger.info("bulk block ok");
+            BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+            logger.info("bulk block ok: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block:", e);
         }
@@ -231,14 +232,14 @@ public class ElasticSearchHandler {
             builder = XContentFactory.jsonBuilder();
             builder.startObject();
             {
-                builder.field("timestamps", header.getTimestamp());
+                builder.field("timestamp", header.getTimestamp());
                 builder.startObject("header");
                 {
                     blockHeaderBuilder(builder, header);
                 }
                 builder.endObject();
                 if (metadata != null) {
-                    builder.startObject("block_metadata");
+                    builder.startObject("metadata");
                     {
                         builder.field("author", metadata.getAuthor());
                         builder.field("parentHash", metadata.getParentHash());
@@ -247,7 +248,7 @@ public class ElasticSearchHandler {
                         builder.field("uncles", metadata.getUncles());
                         builder.field("number", metadata.getNumber());
                         builder.field("chain_id", header.getChainId());
-                        builder.field("parent_gas_used", metadata.getParentHash());
+                        builder.field("parent_gas_used", metadata.getParentGasUsed());
                     }
                     builder.endObject();
                 }
@@ -256,8 +257,8 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-        builder.prettyPrint();
-        logger.info("build: {}", Strings.toString(builder));
+//        builder.prettyPrint();
+        logger.debug("build: {}", Strings.toString(builder));
         request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
         return request;
     }

@@ -11,8 +11,8 @@
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub starscan-sub Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/starcoinorg/starscan-sub</url>
+            <name>GitHub starcoin-search Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/starcoinorg/starcoin-search</url>
         </repository>
     </distributionManagement>
 

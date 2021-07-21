@@ -14,6 +14,15 @@
           }
         }
       },
+      "transaction_type": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
       "block_metadata": {
         "properties": {
           "author": {

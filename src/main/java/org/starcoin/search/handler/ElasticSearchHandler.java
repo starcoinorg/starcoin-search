@@ -173,7 +173,7 @@ public class ElasticSearchHandler {
         }
     }
 
-    public void bulk(List<Block> blockList) {
+    public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -188,7 +188,19 @@ public class ElasticSearchHandler {
 
         for (Block block : blockList) {
             //add block ids
-            bulkRequest.add(buildBlockRequest(block, blockIndex));
+            if (deleteOrSkipIndex > 0) {
+                //fork block handle
+                if (block.getHeader().getHeight() == deleteOrSkipIndex) {
+                       logger.warn("fork block, skip: {}", deleteOrSkipIndex);
+                }else {
+                    //上一轮已经添加ids，需要删掉
+                    DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
+                    deleteRequest.id(String.valueOf(deleteOrSkipIndex));
+                    bulkRequest.add(deleteRequest);
+                }
+            }else {
+                bulkRequest.add(buildBlockRequest(block, blockIndex));
+            }
             //  add block content
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
@@ -257,7 +269,6 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-//        builder.prettyPrint();
         logger.debug("build: {}", Strings.toString(builder));
         request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
         return request;

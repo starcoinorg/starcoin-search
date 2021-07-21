@@ -1,5 +1,6 @@
 package org.starcoin.search.handler;
 
+import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
@@ -9,11 +10,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.TransactionRPCClient;
-import org.starcoin.bean.Block;
-import org.starcoin.bean.BlockHeader;
-import org.starcoin.bean.BlockMetadata;
-import org.starcoin.bean.Transaction;
+import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
+import org.starcoin.types.TransactionPayload;
+import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ public class IndexerHandle extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
         //read current offset
         if (localOffset == null || currentHandleHeader == null) {
-            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
+//            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
             initOffset();
         }
         Offset remoteOffset = elasticSearchHandler.getRemoteOffset();
@@ -85,36 +85,34 @@ public class IndexerHandle extends QuartzJobBean {
             long headHeight = chainHeader.getHeight();
             long bulkNumber = Math.min(headHeight - localOffset.getBlockHeight(), bulkSize);
             int index = 1;
+            long deleteOrSkipIndex = 0;
             List<Block> blockList = new ArrayList<>();
             while (index <= bulkNumber) {
                 long readNumber = localOffset.getBlockHeight() + index;
                 Block block = blockRPCClient.getBlockByHeight(readNumber);
-                BlockMetadata metadata = null;
+
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
                     //fork occurs
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
-                    //todo roll back handle
+                    //获取上一个index的block
+                    Block lastBlock = blockRPCClient.getBlockByHeight(readNumber - 1);
+                    if (lastBlock != null && lastBlock.getHeader().getBlockHash().equals(block.getHeader().getParentHash())) {
+                        addToList(blockList, lastBlock);
+                    }else {
+                        logger.warn("fork block not found: {}", lastBlock);
+                    }
+                    deleteOrSkipIndex = currentHandleHeader.getHeight();
+                    logger.warn("fork delete or skip index: {}", deleteOrSkipIndex);
                 }
                 //set event
-                List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
-                for (Transaction transaction : transactionList) {
-                    Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
-                    if (userTransaction != null) {
-                        transaction.setUserTransaction(userTransaction.getUserTransaction());
-                        metadata = userTransaction.getBlockMetadata();
-                    }
-                    transaction.setEvents(transactionRPCClient.getTransactionEvents(transaction.getTransactionHash()));
-                }
-                block.setTransactionList(transactionList);
-                block.setBlockMetadata(metadata);
-                blockList.add(block);
+                addToList(blockList, block);
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;
                 logger.debug("add block: {}", block.getHeader());
             }
             //bulk execute
-            elasticSearchHandler.bulk(blockList);
+            elasticSearchHandler.bulk(blockList, deleteOrSkipIndex);
             //update offset
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());
@@ -123,6 +121,42 @@ public class IndexerHandle extends QuartzJobBean {
         } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);
         }
+    }
+
+    private void addToList(List<Block> blockList, Block block) throws JSONRPC2SessionException {
+        BlockMetadata metadata = null;
+        List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
+        for (Transaction transaction : transactionList) {
+            Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
+            if (userTransaction != null) {
+                UserTransaction inner = userTransaction.getUserTransaction();
+                transaction.setUserTransaction(inner);
+                metadata = userTransaction.getBlockMetadata();
+                if ( inner != null) {
+                    try {
+                        TransactionPayload payload = TransactionPayload.bcsDeserialize(Hex.decode(inner.getRawTransaction().getPayload()));
+                        if (TransactionPayload.Script.class.equals(payload.getClass())) {
+                            transaction.setTransactionType(TransactionType.Script);
+                        } else if (TransactionPayload.Package.class.equals(payload.getClass())) {
+                            transaction.setTransactionType(TransactionType.Package);
+                        } else if (TransactionPayload.ScriptFunction.class.equals(payload.getClass())) {
+                            transaction.setTransactionType(TransactionType.ScriptFunction);
+                        } else {
+                            logger.warn("payload class error: {}", payload.getClass());
+                        }
+                    } catch (DeserializationError deserializationError) {
+                        logger.error("Deserialization payload error:", deserializationError);
+                    }
+                }
+            }else {
+                logger.warn("get txn by hash is null: {}", transaction.getTransactionHash());
+            }
+            transaction.setTimestamp(block.getHeader().getTimestamp());
+            transaction.setEvents(transactionRPCClient.getTransactionEvents(transaction.getTransactionHash()));
+        }
+        block.setTransactionList(transactionList);
+        block.setBlockMetadata(metadata);
+        blockList.add(block);
     }
 
 }

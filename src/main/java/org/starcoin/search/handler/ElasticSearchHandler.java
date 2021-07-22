@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
+import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -41,12 +42,13 @@ import java.util.Map;
 @Service
 public class ElasticSearchHandler {
 
-    public static final String BLOCK_INDEX = "block_ids";
-    public static final String BLOCK_CONTENT_INDEX = "blocks";
-    public static final String UNCLE_BLOCK_INDEX = "uncle_blocks";
-    public static final String TRANSACTION_INDEX = "txn_infos";
-    public static final String EVENT_INDEX = "txn_events";
+    private static final String BLOCK_INDEX = "block_ids";
+    private static final String BLOCK_CONTENT_INDEX = "blocks";
+    private static final String UNCLE_BLOCK_INDEX = "uncle_blocks";
+    private static final String TRANSACTION_INDEX = "txn_infos";
+    private static final String EVENT_INDEX = "txn_events";
     private static final String PENDING_TXN_INDEX = "pending_txns";
+    private static final String TRANSFER_INDEX = "transfer";
     private static final int ELASTICSEARCH_MAX_HITS = 10000;
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchHandler.class);
@@ -68,6 +70,7 @@ public class ElasticSearchHandler {
             createIndexIfNotExist(TRANSACTION_INDEX);
             createIndexIfNotExist(EVENT_INDEX);
             createIndexIfNotExist(PENDING_TXN_INDEX);
+            createIndexIfNotExist(TRANSFER_INDEX);
             logger.info("index init ok!");
         } catch (IOException e) {
             logger.error("init index error:", e);
@@ -185,20 +188,34 @@ public class ElasticSearchHandler {
         String txnIndex = ServiceUtils.getIndex(network, TRANSACTION_INDEX);
         String eventIndex = ServiceUtils.getIndex(network, EVENT_INDEX);
         String pendingIndex = ServiceUtils.getIndex(network, PENDING_TXN_INDEX);
-
+        String transferIndex = ServiceUtils.getIndex(network, TRANSFER_INDEX);
         for (Block block : blockList) {
+            //transform difficulty
+            BlockHeader header = block.getHeader();
+            String difficultyStr = header.getDifficultyHexStr();
+            if (difficultyStr.startsWith("0x")) {
+                try {
+                    long difficulty = Long.parseLong(difficultyStr.substring(2), 16);
+                    if (difficulty > 0) {
+                        header.setDifficulty(difficulty);
+                        block.setHeader(header);
+                    }
+                } catch (NumberFormatException e) {
+                    logger.error("transform difficulty error: {}", difficultyStr);
+                }
+            }
             //add block ids
             if (deleteOrSkipIndex > 0) {
                 //fork block handle
-                if (block.getHeader().getHeight() == deleteOrSkipIndex) {
-                       logger.warn("fork block, skip: {}", deleteOrSkipIndex);
-                }else {
+                if (header.getHeight() == deleteOrSkipIndex) {
+                    logger.warn("fork block, skip: {}", deleteOrSkipIndex);
+                } else {
                     //上一轮已经添加ids，需要删掉
                     DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
                     deleteRequest.id(String.valueOf(deleteOrSkipIndex));
                     bulkRequest.add(deleteRequest);
                 }
-            }else {
+            } else {
                 bulkRequest.add(buildBlockRequest(block, blockIndex));
             }
             //  add block content
@@ -216,14 +233,17 @@ public class ElasticSearchHandler {
                 bulkRequest.add(deleteRequest);
                 //add events
                 for (Event event : transaction.getEvents()) {
-                    IndexRequest eventReq = new IndexRequest(eventIndex);
-                    eventReq.id(event.getEventKey()).source(JSON.toJSONString(event), XContentType.JSON);
-                    bulkRequest.add(eventReq);
+                    bulkRequest.add(buildEventRequest(event, transaction.getTimestamp(), eventIndex));
+                }
+                //add transfer
+                IndexRequest transferRequest = buildTransferRequest(transaction, transferIndex);
+                if (transferRequest != null) {
+                    bulkRequest.add(transferRequest);
                 }
             }
             //add uncles
             for (BlockHeader uncle : block.getUncles()) {
-                bulkRequest.add(buildUncleRequest(uncle, block.getHeader().getHeight(), uncleIndex));
+                bulkRequest.add(buildUncleRequest(uncle, header.getHeight(), uncleIndex));
             }
         }
         try {
@@ -309,6 +329,70 @@ public class ElasticSearchHandler {
             logger.error("build block error:", e);
         }
         request.source(builder);
+        return request;
+    }
+
+    private IndexRequest buildTransferRequest(Transaction transaction, String indexName) {
+        UserTransaction userTransaction = transaction.getUserTransaction();
+        if (userTransaction == null) {
+            return null;
+        }
+        RawTransaction rawTransaction = userTransaction.getRawTransaction();
+        if (rawTransaction == null) {
+            return null;
+        }
+        org.starcoin.types.TransactionPayload payload = rawTransaction.getTransactionPayload();
+        if (!(payload.getClass() == org.starcoin.types.TransactionPayload.ScriptFunction.class)) {
+            //todo script and package handle
+            logger.warn("other type must handle in future: {}", payload.getClass());
+            return null;
+        }
+        org.starcoin.types.ScriptFunction function = ((org.starcoin.types.TransactionPayload.ScriptFunction) payload).value;
+        if (function.function.value.equals("peer_to_peer")||function.function.value.equals("peer_to_peer_v2")) {
+            Transfer transfer = new Transfer();
+            transfer.setTxnHash(transaction.getTransactionHash());
+            transfer.setSender(rawTransaction.getSender());
+            transfer.setTimestamp(transaction.getTimestamp());
+            transfer.setIdentifier(function.function.value);
+            transfer.setReceiver(Hex.encode(function.args.get(0)));
+            String amount = Hex.encode(function.args.get(1));
+            if (function.function.value.equals("peer_to_peer")) {
+                amount = Hex.encode(function.args.get(2));
+            }
+            transfer.setAmount(amount);
+            IndexRequest request = new IndexRequest(indexName);
+            request.source(JSON.toJSONString(transfer), XContentType.JSON);
+            return request;
+        }else {
+            logger.warn("other scripts not support: {}", function.function.value);
+            return null;
+        }
+    }
+
+    private IndexRequest buildEventRequest(Event event, long timestamp, String indexName) {
+        IndexRequest request = new IndexRequest(indexName);
+        XContentBuilder builder = null;
+        try {
+            builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            builder.field("event_seq_number", event.getEventSeqNumber());
+            builder.field("block_hash", event.getBlockHash());
+            builder.field("block_number", event.getBlockNumber());
+            builder.field("transaction_hash", event.getTransactionHash());
+            builder.field("transaction_index", event.getTransactionIndex());
+            builder.field("data", event.getData());
+            builder.field("type_tag", JSON.toJSONString(event.getTypeTag()));
+            builder.field("event_key", event.getEventKey());
+            builder.field("event_address", event.eventCreateAddress());
+            builder.field("tag_address", event.getTypeTag().getStruct().getAddress());
+            builder.field("tag_module", event.getTypeTag().getStruct().getModule());
+            builder.field("tag_name", event.getTypeTag().getStruct().getName());
+            builder.field("timestamp", timestamp);
+            builder.endObject();
+        } catch (IOException e) {
+            logger.error("build block error:", e);
+        }
+        request.id(event.getEventKey()).source(builder);
         return request;
     }
 

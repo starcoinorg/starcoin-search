@@ -63,6 +63,15 @@
           "chain_id": {
             "type": "long"
           },
+          "difficulty": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
           "difficulty_number": {
             "type": "long"
           },

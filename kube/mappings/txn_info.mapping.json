@@ -63,7 +63,6 @@
           },
           "timestamp": {
             "type": "date"
-
           },
           "uncles": {
             "type": "long"

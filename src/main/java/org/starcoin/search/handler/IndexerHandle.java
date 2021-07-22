@@ -49,7 +49,7 @@ public class IndexerHandle extends QuartzJobBean {
         try {
             if (localOffset != null) {
                 currentHandleHeader = blockRPCClient.getBlockByHeight(localOffset.getBlockHeight()).getHeader();
-            }else {
+            } else {
                 logger.warn("offset is null,init reset to genesis");
                 currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
                 localOffset = new Offset(0, currentHandleHeader.getBlockHash());
@@ -98,7 +98,7 @@ public class IndexerHandle extends QuartzJobBean {
                     Block lastBlock = blockRPCClient.getBlockByHeight(readNumber - 1);
                     if (lastBlock != null && lastBlock.getHeader().getBlockHash().equals(block.getHeader().getParentHash())) {
                         addToList(blockList, lastBlock);
-                    }else {
+                    } else {
                         logger.warn("fork block not found: {}", lastBlock);
                     }
                     deleteOrSkipIndex = currentHandleHeader.getHeight();
@@ -130,11 +130,11 @@ public class IndexerHandle extends QuartzJobBean {
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
             if (userTransaction != null) {
                 UserTransaction inner = userTransaction.getUserTransaction();
-                transaction.setUserTransaction(inner);
                 metadata = userTransaction.getBlockMetadata();
-                if ( inner != null) {
+                if (inner != null) {
                     try {
-                        TransactionPayload payload = TransactionPayload.bcsDeserialize(Hex.decode(inner.getRawTransaction().getPayload()));
+                        RawTransaction rawTransaction = inner.getRawTransaction();
+                        TransactionPayload payload = TransactionPayload.bcsDeserialize(Hex.decode(rawTransaction.getPayload()));
                         if (TransactionPayload.Script.class.equals(payload.getClass())) {
                             transaction.setTransactionType(TransactionType.Script);
                         } else if (TransactionPayload.Package.class.equals(payload.getClass())) {
@@ -144,14 +144,18 @@ public class IndexerHandle extends QuartzJobBean {
                         } else {
                             logger.warn("payload class error: {}", payload.getClass());
                         }
+                        rawTransaction.setTransactionPayload(payload);
+                        inner.setRawTransaction(rawTransaction);
+                        transaction.setUserTransaction(inner);
                     } catch (DeserializationError deserializationError) {
                         logger.error("Deserialization payload error:", deserializationError);
                     }
                 }
-            }else {
+            } else {
                 logger.warn("get txn by hash is null: {}", transaction.getTransactionHash());
             }
             transaction.setTimestamp(block.getHeader().getTimestamp());
+            transaction.setBlockMetadata(metadata);
             transaction.setEvents(transactionRPCClient.getTransactionEvents(transaction.getTransactionHash()));
         }
         block.setTransactionList(transactionList);

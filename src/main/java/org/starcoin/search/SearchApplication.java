@@ -19,9 +19,6 @@ public class SearchApplication {
 
     private static Logger LOG = LoggerFactory.getLogger(SearchApplication.class);
 
-    @Value("${starcoin.seeds}")
-    private String[] seeds;
-
     @Value("${starcoin.network}")
     private String network;
 

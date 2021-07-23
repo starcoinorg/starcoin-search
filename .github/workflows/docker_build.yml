@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-starcoin-docker:
-    name: build starcoin-scan-search docker
+    name: build starcoin-search docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

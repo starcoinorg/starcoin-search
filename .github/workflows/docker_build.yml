@@ -37,6 +37,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GIT_PACKAGE_TOKEN }}
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v18
+        with:
+          repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/starcoinorg/*" }]'
+          servers: '[{ "id": "github", "username": "${{ github.actor }}", "password": "${{ secrets.GIT_PACKAGE_TOKEN }}" }]'
+          output_file: settings.xml
       - name: Build and push
         uses: docker/build-push-action@v2
         with:

@@ -17,12 +17,11 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v1
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v18
         with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/starcoinorg/*" }]'
+          servers: '[{ "id": "github", "username": "${{ github.actor }}", "password": "${{ secrets.GIT_PACKAGE_TOKEN }}" }]'
       - name: Cache Maven packages
         uses: actions/cache@v1
         with:

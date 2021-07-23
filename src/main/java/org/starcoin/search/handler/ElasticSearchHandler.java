@@ -232,8 +232,11 @@ public class ElasticSearchHandler {
                 deleteRequest.id(transaction.getTransactionHash());
                 bulkRequest.add(deleteRequest);
                 //add events
-                for (Event event : transaction.getEvents()) {
-                    bulkRequest.add(buildEventRequest(event, transaction.getTimestamp(), eventIndex));
+                List<Event> events = transaction.getEvents();
+                if (events != null && events.size() > 0) {
+                    for (Event event : events) {
+                        bulkRequest.add(buildEventRequest(event, transaction.getTimestamp(), eventIndex));
+                    }
                 }
                 //add transfer
                 IndexRequest transferRequest = buildTransferRequest(transaction, transferIndex);
@@ -348,7 +351,7 @@ public class ElasticSearchHandler {
             return null;
         }
         org.starcoin.types.ScriptFunction function = ((org.starcoin.types.TransactionPayload.ScriptFunction) payload).value;
-        if (function.function.value.equals("peer_to_peer")||function.function.value.equals("peer_to_peer_v2")) {
+        if (function.function.value.equals("peer_to_peer") || function.function.value.equals("peer_to_peer_v2")) {
             Transfer transfer = new Transfer();
             transfer.setTxnHash(transaction.getTransactionHash());
             transfer.setSender(rawTransaction.getSender());
@@ -363,7 +366,7 @@ public class ElasticSearchHandler {
             IndexRequest request = new IndexRequest(indexName);
             request.source(JSON.toJSONString(transfer), XContentType.JSON);
             return request;
-        }else {
+        } else {
             logger.warn("other scripts not support: {}", function.function.value);
             return null;
         }
@@ -392,7 +395,7 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-        request.id(event.getEventKey()).source(builder);
+        request.source(builder);
         return request;
     }
 

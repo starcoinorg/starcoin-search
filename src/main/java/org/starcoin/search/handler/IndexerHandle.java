@@ -90,7 +90,6 @@ public class IndexerHandle extends QuartzJobBean {
             while (index <= bulkNumber) {
                 long readNumber = localOffset.getBlockHeight() + index;
                 Block block = blockRPCClient.getBlockByHeight(readNumber);
-
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
                     //fork occurs
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
@@ -124,13 +123,17 @@ public class IndexerHandle extends QuartzJobBean {
     }
 
     private void addToList(List<Block> blockList, Block block) throws JSONRPC2SessionException {
-        BlockMetadata metadata = null;
         List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
         for (Transaction transaction : transactionList) {
+            BlockMetadata metadata = null;
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
             if (userTransaction != null) {
                 UserTransaction inner = userTransaction.getUserTransaction();
                 metadata = userTransaction.getBlockMetadata();
+                if (metadata != null) {
+                    transaction.setBlockMetadata(metadata);
+                    block.setBlockMetadata(metadata);
+                }
                 if (inner != null) {
                     try {
                         RawTransaction rawTransaction = inner.getRawTransaction();
@@ -155,11 +158,15 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.warn("get txn by hash is null: {}", transaction.getTransactionHash());
             }
             transaction.setTimestamp(block.getHeader().getTimestamp());
-            transaction.setBlockMetadata(metadata);
-            transaction.setEvents(transactionRPCClient.getTransactionEvents(transaction.getTransactionHash()));
+            // set events
+            List<Event> events = transactionRPCClient.getTransactionEvents(transaction.getTransactionHash());
+            if (!events.isEmpty()) {
+                transaction.setEvents(events);
+            } else {
+                logger.warn("current txn event is null: {}", transaction.getTransactionHash());
+            }
         }
         block.setTransactionList(transactionList);
-        block.setBlockMetadata(metadata);
         blockList.add(block);
     }
 

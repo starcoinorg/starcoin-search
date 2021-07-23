@@ -14,6 +14,7 @@ import java.util.Properties;
 public class QuartzConfig {
     @Autowired
     private SearchJobFactory searchJobFactory;
+
     @Bean
     public JobDetail handleIndexer() {
         return JobBuilder.newJob(IndexerHandle.class).withIdentity("indexer").storeDurably().build();

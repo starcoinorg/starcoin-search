@@ -17,21 +17,15 @@ import java.net.URL;
 @SpringBootApplication
 public class SearchApplication {
 
-    private static Logger LOG = LoggerFactory.getLogger(SearchApplication.class);
-
-    @Value("${starcoin.network}")
-    private String network;
-
-    @Value("${STARCOIN_ES_URL}")
-    private String esUrl;
+    private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
 
     @Autowired
     private ElasticSearchHandler elasticSearchHandler;
 
     public static void main(String[] args) {
-        LOG.info("start search service...");
+        logger.info("start search service...");
         SpringApplication.run(SearchApplication.class, args);
-        LOG.info("APPLICATION FINISHED");
+        logger.info("APPLICATION FINISHED");
     }
 
     @Bean(name = "base_url")
@@ -39,9 +33,8 @@ public class SearchApplication {
         try {
             return new URL("http://" + host + ":9850");
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            logger.error("get base url error:", e);
         }
-        ;
         return null;
     }
 

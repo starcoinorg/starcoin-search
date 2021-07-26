@@ -1,18 +1,10 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
-import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.*;
@@ -21,10 +13,6 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.rest.RestStatus;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,7 +74,7 @@ public class ElasticSearchHandler {
             MappingMetadata data = response.mappings().get(offsetIndex);
             Object meta = data.getSourceAsMap().get("_meta");
             if (meta != null) {
-                Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<?, ?>) meta).get("tip");
+                Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<String, Object>) meta).get("tip");
                 String blockHash = tip.get("block_hash").toString();
                 Integer blockHeight = (Integer) tip.get("block_number");
                 return new Offset(blockHeight.longValue(), blockHash);
@@ -124,57 +112,6 @@ public class ElasticSearchHandler {
         }
     }
 
-
-    public void saveTransaction(PendingTransaction transaction) {
-        if (transaction == null) {
-            return;
-        }
-        if (!checkExists(transaction)) {
-            addToEs(transaction);
-        } else {
-            logger.warn("transaction exist: {}", transaction.getTransactionHash());
-        }
-
-    }
-
-    public Result<PendingTransaction> getPendingTransaction(int count) {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, PENDING_TXN_INDEX));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.query(QueryBuilders.matchAllQuery());
-        //page size
-        searchSourceBuilder.size(count);
-        searchSourceBuilder.from(0);
-        searchSourceBuilder.sort("timestamp", SortOrder.DESC);
-        searchSourceBuilder.trackTotalHits(true);
-        searchRequest.source(searchSourceBuilder);
-        SearchResponse searchResponse;
-        try {
-            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            logger.error("get pending transactions error:", e);
-            return null;
-        }
-        return ServiceUtils.getSearchResult(searchResponse, PendingTransaction.class);
-    }
-
-    public void deletePendingTransaction(List<PendingTransaction> pendingTxns) {
-        if (pendingTxns.size() <= 0) {
-            return;
-        }
-        BulkRequest bulkRequest = new BulkRequest();
-        String index = ServiceUtils.getIndex(network, PENDING_TXN_INDEX);
-        for (PendingTransaction pending : pendingTxns) {
-            DeleteRequest delete = new DeleteRequest(index);
-            delete.id(pending.getTransactionHash());
-            bulkRequest.add(delete);
-        }
-        try {
-            client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            logger.info("delete pending transaction ok");
-        } catch (IOException e) {
-            logger.error("delete pending transaction error:", e);
-        }
-    }
 
     public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
         if (blockList.isEmpty()) {
@@ -251,10 +188,9 @@ public class ElasticSearchHandler {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-
-            logger.info("bulk block ok: {}", response.buildFailureMessage());
+            logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
-            logger.error("bulk block:", e);
+            logger.error("bulk block error:", e);
         }
     }
 
@@ -292,7 +228,6 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-        logger.debug("build: {}", Strings.toString(builder));
         request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
         return request;
     }
@@ -376,6 +311,7 @@ public class ElasticSearchHandler {
         IndexRequest request = new IndexRequest(indexName);
         XContentBuilder builder = null;
         try {
+            Struct struct = Struct.fromRPC(event.getTypeTag());
             builder = XContentFactory.jsonBuilder();
             builder.startObject();
             builder.field("event_seq_number", event.getEventSeqNumber());
@@ -384,12 +320,16 @@ public class ElasticSearchHandler {
             builder.field("transaction_hash", event.getTransactionHash());
             builder.field("transaction_index", event.getTransactionIndex());
             builder.field("data", event.getData());
-            builder.field("type_tag", JSON.toJSONString(event.getTypeTag()));
+            builder.field("type_tag", event.getTypeTag());
             builder.field("event_key", event.getEventKey());
             builder.field("event_address", event.eventCreateAddress());
-            builder.field("tag_address", event.getTypeTag().getStruct().getAddress());
-            builder.field("tag_module", event.getTypeTag().getStruct().getModule());
-            builder.field("tag_name", event.getTypeTag().getStruct().getName());
+            if (struct != null) {
+                builder.field("tag_address", struct.getAddress());
+                builder.field("tag_module", struct.getModule());
+                builder.field("tag_name", struct.getName());
+            } else {
+                logger.warn("type tag is not struct: {}", event.getTypeTag());
+            }
             builder.field("timestamp", timestamp);
             builder.endObject();
         } catch (IOException e) {
@@ -397,52 +337,6 @@ public class ElasticSearchHandler {
         }
         request.source(builder);
         return request;
-    }
-
-
-    private boolean checkExists(PendingTransaction transaction) {
-        try {
-            GetRequest getRequest = new GetRequest(ServiceUtils.getIndex(network, TRANSACTION_INDEX), transaction.getTransactionHash());
-            GetResponse getResponse = client.get(getRequest, RequestOptions.DEFAULT);
-            return getResponse.isExists();
-        } catch (Exception e) {
-            logger.warn("access es failed", e);
-            return false;
-        }
-    }
-
-    private void addToEs(PendingTransaction transaction) {
-        try {
-            IndexRequest request = new IndexRequest(ServiceUtils.getIndex(network, PENDING_TXN_INDEX));
-            request.id(transaction.getTransactionHash());
-
-            String doc = JSON.toJSONString(transaction);
-            request.source(doc, XContentType.JSON);
-
-            IndexResponse indexResponse = null;
-            try {
-                indexResponse = client.index(request, RequestOptions.DEFAULT);
-            } catch (ElasticsearchException e) {
-                if (e.status() == RestStatus.CONFLICT) {
-                    logger.error("duplicate entry\n" + e.getDetailedMessage());
-                }
-                logger.error("index error", e);
-            }
-
-            if (indexResponse != null) {
-                if (indexResponse.getResult() == DocWriteResponse.Result.CREATED) {
-                    logger.info("add transaction success: {}", transaction.getTransactionHash());
-                } else if (indexResponse.getResult() == DocWriteResponse.Result.UPDATED) {
-                    logger.info("update transaction success:{}", transaction.getTransactionHash());
-                }
-                ReplicationResponse.ShardInfo shardInfo = indexResponse.getShardInfo();
-                if (shardInfo.getTotal() != shardInfo.getSuccessful()) {
-                    logger.info("sharding info is " + shardInfo);
-                }
-            }
-        } catch (IOException e) {
-            logger.warn("save transaction error", e);
-        }
     }
 
     private void createIndexIfNotExist(String index) throws IOException {

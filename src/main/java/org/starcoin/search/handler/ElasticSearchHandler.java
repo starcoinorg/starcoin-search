@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
+import org.starcoin.types.StructTag;
 import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
@@ -298,6 +299,7 @@ public class ElasticSearchHandler {
                 amount = Hex.encode(function.args.get(2));
             }
             transfer.setAmount(amount);
+            transfer.setTypeTag(getTypeTags(function.ty_args));
             IndexRequest request = new IndexRequest(indexName);
             request.source(JSON.toJSONString(transfer), XContentType.JSON);
             return request;
@@ -305,6 +307,23 @@ public class ElasticSearchHandler {
             logger.warn("other scripts not support: {}", function.function.value);
             return null;
         }
+    }
+
+    private String getTypeTags(List<org.starcoin.types.TypeTag> typeTags) {
+        if (typeTags.isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for( org.starcoin.types.TypeTag typeTag: typeTags) {
+            if (typeTag.getClass()== org.starcoin.types.TypeTag.Struct.class ) {
+                StructTag structTag = ((org.starcoin.types.TypeTag.Struct) typeTag).value;
+                sb.append(structTag.address).append("::").append(structTag.module).append("::").append(structTag.name).append(";");
+            }
+        }
+        if(sb.length() > 1) {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+        return sb.toString();
     }
 
     private IndexRequest buildEventRequest(Event event, long timestamp, String indexName) {

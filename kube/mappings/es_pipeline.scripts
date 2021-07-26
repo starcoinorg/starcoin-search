@@ -66,6 +66,13 @@ PUT _component_template/block-mappings
       }
     }
 
+    PUT _component_template/transfer-mappings
+    {
+      "template": {
+        # copy transfer_mapping.json to here.
+      }
+    }
+
 4.
   PUT _index_template/blocks-template
   {
@@ -107,3 +114,10 @@ PUT _component_template/block-mappings
     "priority": 500,
     "composed_of": ["event-mappings"]
   }
+
+   PUT _index_template/transfer-template
+    {
+      "index_patterns": ["*.transfer"],
+      "priority": 500,
+      "composed_of": ["transfer-mappings"]
+    }

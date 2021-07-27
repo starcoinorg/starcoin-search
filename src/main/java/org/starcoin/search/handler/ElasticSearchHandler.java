@@ -130,18 +130,8 @@ public class ElasticSearchHandler {
         for (Block block : blockList) {
             //transform difficulty
             BlockHeader header = block.getHeader();
-            String difficultyStr = header.getDifficultyHexStr();
-            if (difficultyStr.startsWith("0x")) {
-                try {
-                    long difficulty = Long.parseLong(difficultyStr.substring(2), 16);
-                    if (difficulty > 0) {
-                        header.setDifficulty(difficulty);
-                        block.setHeader(header);
-                    }
-                } catch (NumberFormatException e) {
-                    logger.error("transform difficulty error: {}", difficultyStr);
-                }
-            }
+            transferDifficulty(header);
+            block.setHeader(header);
             //add block ids
             if (deleteOrSkipIndex > 0) {
                 //fork block handle
@@ -195,6 +185,20 @@ public class ElasticSearchHandler {
         }
     }
 
+    private void transferDifficulty(BlockHeader header) {
+        String difficultyStr = header.getDifficultyHexStr();
+        if (difficultyStr.startsWith("0x")) {
+            try {
+                long difficulty = Long.parseLong(difficultyStr.substring(2), 16);
+                if (difficulty > 0) {
+                    header.setDifficulty(difficulty);
+                }
+            } catch (NumberFormatException e) {
+                logger.error("transform difficulty error: {}", difficultyStr);
+            }
+        }
+    }
+
     private IndexRequest buildBlockRequest(Block bLock, String indexName) {
         IndexRequest request = new IndexRequest(indexName);
         XContentBuilder builder = null;
@@ -240,6 +244,7 @@ public class ElasticSearchHandler {
         builder.field("block_hash", header.getBlockHash());
         builder.field("body_hash", header.getBodyHash());
         builder.field("chain_id", header.getChainId());
+        builder.field("difficulty", header.getDifficultyHexStr());
         builder.field("difficulty_number", header.getDifficulty());
         builder.field("gas_used", header.getGasUsed());
         builder.field("number", header.getHeight());
@@ -250,6 +255,8 @@ public class ElasticSearchHandler {
     }
 
     private IndexRequest buildUncleRequest(BlockHeader header, long blockHeaderHeight, String indexName) {
+        //transfer difficulty
+        transferDifficulty(header);
         IndexRequest request = new IndexRequest(indexName);
         XContentBuilder builder = null;
         try {

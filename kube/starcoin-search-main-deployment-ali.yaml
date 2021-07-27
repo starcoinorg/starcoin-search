@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcoin-search-deployment
-  namespace: starcoin-barnard
+  namespace: starcoin-main
   labels:
     app: starcoin-search
 spec:
@@ -22,9 +22,9 @@ spec:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard1.seed.starcoin.org"
+              value: "main.seed.starcoin.org"
             - name: NETWORK
-              value: "barnard"
+              value: "main"
             - name: "BULK_SIZE"
               value: 60
             - name: STARCOIN_ES_URL

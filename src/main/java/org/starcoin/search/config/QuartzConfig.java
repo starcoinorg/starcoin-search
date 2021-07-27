@@ -37,7 +37,6 @@ public class QuartzConfig {
         try {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
-//            schedulerFactoryBean.setTriggers(startQuartzTrigger());
         } catch (Exception e) {
             e.printStackTrace();
         }

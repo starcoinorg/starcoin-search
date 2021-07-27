@@ -78,7 +78,7 @@ PUT _component_template/block-mappings
   {
     "index_patterns": ["*.blocks"],
     "priority": 500,
-    "composed_of": ["blocks-settings","block-mappings", "txn_info-mappings" ]
+    "composed_of": ["blocks-settings","block-mappings" ]
   }
 
   PUT _index_template/uncle-template

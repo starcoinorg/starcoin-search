@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-e7d3a0b
+          image: starcoin/starcoin_search:sha-2058228
           ports:
             - containerPort: 8300
           env:
@@ -25,8 +25,8 @@ spec:
               value: "barnard1.seed.starcoin.org"
             - name: NETWORK
               value: "barnard"
-            - name: "BULK_SIZE"
-              value: 60
+            - name: BULK_SIZE
+              value: "80"
             - name: STARCOIN_ES_URL
               value: "123.57.40.36"
             - name: STARCOIN_ES_PROTOCOL

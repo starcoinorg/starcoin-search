@@ -160,7 +160,7 @@ public class IndexerHandle extends QuartzJobBean {
             transaction.setTimestamp(block.getHeader().getTimestamp());
             // set events
             List<Event> events = transactionRPCClient.getTransactionEvents(transaction.getTransactionHash());
-            if (!events.isEmpty()) {
+            if (events!=null && (!events.isEmpty())) {
                 transaction.setEvents(events);
             } else {
                 logger.warn("current txn event is null: {}", transaction.getTransactionHash());

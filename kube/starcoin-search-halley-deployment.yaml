@@ -17,16 +17,16 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-e7d3a0b
+          image: starcoin/starcoin_search:sha-2058228
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
               value: "halley.seed.starcoin.org"
             - name: NETWORK
-              value: "halley"
-            - name: "BULK_SIZE"
-              value: 60
+              value: "halley.0727"
+            - name: BULK_SIZE
+              value: "80"
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: STARCOIN_ES_PROTOCOL

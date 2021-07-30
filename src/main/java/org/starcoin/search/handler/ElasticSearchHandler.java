@@ -5,6 +5,9 @@ import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.*;
@@ -13,10 +16,14 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
 import org.starcoin.types.StructTag;
@@ -86,6 +93,29 @@ public class ElasticSearchHandler {
         return null;
     }
 
+    public Block getBlockId(long blockNumber) {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, BLOCK_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("header.number", blockNumber);
+        searchSourceBuilder.query(termQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get block by height error:", e);
+            return null;
+        }
+        Result<Block> result = ServiceUtils.getSearchResult(searchResponse, Block.class);
+        List<Block> blocks = result.getContents();
+        if (blocks.size() == 1) {
+            return blocks.get(0);
+        } else {
+            logger.warn("get block by height is null, network: {}, : {}", network, blockNumber);
+        }
+        return null;
+    }
+
     public void setRemoteOffset(Offset offset) {
         String offsetIndex = ServiceUtils.getIndex(network, BLOCK_CONTENT_INDEX);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
@@ -113,6 +143,36 @@ public class ElasticSearchHandler {
         }
     }
 
+    public void updateBlock(Block block) {
+        String blockIndex = ServiceUtils.getIndex(network, BLOCK_INDEX);
+        String blockContentIndex = ServiceUtils.getIndex(network, BLOCK_CONTENT_INDEX);
+        UpdateRequest updateRequest = new UpdateRequest();
+        updateRequest.index(blockIndex);
+        updateRequest.id(String.valueOf(block.getHeader().getHeight()));
+        updateRequest.doc(getBlockBuilder(block));
+        try {
+            client.update(updateRequest, RequestOptions.DEFAULT);
+            logger.info("update block ids ok, {}", block.getHeader().getHeight());
+        } catch (IOException e) {
+            logger.error("update block id error:", e);
+            return;
+        }
+        //update content
+        String blockJson = JSON.toJSONString(block);
+        IndexRequest indexRequest = new IndexRequest(blockContentIndex);
+        indexRequest.id(block.getHeader().getBlockHash()).source(blockJson, XContentType.JSON);
+        updateRequest = new UpdateRequest();
+        updateRequest.index(blockContentIndex);
+        updateRequest.id(block.getHeader().getBlockHash());
+        updateRequest.doc(blockJson, XContentType.JSON);
+        updateRequest.upsert(indexRequest);
+        try {
+            client.update(updateRequest, RequestOptions.DEFAULT);
+            logger.info("update block content ok, {}", block.getHeader().getHeight());
+        } catch (IOException e) {
+            logger.error("update block content error:", e);
+        }
+    }
 
     public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
         if (blockList.isEmpty()) {
@@ -201,6 +261,12 @@ public class ElasticSearchHandler {
 
     private IndexRequest buildBlockRequest(Block bLock, String indexName) {
         IndexRequest request = new IndexRequest(indexName);
+        XContentBuilder builder = getBlockBuilder(bLock);
+        request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
+        return request;
+    }
+
+    private XContentBuilder getBlockBuilder(Block bLock) {
         XContentBuilder builder = null;
         BlockHeader header = bLock.getHeader();
         BlockMetadata metadata = bLock.getBlockMetadata();
@@ -233,8 +299,7 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-        request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
-        return request;
+        return builder;
     }
 
     private void blockHeaderBuilder(XContentBuilder builder, BlockHeader header) throws IOException {

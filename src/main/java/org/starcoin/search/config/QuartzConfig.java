@@ -58,8 +58,8 @@ public class QuartzConfig {
     @Bean
     public Scheduler scheduler() throws IOException, SchedulerException {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
-        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
-        scheduler.start();// 服务启动
+//        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
+//        scheduler.start();// 服务启动
         return scheduler;
     }
 }

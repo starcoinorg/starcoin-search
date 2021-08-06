@@ -137,15 +137,14 @@ public class TransferHandle {
         int successSize = offset;
         for (Transfer transfer : transferList) {
             // update token index
-            logger.info("amount: {}", transfer.getAmount());
             long amount = transferAmount(transfer.getAmount());
-            IndexRequest senderRequest = buildTokenHolderRequest(transfer.getTypeTag(), transfer.getSender(), -amount);
+            IndexRequest senderRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getSender(), -amount, transfer.getTimestamp());
             if (senderRequest != null) {
                 bulkRequest.add(senderRequest);
             } else {
                 break;
             }
-            IndexRequest receiveRequest = buildTokenHolderRequest(transfer.getTypeTag(), transfer.getReceiver(), amount);
+            IndexRequest receiveRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getReceiver(), amount, transfer.getTimestamp());
             if (senderRequest != null) {
                 bulkRequest.add(receiveRequest);
             } else {
@@ -189,8 +188,8 @@ public class TransferHandle {
         return 0;
     }
 
-    private IndexRequest buildTokenHolderRequest(String typeTag, String address, long amount) {
-        XContentBuilder addressBuilder = getHoldersBuilder(typeTag, address, amount);
+    private IndexRequest buildJournalRequest(String typeTag, String address, long amount, long timestamp) {
+        XContentBuilder addressBuilder = getJournalBuilder(typeTag, address, amount, timestamp);
         if (addressBuilder != null) {
             String addressIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_JOURNAL_INDEX);
             IndexRequest indexRequest = new IndexRequest(addressIndex);
@@ -200,7 +199,7 @@ public class TransferHandle {
         return null;
     }
 
-    private XContentBuilder getHoldersBuilder(String typeTag, String address, long amount) {
+    private XContentBuilder getJournalBuilder(String typeTag, String address, long amount, long timestamp) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
@@ -208,6 +207,7 @@ public class TransferHandle {
                 builder.field("type_tag", typeTag);
                 builder.field("address", address);
                 builder.field("amount", amount);
+                builder.field("timestamp", timestamp);
             }
             builder.endObject();
             return builder;

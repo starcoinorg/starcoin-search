@@ -136,7 +136,7 @@ PUT _component_template/block-mappings
       "composed_of": ["transfer-mappings"]
     }
 
-    PUT _index_template/transfer-template
+    PUT _index_template/transfer-journal-template
     {
       "index_patterns": ["*.transfer_journal"],
       "priority": 500,

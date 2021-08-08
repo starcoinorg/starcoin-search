@@ -73,6 +73,20 @@ PUT _component_template/block-mappings
       }
     }
 
+    PUT _component_template/transfer-journal-mappings
+    {
+      "template": {
+        # copy transfer_journal.mapping.json to here.
+      }
+    }
+
+    PUT _component_template/address-holder-mappings
+    {
+      "template": {
+        # copy address_holder.mapping.json to here.
+      }
+    }
+
 4.
   PUT _index_template/blocks-template
   {
@@ -121,3 +135,28 @@ PUT _component_template/block-mappings
       "priority": 500,
       "composed_of": ["transfer-mappings"]
     }
+
+    PUT _index_template/transfer-journal-template
+    {
+      "index_patterns": ["*.transfer_journal"],
+      "priority": 500,
+      "composed_of": ["transfer-journal-mappings"]
+    }
+
+    PUT _index_template/address-holder-template
+    {
+      "index_patterns": ["*.address_holder"],
+      "priority": 500,
+      "composed_of": ["address-holder-mappings"]
+    }
+
+
+POST _reindex
+{
+  "source": {
+    "index": "main.transfer"
+  },
+  "dest": {
+    "index": "main.0802.transfer"
+  }
+}

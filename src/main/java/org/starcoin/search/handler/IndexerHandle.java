@@ -21,7 +21,6 @@ import java.util.List;
 
 
 public class IndexerHandle extends QuartzJobBean {
-    private final static int HANDLE_COUNT = 100;
     private static Logger logger = LoggerFactory.getLogger(IndexerHandle.class);
 
     private Offset localOffset;
@@ -160,7 +159,7 @@ public class IndexerHandle extends QuartzJobBean {
             transaction.setTimestamp(block.getHeader().getTimestamp());
             // set events
             List<Event> events = transactionRPCClient.getTransactionEvents(transaction.getTransactionHash());
-            if (events!=null && (!events.isEmpty())) {
+            if (events != null && (!events.isEmpty())) {
                 transaction.setEvents(events);
             } else {
                 logger.warn("current txn event is null: {}", transaction.getTransactionHash());

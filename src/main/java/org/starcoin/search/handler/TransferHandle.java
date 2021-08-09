@@ -155,14 +155,14 @@ public class TransferHandle {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            logger.info("bulk block result: {}", response.buildFailureMessage());
+            logger.info("bulk transfer result: {}", response.buildFailureMessage());
             //update offset
             TransferOffset transferOffset = new TransferOffset();
             transferOffset.setOffset(successSize);
             transferOffset.setTimestamp(String.valueOf(timestamp));
             this.setRemoteOffset(transferOffset);
         } catch (IOException e) {
-            logger.error("bulk block error:", e);
+            logger.error("bulk transfer error:", e);
         }
     }
 
@@ -179,9 +179,13 @@ public class TransferHandle {
                 break;
             }
         }
-        String tempStr = amountStr.substring(2, index + 1);
         try {
-            return Long.parseLong(tempStr, 16);
+            if (index + 1 > 2) {
+                String tempStr = amountStr.substring(2, index + 1);
+                return Long.parseLong(tempStr, 16);
+            } else {
+                logger.warn("amountStr too short: {}", amountStr);
+            }
         } catch (NumberFormatException e) {
             logger.error("transfer amount error:", e);
         }

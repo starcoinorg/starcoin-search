@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.StateRPCClient;
+import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 
 import java.net.MalformedURLException;
@@ -47,6 +48,11 @@ public class SearchApplication {
     @Bean
     StateRPCClient stateRPCClient(URL baseUrl) {
         return new StateRPCClient(baseUrl);
+    }
+
+    @Bean
+    TokenContractRPCClient tokenContractRPCClient(URL baseUrl) {
+        return new TokenContractRPCClient(baseUrl);
     }
 
 }

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.starcoin.search.handler.IndexerHandle;
+import org.starcoin.search.handler.MarketCapIndexer;
 import org.starcoin.search.handler.SecondaryIndexer;
 
 import java.util.Properties;
@@ -25,6 +26,10 @@ public class QuartzConfig {
         return JobBuilder.newJob(SecondaryIndexer.class).withIdentity("secondary").storeDurably().build();
     }
 
+    @Bean
+    public JobDetail handleMarketCapIndexer() {
+        return JobBuilder.newJob(MarketCapIndexer.class).withIdentity("market").storeDurably().build();
+    }
 
     @Bean
     public Trigger startQuartzTrigger() {
@@ -44,6 +49,17 @@ public class QuartzConfig {
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
                 .withIdentity("secondary")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
+    public Trigger startMarketCapTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(24)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(handleMarketCapIndexer())
+                .withIdentity("market")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
@@ -77,6 +93,7 @@ public class QuartzConfig {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
         scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
+        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
         scheduler.start();// 服务启动
         return scheduler;
     }

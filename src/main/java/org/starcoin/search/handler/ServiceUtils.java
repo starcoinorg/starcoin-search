@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ServiceUtils {
-    public static final int ELASTICSEARCH_MAX_HITS = 10000;
 
     public static String getIndex(String network, String indexConstant) {
         return network + "." + indexConstant;

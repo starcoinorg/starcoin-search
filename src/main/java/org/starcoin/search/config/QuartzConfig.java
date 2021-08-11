@@ -6,8 +6,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.starcoin.search.handler.IndexerHandle;
+import org.starcoin.search.handler.MarketCapIndexer;
+import org.starcoin.search.handler.SecondaryIndexer;
 
-import java.io.IOException;
 import java.util.Properties;
 
 @Configuration
@@ -21,12 +22,44 @@ public class QuartzConfig {
     }
 
     @Bean
+    public JobDetail handleSecondIndexer() {
+        return JobBuilder.newJob(SecondaryIndexer.class).withIdentity("secondary").storeDurably().build();
+    }
+
+    @Bean
+    public JobDetail handleMarketCapIndexer() {
+        return JobBuilder.newJob(MarketCapIndexer.class).withIdentity("market").storeDurably().build();
+    }
+
+    @Bean
     public Trigger startQuartzTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(1)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleIndexer())
                 .withIdentity("indexer")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
+    public Trigger startSecondTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(5)  //设置时间周期单位秒
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
+                .withIdentity("secondary")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
+    public Trigger startMarketCapTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(24)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(handleMarketCapIndexer())
+                .withIdentity("market")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
@@ -56,10 +89,12 @@ public class QuartzConfig {
     }
 
     @Bean
-    public Scheduler scheduler() throws IOException, SchedulerException {
+    public Scheduler scheduler() throws SchedulerException {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
-//        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
-//        scheduler.start();// 服务启动
+        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
+        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
+        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
+        scheduler.start();// 服务启动
         return scheduler;
     }
 }

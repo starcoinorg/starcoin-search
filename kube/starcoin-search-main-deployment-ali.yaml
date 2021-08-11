@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-2058228
+          image: starcoin/starcoin_search:sha-85e76fb
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "main.seed.starcoin.org"
+              value: "main1.seed.starcoin.org"
             - name: NETWORK
               value: "main"
             - name: BULK_SIZE

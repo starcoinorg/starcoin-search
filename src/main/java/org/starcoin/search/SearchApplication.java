@@ -2,16 +2,15 @@ package org.starcoin.search;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.starcoin.api.BlockRPCClient;
+import org.starcoin.api.StateRPCClient;
+import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
-import org.starcoin.search.handler.ElasticSearchHandler;
-import org.starcoin.search.handler.RepairHandle;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -52,6 +51,16 @@ public class SearchApplication {
     @Bean
     BlockRPCClient blockRPCClient(URL baseUrl) {
         return new BlockRPCClient(baseUrl);
+    }
+
+    @Bean
+    StateRPCClient stateRPCClient(URL baseUrl) {
+        return new StateRPCClient(baseUrl);
+    }
+
+    @Bean
+    TokenContractRPCClient tokenContractRPCClient(URL baseUrl) {
+        return new TokenContractRPCClient(baseUrl);
     }
 
 }

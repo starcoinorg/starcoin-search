@@ -1,6 +1,5 @@
 package org.starcoin.search.handler;
 
-import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
@@ -10,10 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.TransactionRPCClient;
-import org.starcoin.bean.*;
+import org.starcoin.bean.Block;
+import org.starcoin.bean.BlockHeader;
 import org.starcoin.search.bean.Offset;
-import org.starcoin.types.TransactionPayload;
-import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -95,7 +93,7 @@ public class IndexerHandle extends QuartzJobBean {
                     //获取上一个index的block
                     Block lastBlock = blockRPCClient.getBlockByHeight(readNumber - 1);
                     if (lastBlock != null && lastBlock.getHeader().getBlockHash().equals(block.getHeader().getParentHash())) {
-                        addToList(blockList, lastBlock);
+                        ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastBlock);
                     } else {
                         logger.warn("fork block not found: {}", lastBlock);
                     }
@@ -103,7 +101,7 @@ public class IndexerHandle extends QuartzJobBean {
                     logger.warn("fork delete or skip index: {}", deleteOrSkipIndex);
                 }
                 //set event
-                addToList(blockList, block);
+                ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;
@@ -120,53 +118,4 @@ public class IndexerHandle extends QuartzJobBean {
             logger.error("chain header error:", e);
         }
     }
-
-    private void addToList(List<Block> blockList, Block block) throws JSONRPC2SessionException {
-        List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
-        for (Transaction transaction : transactionList) {
-            BlockMetadata metadata = null;
-            Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
-            if (userTransaction != null) {
-                UserTransaction inner = userTransaction.getUserTransaction();
-                metadata = userTransaction.getBlockMetadata();
-                if (metadata != null) {
-                    transaction.setBlockMetadata(metadata);
-                    block.setBlockMetadata(metadata);
-                }
-                if (inner != null) {
-                    try {
-                        RawTransaction rawTransaction = inner.getRawTransaction();
-                        TransactionPayload payload = TransactionPayload.bcsDeserialize(Hex.decode(rawTransaction.getPayload()));
-                        if (TransactionPayload.Script.class.equals(payload.getClass())) {
-                            transaction.setTransactionType(TransactionType.Script);
-                        } else if (TransactionPayload.Package.class.equals(payload.getClass())) {
-                            transaction.setTransactionType(TransactionType.Package);
-                        } else if (TransactionPayload.ScriptFunction.class.equals(payload.getClass())) {
-                            transaction.setTransactionType(TransactionType.ScriptFunction);
-                        } else {
-                            logger.warn("payload class error: {}", payload.getClass());
-                        }
-                        rawTransaction.setTransactionPayload(payload);
-                        inner.setRawTransaction(rawTransaction);
-                        transaction.setUserTransaction(inner);
-                    } catch (DeserializationError deserializationError) {
-                        logger.error("Deserialization payload error:", deserializationError);
-                    }
-                }
-            } else {
-                logger.warn("get txn by hash is null: {}", transaction.getTransactionHash());
-            }
-            transaction.setTimestamp(block.getHeader().getTimestamp());
-            // set events
-            List<Event> events = transactionRPCClient.getTransactionEvents(transaction.getTransactionHash());
-            if (events != null && (!events.isEmpty())) {
-                transaction.setEvents(events);
-            } else {
-                logger.warn("current txn event is null: {}", transaction.getTransactionHash());
-            }
-        }
-        block.setTransactionList(transactionList);
-        blockList.add(block);
-    }
-
 }

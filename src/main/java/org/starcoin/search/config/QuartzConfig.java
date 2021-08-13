@@ -71,7 +71,6 @@ public class QuartzConfig {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
             schedulerFactoryBean.setAutoStartup(false);
-            schedulerFactoryBean.setStartupDelay(10);
         } catch (Exception e) {
             e.printStackTrace();
         }

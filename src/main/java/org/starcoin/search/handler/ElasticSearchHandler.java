@@ -185,7 +185,7 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, 0);
+        bulk(blocks, Collections.EMPTY_SET);
     }
 
     public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds) {
@@ -201,6 +201,7 @@ public class ElasticSearchHandler {
         String eventIndex = ServiceUtils.getIndex(network, Constant.EVENT_INDEX);
         String pendingIndex = ServiceUtils.getIndex(network, Constant.PENDING_TXN_INDEX);
         String transferIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_INDEX);
+        boolean isDeleted = false;
         for (Block block : blockList) {
             //transform difficulty
             BlockHeader header = block.getHeader();
@@ -208,18 +209,15 @@ public class ElasticSearchHandler {
             block.setHeader(header);
             //add block ids
             if (deleteForkBlockIds.size() > 0) {
-                for(long forkId: deleteForkBlockIds) {
-
+                if(! isDeleted) {
+                    for(long forkId: deleteForkBlockIds) {
+                        DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
+                        deleteRequest.id(String.valueOf(forkId));
+                        bulkRequest.add(deleteRequest);
+                    }
+                    isDeleted = true;
+                    logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
                 }
-//                //fork block handle
-//                if (header.getHeight() == deleteOrSkipIndex) {
-//                    logger.warn("fork block, skip: {}", deleteOrSkipIndex);
-//                } else {
-//                    //上一轮已经添加ids，需要删掉
-//                    DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
-//                    deleteRequest.id(String.valueOf(deleteOrSkipIndex));
-//                    bulkRequest.add(deleteRequest);
-//                }
             } else {
                 bulkRequest.add(buildBlockRequest(block, blockIndex));
             }

@@ -103,7 +103,7 @@ public class IndexerHandle extends QuartzJobBean {
                         lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
                         if( lastMasterBlock != null) {
                             // add master block to es
-                            ServiceUtils.addToList(blockList, lastMasterBlock);
+                            ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastMasterBlock);
                             forkHeaderParentHash = forkHeader.getParentHash();
                             if(lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
                                 //find fork point

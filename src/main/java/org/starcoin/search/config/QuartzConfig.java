@@ -70,6 +70,7 @@ public class QuartzConfig {
         try {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
+            schedulerFactoryBean.setAutoStartup(false);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -94,7 +95,7 @@ public class QuartzConfig {
         scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
         scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
-        scheduler.start();// 服务启动
+//        scheduler.start();// 服务启动
         return scheduler;
     }
 }

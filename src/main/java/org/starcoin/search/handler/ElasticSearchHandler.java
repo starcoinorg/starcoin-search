@@ -8,6 +8,8 @@ import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -15,13 +17,19 @@ import org.elasticsearch.client.indices.GetMappingsRequest;
 import org.elasticsearch.client.indices.GetMappingsResponse;
 import org.elasticsearch.client.indices.PutMappingRequest;
 import org.elasticsearch.cluster.metadata.MappingMetadata;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
@@ -113,6 +121,72 @@ public class ElasticSearchHandler {
         }
     }
 
+    public Block getBlockId(long blockNumber) {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("header.number", blockNumber);
+        searchSourceBuilder.query(termQueryBuilder);
+        searchSourceBuilder.timeout(TimeValue.timeValueSeconds(5));
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get block by height error:", e);
+            return null;
+        }
+        Result<Block> result = ServiceUtils.getSearchResult(searchResponse, Block.class);
+        List<Block> blocks = result.getContents();
+        if (blocks.size() == 1) {
+            return blocks.get(0);
+        } else {
+            logger.warn("get block by height is null, network: {}, : {}", network, blockNumber);
+        }
+        return null;
+    }
+
+    public Result<Block> getBlockIds(long blockNumber, int count) {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("header.number").gt(blockNumber);
+        searchSourceBuilder.query(termQueryBuilder);
+        searchSourceBuilder.timeout(TimeValue.timeValueSeconds(5));
+        searchSourceBuilder.size(count);
+        searchSourceBuilder.sort("header.number");
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get block by height error:", e);
+            return null;
+        }
+        return ServiceUtils.getSearchResult(searchResponse, Block.class);
+    }
+
+    public void updateBlock(List<Block> blocks) {
+        String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
+        for (Block block : blocks
+        ) {
+            String id = String.valueOf(block.getHeader().getHeight());
+            UpdateRequest updateRequest = new UpdateRequest();
+            updateRequest.index(blockIndex);
+            updateRequest.id(id);
+            IndexRequest indexRequest = new IndexRequest(blockIndex);
+            XContentBuilder blockBuild = getBlockBuilder(block);
+            indexRequest.id(id).source(blockBuild);
+            updateRequest.doc(blockBuild);
+            updateRequest.upsert(indexRequest);
+            try {
+                client.update(updateRequest, RequestOptions.DEFAULT);
+                logger.info("update block ids ok, {}", block.getHeader().getHeight());
+            } catch (IOException e) {
+                logger.error("update block id error:", e);
+                return;
+            }
+        }
+        bulk(blocks, 0);
+    }
 
     public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
         if (blockList.isEmpty()) {
@@ -211,6 +285,12 @@ public class ElasticSearchHandler {
 
     private IndexRequest buildBlockRequest(Block bLock, String indexName) {
         IndexRequest request = new IndexRequest(indexName);
+        XContentBuilder builder = getBlockBuilder(bLock);
+        request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
+        return request;
+    }
+
+    private XContentBuilder getBlockBuilder(Block bLock) {
         XContentBuilder builder = null;
         BlockHeader header = bLock.getHeader();
         BlockMetadata metadata = bLock.getBlockMetadata();
@@ -243,8 +323,7 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("build block error:", e);
         }
-        request.id(String.valueOf(bLock.getHeader().getHeight())).source(builder);
-        return request;
+        return builder;
     }
 
     private void blockHeaderBuilder(XContentBuilder builder, BlockHeader header) throws IOException {

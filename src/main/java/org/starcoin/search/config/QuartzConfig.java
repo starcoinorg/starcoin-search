@@ -70,7 +70,7 @@ public class QuartzConfig {
         try {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
-            schedulerFactoryBean.setAutoStartup(false);
+            schedulerFactoryBean.setAutoStartup(true);
         } catch (Exception e) {
             e.printStackTrace();
         }

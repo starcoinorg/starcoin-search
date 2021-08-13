@@ -22,6 +22,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.slf4j.Logger;
@@ -144,15 +145,38 @@ public class ElasticSearchHandler {
         return null;
     }
 
+    public Result<Block> getBlockIds(long blockNumber, int count) {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("header.number").gt(blockNumber);
+        searchSourceBuilder.query(termQueryBuilder);
+        searchSourceBuilder.timeout(TimeValue.timeValueSeconds(5));
+        searchSourceBuilder.size(count);
+        searchSourceBuilder.sort("header.number");
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get block by height error:", e);
+            return null;
+        }
+        return ServiceUtils.getSearchResult(searchResponse, Block.class);
+    }
+
     public void updateBlock(List<Block> blocks) {
+        String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
         for (Block block : blocks
         ) {
-            String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
-            String blockContentIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
+            String id = String.valueOf(block.getHeader().getHeight());
             UpdateRequest updateRequest = new UpdateRequest();
             updateRequest.index(blockIndex);
-            updateRequest.id(String.valueOf(block.getHeader().getHeight()));
-            updateRequest.doc(getBlockBuilder(block));
+            updateRequest.id(id);
+            IndexRequest indexRequest = new IndexRequest(blockIndex);
+            XContentBuilder blockBuild = getBlockBuilder(block);
+            indexRequest.id(id).source(blockBuild);
+            updateRequest.doc(blockBuild);
+            updateRequest.upsert(indexRequest);
             try {
                 client.update(updateRequest, RequestOptions.DEFAULT);
                 logger.info("update block ids ok, {}", block.getHeader().getHeight());
@@ -161,23 +185,7 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-
-        //update content
         bulk(blocks, 0);
-//        String blockJson = JSON.toJSONString(block);
-//        IndexRequest indexRequest = new IndexRequest(blockContentIndex);
-//        indexRequest.id(block.getHeader().getBlockHash()).source(blockJson, XContentType.JSON);
-//        updateRequest = new UpdateRequest();
-//        updateRequest.index(blockContentIndex);
-//        updateRequest.id(block.getHeader().getBlockHash());
-//        updateRequest.doc(blockJson, XContentType.JSON);
-//        updateRequest.upsert(indexRequest);
-//        try {
-//            client.update(updateRequest, RequestOptions.DEFAULT);
-//            logger.info("update block content ok, {}", block.getHeader().getHeight());
-//        } catch (IOException e) {
-//            logger.error("update block content error:", e);
-//        }
     }
 
     public void bulk(List<Block> blockList, long deleteOrSkipIndex) {

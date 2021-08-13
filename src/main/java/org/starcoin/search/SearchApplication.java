@@ -52,8 +52,23 @@ public class SearchApplication {
                             System.out.println("repair ok :" + str);
                         }
                     }
+                    System.out.println("repair done");
                 } catch (IOException e) {
                     e.printStackTrace();
+                }
+            }
+            if (args[0].equals("auto_repair")) {
+                int count = 20;
+                long startNumber = Long.parseLong(args[1]);
+                while (startNumber > 0) {
+                    if (repairHandle.autoRepair(startNumber, count)) {
+                        startNumber += count;
+                    }
+                    try {
+                        Thread.currentThread().sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } else {

@@ -185,51 +185,9 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, 0);
-    }
-
-    public Result<Block> getBlockIds(long blockNumber, int count) {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("header.number").gt(blockNumber);
-        searchSourceBuilder.query(termQueryBuilder);
-        searchSourceBuilder.timeout(TimeValue.timeValueSeconds(5));
-        searchSourceBuilder.size(count);
-        searchSourceBuilder.sort("header.number");
-        searchRequest.source(searchSourceBuilder);
-        SearchResponse searchResponse;
-        try {
-            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            logger.error("get block by height error:", e);
-            return null;
-        }
-        return ServiceUtils.getSearchResult(searchResponse, Block.class);
-    }
-
-    public void updateBlock(List<Block> blocks) {
-        String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
-        for (Block block : blocks
-        ) {
-            String id = String.valueOf(block.getHeader().getHeight());
-            UpdateRequest updateRequest = new UpdateRequest();
-            updateRequest.index(blockIndex);
-            updateRequest.id(id);
-            IndexRequest indexRequest = new IndexRequest(blockIndex);
-            XContentBuilder blockBuild = getBlockBuilder(block);
-            indexRequest.id(id).source(blockBuild);
-            updateRequest.doc(blockBuild);
-            updateRequest.upsert(indexRequest);
-            try {
-                client.update(updateRequest, RequestOptions.DEFAULT);
-                logger.info("update block ids ok, {}", block.getHeader().getHeight());
-            } catch (IOException e) {
-                logger.error("update block id error:", e);
-                return;
-            }
-        }
         bulk(blocks, Collections.EMPTY_SET);
     }
+
 
     public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds) {
         if (blockList.isEmpty()) {

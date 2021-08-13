@@ -17,7 +17,9 @@ import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 public class IndexerHandle extends QuartzJobBean {
@@ -85,6 +87,7 @@ public class IndexerHandle extends QuartzJobBean {
             long bulkNumber = Math.min(headHeight - localOffset.getBlockHeight(), bulkSize);
             int index = 1;
             long deleteOrSkipIndex = 0;
+            Set<Long> deleteForkBlockIds = new HashSet<>();
             List<Block> blockList = new ArrayList<>();
             while (index <= bulkNumber) {
                 long readNumber = localOffset.getBlockHeight() + index;
@@ -92,15 +95,35 @@ public class IndexerHandle extends QuartzJobBean {
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
                     //fork occurs
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
-                    //获取上一个index的block
-                    Block lastBlock = blockRPCClient.getBlockByHeight(readNumber - 1);
-                    if (lastBlock != null && lastBlock.getHeader().getBlockHash().equals(block.getHeader().getParentHash())) {
-                        addToList(blockList, lastBlock);
-                    } else {
-                        logger.warn("fork block not found: {}", lastBlock);
-                    }
-                    deleteOrSkipIndex = currentHandleHeader.getHeight();
-                    logger.warn("fork delete or skip index: {}", deleteOrSkipIndex);
+                    Block lastForkBlock, lastMasterBlock;
+                    BlockHeader forkHeader = currentHandleHeader;
+                    long lastMasterNumber = readNumber - 1;
+                    String forkHeaderParentHash;
+                    deleteForkBlockIds.add(currentHandleHeader.getHeight());
+                    do {
+                        //获取上一个block
+                        lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
+                        if( lastMasterBlock != null) {
+                            // add master block to es
+                            addToList(blockList, lastMasterBlock);
+                            forkHeaderParentHash = forkHeader.getParentHash();
+                            if(lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
+                                //find fork point
+                                break;
+                            }else {
+                                lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
+                                if(lastForkBlock != null) {
+                                    forkHeader = lastForkBlock.getHeader();
+                                    deleteForkBlockIds.add(lastMasterNumber);
+                                    lastMasterNumber --;
+                                }else {
+                                    logger.warn("get last fork block null: {}", forkHeaderParentHash);
+                                }
+                            }
+                        }else {
+                            logger.warn("get last aster Block null: {}", lastMasterNumber);
+                        }
+                    }while (true);
                 }
                 //set event
                 addToList(blockList, block);
@@ -110,7 +133,7 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.debug("add block: {}", block.getHeader());
             }
             //bulk execute
-            elasticSearchHandler.bulk(blockList, deleteOrSkipIndex);
+            elasticSearchHandler.bulk(blockList, deleteForkBlockIds);
             //update offset
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());

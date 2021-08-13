@@ -114,7 +114,7 @@ public class ElasticSearchHandler {
     }
 
 
-    public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
+    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -133,16 +133,19 @@ public class ElasticSearchHandler {
             transferDifficulty(header);
             block.setHeader(header);
             //add block ids
-            if (deleteOrSkipIndex > 0) {
-                //fork block handle
-                if (header.getHeight() == deleteOrSkipIndex) {
-                    logger.warn("fork block, skip: {}", deleteOrSkipIndex);
-                } else {
-                    //上一轮已经添加ids，需要删掉
-                    DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
-                    deleteRequest.id(String.valueOf(deleteOrSkipIndex));
-                    bulkRequest.add(deleteRequest);
+            if (deleteForkBlockIds.size() > 0) {
+                for(long forkId: deleteForkBlockIds) {
+
                 }
+//                //fork block handle
+//                if (header.getHeight() == deleteOrSkipIndex) {
+//                    logger.warn("fork block, skip: {}", deleteOrSkipIndex);
+//                } else {
+//                    //上一轮已经添加ids，需要删掉
+//                    DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
+//                    deleteRequest.id(String.valueOf(deleteOrSkipIndex));
+//                    bulkRequest.add(deleteRequest);
+//                }
             } else {
                 bulkRequest.add(buildBlockRequest(block, blockIndex));
             }

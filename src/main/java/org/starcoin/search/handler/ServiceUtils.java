@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ServiceUtils {
+
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
 
     public static String getIndex(String network, String indexConstant) {

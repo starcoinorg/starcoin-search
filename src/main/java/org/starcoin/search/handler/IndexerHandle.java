@@ -104,12 +104,16 @@ public class IndexerHandle extends QuartzJobBean {
                         if( lastMasterBlock != null) {
                             // add master block to es
                             ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastMasterBlock);
+                            logger.info("add master block:{}", lastMasterNumber);
                             forkHeaderParentHash = forkHeader.getParentHash();
-                            if(lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
+                            long forkNumber = forkHeader.getHeight();
+                            logger.info("fork number: {}", forkNumber);
+                            if(lastMasterNumber == forkNumber && lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
                                 //find fork point
+                                logger.info("find fork height: {}", lastMasterNumber);
                                 break;
                             }else {
-                                lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
+                                lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
                                 if(lastForkBlock != null) {
                                     forkHeader = lastForkBlock.getHeader();
                                     deleteForkBlockIds.add(lastMasterNumber);

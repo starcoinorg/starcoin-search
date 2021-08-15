@@ -17,14 +17,14 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-df172a4
+          image: starcoin/starcoin_search:sha-cfad15d
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
               value: "proxima.seed.starcoin.org"
             - name: NETWORK
-              value: "proxima.0813"
+              value: "proxima.0727"
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_URL

@@ -18,13 +18,18 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 
 @SpringBootApplication
 public class SearchApplication {
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
 
     public static void main(String[] args) {
-        logger.info("start search service...");
+        logger.info("start search service: {}", args);
+        Map<String, String> envMap = System.getenv();
+        for (String env: envMap.keySet()) {
+            logger.info("{} : {}", env, envMap.get(env));
+        }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
         if (args != null && args.length >= 2) {
             RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
@@ -46,12 +51,12 @@ public class SearchApplication {
                         blockNumber = Long.parseLong(str);
                         if (blockNumber > 0) {
                             repairHandle.repair(blockNumber);
-                            System.out.println("repair ok :" + str);
+                            logger.info("repair ok :" + str);
                         }
                     }
-                    System.out.println("repair done");
+                    logger.info("repair done");
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("repair file error:", e);
                 }
             }
             if (args[0].equals("auto_repair")) {
@@ -64,7 +69,7 @@ public class SearchApplication {
                     try {
                         Thread.currentThread().sleep(2000);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        logger.error("auto repair error:", e);
                     }
                 }
             }

@@ -1,7 +1,5 @@
 package org.starcoin.search;
 
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,14 +18,26 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 
 @SpringBootApplication
 public class SearchApplication {
-
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
 
     public static void main(String[] args) {
-        logger.info("start search service...");
+        logger.info("start search service: {}", args);
+        Map<String, String> envMap = System.getenv();
+        String progArgs = envMap.get("PROG_ARGS");
+        logger.info("PROG_ARGS: {}", progArgs);
+        if(progArgs!= null && progArgs.length() > 0) {
+         //set env to args for docker environment
+         String[] progs = progArgs.split(" ");
+         int i = 0;
+         for(String prog: progs) {
+             args[i] = prog;
+             i++;
+         }
+        }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
         if (args != null && args.length >= 2) {
             RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
@@ -49,12 +59,12 @@ public class SearchApplication {
                         blockNumber = Long.parseLong(str);
                         if (blockNumber > 0) {
                             repairHandle.repair(blockNumber);
-                            System.out.println("repair ok :" + str);
+                            logger.info("repair ok :" + str);
                         }
                     }
-                    System.out.println("repair done");
+                    logger.info("repair done");
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("repair file error:", e);
                 }
             }
             if (args[0].equals("auto_repair")) {
@@ -67,22 +77,11 @@ public class SearchApplication {
                     try {
                         Thread.currentThread().sleep(2000);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        logger.error("auto repair error:", e);
                     }
                 }
             }
-        } else {
-            //default mode
-            Scheduler scheduler = (Scheduler) context.getBean("scheduler");
-            if (scheduler != null) {
-                try {
-                    scheduler.start();
-                } catch (SchedulerException e) {
-                    e.printStackTrace();
-                }
-            }
         }
-
     }
 
     @Bean(name = "base_url")

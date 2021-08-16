@@ -15,7 +15,9 @@ import org.starcoin.search.bean.Offset;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 public class IndexerHandle extends QuartzJobBean {
@@ -83,6 +85,7 @@ public class IndexerHandle extends QuartzJobBean {
             long bulkNumber = Math.min(headHeight - localOffset.getBlockHeight(), bulkSize);
             int index = 1;
             long deleteOrSkipIndex = 0;
+            Set<Long> deleteForkBlockIds = new HashSet<>();
             List<Block> blockList = new ArrayList<>();
             while (index <= bulkNumber) {
                 long readNumber = localOffset.getBlockHeight() + index;
@@ -90,15 +93,51 @@ public class IndexerHandle extends QuartzJobBean {
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
                     //fork occurs
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
-                    //获取上一个index的block
-                    Block lastBlock = blockRPCClient.getBlockByHeight(readNumber - 1);
-                    if (lastBlock != null && lastBlock.getHeader().getBlockHash().equals(block.getHeader().getParentHash())) {
-                        ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastBlock);
-                    } else {
-                        logger.warn("fork block not found: {}", lastBlock);
-                    }
-                    deleteOrSkipIndex = currentHandleHeader.getHeight();
-                    logger.warn("fork delete or skip index: {}", deleteOrSkipIndex);
+                    Block lastForkBlock, lastMasterBlock;
+                    BlockHeader forkHeader = currentHandleHeader;
+                    long lastMasterNumber = readNumber - 1;
+                    String forkHeaderParentHash;
+                    deleteForkBlockIds.add(currentHandleHeader.getHeight());
+                    int retryCount = 0;
+                    do {
+                        //获取上一个block
+                        lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
+                        if( lastMasterBlock != null) {
+                            // add master block to es
+                            ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastMasterBlock);
+                            logger.info("add master block:{}", lastMasterNumber);
+                            forkHeaderParentHash = forkHeader.getParentHash();
+                            long forkNumber = forkHeader.getHeight();
+                            logger.info("fork number: {}", forkNumber);
+                            if(lastMasterNumber == forkNumber && lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
+                                //find fork point
+                                logger.info("find fork height: {}", lastMasterNumber);
+                                break;
+                            }else {
+                                lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
+                                if(lastForkBlock == null) {
+                                    logger.warn("get last fork block null: {}", forkHeaderParentHash);
+                                    //read from node
+                                    lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
+                                }
+                                if(lastForkBlock != null) {
+                                    forkHeader = lastForkBlock.getHeader();
+                                    deleteForkBlockIds.add(lastMasterNumber);
+                                    lastMasterNumber --;
+                                }else {
+                                    logger.warn("forked block es and node both null: {}", forkHeaderParentHash);
+                                    retryCount ++;
+                                }
+                            }
+                        }else {
+                            logger.warn("get last aster Block null: {}", lastMasterNumber);
+                            retryCount ++;
+                        }
+                        if (retryCount > 100)  {
+                            logger.error("fork handle retry 100 times,must manual handle: {}", lastMasterNumber);
+                            break;
+                        }
+                    }while (true);
                 }
                 //set event
                 ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
@@ -108,7 +147,7 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.debug("add block: {}", block.getHeader());
             }
             //bulk execute
-            elasticSearchHandler.bulk(blockList, deleteOrSkipIndex);
+            elasticSearchHandler.bulk(blockList, deleteForkBlockIds);
             //update offset
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-85e76fb
+          image: starcoin/starcoin_search:sha-98bc5d8
           ports:
             - containerPort: 8300
           env:
@@ -35,6 +35,10 @@ spec:
               value: "9200"
             - name: STARCOIN_ES_USER
               value: elastic
+            - name: PROG_ARGS
+              value: ""
+            - name: INDEXER_AUTO_START
+              value: "true"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

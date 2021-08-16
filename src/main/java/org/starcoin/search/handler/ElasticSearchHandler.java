@@ -7,6 +7,8 @@ import org.bouncycastle.util.Arrays;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.get.GetRequest;
+import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -144,6 +146,23 @@ public class ElasticSearchHandler {
         }
         return null;
     }
+    public Block getBlockContent(String blockHash) {
+        GetRequest getRequest = new GetRequest(ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX), blockHash);
+        GetResponse getResponse = null;
+        try {
+            getResponse = client.get(getRequest, RequestOptions.DEFAULT);
+            if (getResponse.isExists()) {
+                String sourceAsString = getResponse.getSourceAsString();
+                return JSON.parseObject(sourceAsString, Block.class);
+            } else {
+                logger.error("not found block by id: {}", blockHash);
+            }
+        } catch (IOException e) {
+           logger.error("get block content: ",e);
+        }
+        return null;
+    }
+
 
     public Result<Block> getBlockIds(long blockNumber, int count) {
         SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
@@ -185,10 +204,11 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, 0);
+        bulk(blocks, Collections.EMPTY_SET);
     }
 
-    public void bulk(List<Block> blockList, long deleteOrSkipIndex) {
+
+    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -201,21 +221,22 @@ public class ElasticSearchHandler {
         String eventIndex = ServiceUtils.getIndex(network, Constant.EVENT_INDEX);
         String pendingIndex = ServiceUtils.getIndex(network, Constant.PENDING_TXN_INDEX);
         String transferIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_INDEX);
+        boolean isDeleted = false;
         for (Block block : blockList) {
             //transform difficulty
             BlockHeader header = block.getHeader();
             transferDifficulty(header);
             block.setHeader(header);
             //add block ids
-            if (deleteOrSkipIndex > 0) {
-                //fork block handle
-                if (header.getHeight() == deleteOrSkipIndex) {
-                    logger.warn("fork block, skip: {}", deleteOrSkipIndex);
-                } else {
-                    //上一轮已经添加ids，需要删掉
-                    DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
-                    deleteRequest.id(String.valueOf(deleteOrSkipIndex));
-                    bulkRequest.add(deleteRequest);
+            if (deleteForkBlockIds.size() > 0) {
+                if(! isDeleted) {
+                    for(long forkId: deleteForkBlockIds) {
+                        DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
+                        deleteRequest.id(String.valueOf(forkId));
+                        bulkRequest.add(deleteRequest);
+                    }
+                    isDeleted = true;
+                    logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
                 }
             } else {
                 bulkRequest.add(buildBlockRequest(block, blockIndex));

@@ -27,8 +27,16 @@ public class SearchApplication {
     public static void main(String[] args) {
         logger.info("start search service: {}", args);
         Map<String, String> envMap = System.getenv();
-        for (String env: envMap.keySet()) {
-            logger.info("{} : {}", env, envMap.get(env));
+        String progArgs = envMap.get("PROG_ARGS");
+        logger.info("PROG_ARGS: {}", progArgs);
+        if(progArgs!= null && progArgs.length() > 0) {
+         //set env to args for docker environment
+         String[] progs = progArgs.split(" ");
+         int i = 0;
+         for(String prog: progs) {
+             args[i] = prog;
+             i++;
+         }
         }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
         if (args != null && args.length >= 2) {

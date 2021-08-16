@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcoin-search-repair-deployment
+  namespace: starcoin-main
+  labels:
+    app: starcoin-search-repair
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starcoin-search-repair
+  template:
+    metadata:
+      labels:
+        app: starcoin-search-repair
+    spec:
+      containers:
+        - name: starcoin-search-repair
+          image: starcoin/starcoin_search:sha-1e53845
+          ports:
+            - containerPort: 8300
+          env:
+            - name: HOSTS
+              value: "main6.seed.starcoin.org"
+            - name: NETWORK
+              value: "main.0727"
+            - name: BULK_SIZE
+              value: "100"
+            - name: STARCOIN_ES_URL
+              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "https"
+            - name: STARCOIN_ES_PORT
+              value: "443"
+            - name: STARCOIN_ES_USER
+              value: elastic
+            - name: PROG_ARGS
+              value: "auto_repair 1469200"
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password

@@ -2,6 +2,7 @@ package org.starcoin.search.config;
 
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
@@ -13,6 +14,9 @@ import java.util.Properties;
 
 @Configuration
 public class QuartzConfig {
+    @Value("${starcoin.indexer.auto_start}")
+    private boolean autoStart;
+
     @Autowired
     private SearchJobFactory searchJobFactory;
 
@@ -70,7 +74,7 @@ public class QuartzConfig {
         try {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
-            schedulerFactoryBean.setAutoStartup(true);
+            schedulerFactoryBean.setAutoStartup(autoStart);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -95,7 +99,9 @@ public class QuartzConfig {
         scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
         scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
-//        scheduler.start();// 服务启动
+        if(autoStart) {
+            scheduler.start();
+        }
         return scheduler;
     }
 }

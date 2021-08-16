@@ -37,6 +37,8 @@ spec:
               value: elastic
             - name: PROG_ARGS
               value: "auto_repair 1469200"
+            - name: INDEXER_AUTO_START
+              value: "false"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

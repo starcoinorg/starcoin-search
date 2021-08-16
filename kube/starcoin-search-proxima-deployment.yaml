@@ -35,6 +35,10 @@ spec:
               value: "443"
             - name: STARCOIN_ES_USER
               value: elastic
+            - name: PROG_ARGS
+              value: ""
+            - name: INDEXER_AUTO_START
+              value: "true"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

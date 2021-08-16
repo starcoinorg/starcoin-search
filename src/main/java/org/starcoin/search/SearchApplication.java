@@ -1,7 +1,5 @@
 package org.starcoin.search;
 
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +21,6 @@ import java.net.URL;
 
 @SpringBootApplication
 public class SearchApplication {
-
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
 
     public static void main(String[] args) {
@@ -71,18 +68,7 @@ public class SearchApplication {
                     }
                 }
             }
-        } else {
-            //default mode
-            Scheduler scheduler = (Scheduler) context.getBean("scheduler");
-            if (scheduler != null) {
-                try {
-                    scheduler.start();
-                } catch (SchedulerException e) {
-                    e.printStackTrace();
-                }
-            }
         }
-
     }
 
     @Bean(name = "base_url")

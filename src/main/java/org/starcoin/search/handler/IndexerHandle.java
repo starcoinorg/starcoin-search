@@ -98,6 +98,7 @@ public class IndexerHandle extends QuartzJobBean {
                     long lastMasterNumber = readNumber - 1;
                     String forkHeaderParentHash;
                     deleteForkBlockIds.add(currentHandleHeader.getHeight());
+                    int retryCount = 0;
                     do {
                         //获取上一个block
                         lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
@@ -114,16 +115,27 @@ public class IndexerHandle extends QuartzJobBean {
                                 break;
                             }else {
                                 lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
+                                if(lastForkBlock == null) {
+                                    logger.warn("get last fork block null: {}", forkHeaderParentHash);
+                                    //read from node
+                                    lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
+                                }
                                 if(lastForkBlock != null) {
                                     forkHeader = lastForkBlock.getHeader();
                                     deleteForkBlockIds.add(lastMasterNumber);
                                     lastMasterNumber --;
                                 }else {
-                                    logger.warn("get last fork block null: {}", forkHeaderParentHash);
+                                    logger.warn("forked block es and node both null: {}", forkHeaderParentHash);
+                                    retryCount ++;
                                 }
                             }
                         }else {
                             logger.warn("get last aster Block null: {}", lastMasterNumber);
+                            retryCount ++;
+                        }
+                        if (retryCount > 100)  {
+                            logger.error("fork handle retry 100 times,must manual handle: {}", lastMasterNumber);
+                            break;
                         }
                     }while (true);
                 }

@@ -1,6 +1,7 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
 import org.bouncycastle.util.Arrays;
@@ -23,10 +24,9 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +38,7 @@ import org.starcoin.search.bean.Offset;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
+import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.event.DepositEvent;
 import org.starcoin.utils.Hex;
 
@@ -76,10 +77,10 @@ public class ElasticSearchHandler {
         }
     }
 
-    public Offset getRemoteOffset() {
+    public Offset getRemoteOffset(String index) {
         GetMappingsRequest request = new GetMappingsRequest();
         try {
-            String offsetIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
+            String offsetIndex = ServiceUtils.getIndex(network, index);
             request.indices(offsetIndex);
             GetMappingsResponse response = client.indices().getMapping(request, RequestOptions.DEFAULT);
             MappingMetadata data = response.mappings().get(offsetIndex);
@@ -96,8 +97,8 @@ public class ElasticSearchHandler {
         return null;
     }
 
-    public void setRemoteOffset(Offset offset) {
-        String offsetIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
+    public void setRemoteOffset(Offset offset,String index) {
+        String offsetIndex = ServiceUtils.getIndex(network, index);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -288,6 +289,22 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("bulk block error:", e);
         }
+    }
+
+    public void bulkAddPayload(List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
+        String payloadIndex = ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX);
+
+        BulkRequest bulkRequest = new BulkRequest();
+        for(Transaction transaction:transactionList){
+            String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
+            TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
+
+            IndexRequest blockContent = new IndexRequest(payloadIndex);
+            blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
+            bulkRequest.add(blockContent);
+        }
+        BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+        logger.info("bulk block result: {}", response.buildFailureMessage());
     }
 
     private void transferDifficulty(BlockHeader header) {
@@ -558,4 +575,25 @@ public class ElasticSearchHandler {
             this.tokenCode = tokenCode;
         }
     }
+
+    public List<Transaction> getByTimestamp(String network, long ts) throws IOException {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network , Constant.TRANSACTION_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(20);
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("timestamp").gt(ts);
+        boolQuery.must(termQueryBuilder);
+        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        searchSourceBuilder.query(termQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.sort("timestamp", SortOrder.ASC);
+
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        Result<Transaction> result = ServiceUtils.getSearchResult(searchResponse, Transaction.class);
+
+        List<Transaction> transactions = result.getContents();
+        return transactions;
+    }
+
 }

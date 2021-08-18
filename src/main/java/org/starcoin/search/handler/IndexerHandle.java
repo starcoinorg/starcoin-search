@@ -12,6 +12,7 @@ import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
 import org.starcoin.search.bean.Offset;
+import org.starcoin.search.constant.Constant;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public class IndexerHandle extends QuartzJobBean {
 
     @PostConstruct
     public void initOffset() {
-        localOffset = elasticSearchHandler.getRemoteOffset();
+        localOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
         //update current handle header
         try {
             if (localOffset != null) {
@@ -52,7 +53,7 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.warn("offset is null,init reset to genesis");
                 currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
                 localOffset = new Offset(0, currentHandleHeader.getBlockHash());
-                elasticSearchHandler.setRemoteOffset(localOffset);
+                elasticSearchHandler.setRemoteOffset(localOffset, Constant.BLOCK_CONTENT_INDEX);
                 logger.info("init offset ok: {}", localOffset);
             }
         } catch (JSONRPC2SessionException e) {
@@ -67,7 +68,7 @@ public class IndexerHandle extends QuartzJobBean {
 //            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
             initOffset();
         }
-        Offset remoteOffset = elasticSearchHandler.getRemoteOffset();
+        Offset remoteOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
         logger.info("current remote offset: {}", remoteOffset);
         if (remoteOffset == null) {
             logger.warn("offset must not null, please check blocks.mapping!!");
@@ -151,7 +152,7 @@ public class IndexerHandle extends QuartzJobBean {
             //update offset
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());
-            elasticSearchHandler.setRemoteOffset(localOffset);
+            elasticSearchHandler.setRemoteOffset(localOffset,Constant.BLOCK_CONTENT_INDEX);
             logger.info("indexer update success: {}", localOffset);
         } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);

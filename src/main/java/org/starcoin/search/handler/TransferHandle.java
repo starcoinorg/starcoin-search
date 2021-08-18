@@ -28,6 +28,7 @@ import org.starcoin.search.constant.Constant;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
@@ -137,8 +138,8 @@ public class TransferHandle {
         int successSize = offset;
         for (Transfer transfer : transferList) {
             // update token index
-            long amount = transferAmount(transfer.getAmount());
-            IndexRequest senderRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getSender(), -amount, transfer.getTimestamp());
+            BigInteger amount = transfer.getAmountValue();
+            IndexRequest senderRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getSender(), amount.negate(), transfer.getTimestamp());
             if (senderRequest != null) {
                 bulkRequest.add(senderRequest);
             } else {
@@ -166,33 +167,7 @@ public class TransferHandle {
         }
     }
 
-    private long transferAmount(String amountStr) {
-        if (amountStr == null && (!amountStr.startsWith("0x"))) {
-            logger.warn("amount not right: {}", amountStr);
-            return 0;
-        }
-        int len = amountStr.length();
-        int index = 0;
-        for (int i = len - 1; i > 1; i--) {
-            if (!(amountStr.charAt(i) == '0')) {
-                index = i;
-                break;
-            }
-        }
-        try {
-            if (index + 1 > 2) {
-                String tempStr = amountStr.substring(2, index + 1);
-                return Long.parseLong(tempStr, 16);
-            } else {
-                logger.warn("amountStr too short: {}", amountStr);
-            }
-        } catch (NumberFormatException e) {
-            logger.error("transfer amount error:", e);
-        }
-        return 0;
-    }
-
-    private IndexRequest buildJournalRequest(String typeTag, String address, long amount, long timestamp) {
+    private IndexRequest buildJournalRequest(String typeTag, String address, BigInteger amount, long timestamp) {
         XContentBuilder addressBuilder = getJournalBuilder(typeTag, address, amount, timestamp);
         if (addressBuilder != null) {
             String addressIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_JOURNAL_INDEX);
@@ -203,7 +178,7 @@ public class TransferHandle {
         return null;
     }
 
-    private XContentBuilder getJournalBuilder(String typeTag, String address, long amount, long timestamp) {
+    private XContentBuilder getJournalBuilder(String typeTag, String address, BigInteger amount, long timestamp) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-98bc5d8
+          image: starcoin/starcoin_search:sha-ed55950
           ports:
             - containerPort: 8300
           env:

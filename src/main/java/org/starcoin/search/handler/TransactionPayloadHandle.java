@@ -28,6 +28,26 @@ public class TransactionPayloadHandle extends QuartzJobBean {
 
     private static Logger logger = LoggerFactory.getLogger(TransactionPayloadHandle.class);
 
+    private ObjectMapper objectMapper;
+
+    public TransactionPayloadHandle() {
+        objectMapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(StructTag.class, new StructTagDeserializer());
+        module.addDeserializer(TypeTag.class, new TypeTagDeserializer());
+        module.addDeserializer(ModuleId.class, new ModuleDeserializer());
+        module.addDeserializer(ScriptFunction.class, new ScriptFunctionDeserializer());
+        module.addDeserializer(TransactionPayload.class, new TransactionPayloadDeserializer());
+
+        module.addSerializer(TransactionPayload.class, new TransactionPayloadSerializer());
+        module.addSerializer(TypeTag.class, new TypeTagSerializer());
+        module.addSerializer(StructTag.class, new StructTagSerializer());
+        module.addSerializer(ScriptFunction.class, new ScriptFunctionSerializer());
+        module.addSerializer(ModuleId.class, new ModuleIdSerializer());
+
+        objectMapper.registerModule(module);
+    }
+
     @Autowired
     private ElasticSearchHandler elasticSearchHandler;
 
@@ -46,31 +66,13 @@ public class TransactionPayloadHandle extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         Offset transactionPayloadRemoteOffset = elasticSearchHandler.getRemoteOffset(Constant.PAYLOAD_INDEX);
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(StructTag.class,new StructTagDeserializer());
-        module.addDeserializer(TypeTag.class,new TypeTagDeserializer());
-        module.addDeserializer(ModuleId.class,new ModuleDeserializer());
-        module.addDeserializer(ScriptFunction.class,new ScriptFunctionDeserializer());
-        module.addDeserializer(TransactionPayload.class,new TransactionPayloadDeserializer());
-
-        module.addSerializer(TransactionPayload.class,new TransactionPayloadSerializer());
-        module.addSerializer(TypeTag.class,new TypeTagSerializer());
-        module.addSerializer(StructTag.class,new StructTagSerializer());
-        module.addSerializer(ScriptFunction.class,new ScriptFunctionSerializer());
-        module.addSerializer(ModuleId.class,new ModuleIdSerializer());
-
-        objectMapper.registerModule(module);
-
-        while (true){
-            try {
-                List<Transaction> transactionList = elasticSearchHandler.getByTimestamp(network,transactionPayloadRemoteOffset.getBlockHeight());
-                elasticSearchHandler.bulkAddPayload(transactionList,objectMapper);
-                Offset currentOffset = new Offset(transactionList.get(transactionList.size()-1).getTimestamp(),null);
-                elasticSearchHandler.setRemoteOffset(currentOffset,Constant.PAYLOAD_INDEX);
-            } catch (IOException | DeserializationError e) {
-                logger.warn("query es failed .",e);
-            }
+        try {
+            List<Transaction> transactionList = elasticSearchHandler.getByTimestamp(network, transactionPayloadRemoteOffset.getBlockHeight());
+            elasticSearchHandler.bulkAddPayload(transactionList, objectMapper);
+            Offset currentOffset = new Offset(transactionList.get(transactionList.size() - 1).getTimestamp(), null);
+            elasticSearchHandler.setRemoteOffset(currentOffset, Constant.PAYLOAD_INDEX);
+        } catch (IOException | DeserializationError e) {
+            logger.warn("query es failed .", e);
         }
     }
 

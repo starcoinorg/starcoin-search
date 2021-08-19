@@ -294,7 +294,8 @@ public class ElasticSearchHandler {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            payloadOffset.setBlockHeight(minTimestamp);
+            if(isDeleted)
+                payloadOffset.setBlockHeight(minTimestamp);
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block error:", e);

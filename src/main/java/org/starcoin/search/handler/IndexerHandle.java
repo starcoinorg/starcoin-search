@@ -148,11 +148,13 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.debug("add block: {}", block.getHeader());
             }
             //bulk execute
-            elasticSearchHandler.bulk(blockList, deleteForkBlockIds);
+            Offset payloadOffset = new Offset(0,"");
+            elasticSearchHandler.bulk(blockList, deleteForkBlockIds, payloadOffset);
             //update offset
             localOffset.setBlockHeight(currentHandleHeader.getHeight());
             localOffset.setBlockHash(currentHandleHeader.getBlockHash());
             elasticSearchHandler.setRemoteOffset(localOffset,Constant.BLOCK_CONTENT_INDEX);
+            elasticSearchHandler.setRemoteOffset(payloadOffset,Constant.PAYLOAD_INDEX);
             logger.info("indexer update success: {}", localOffset);
         } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);

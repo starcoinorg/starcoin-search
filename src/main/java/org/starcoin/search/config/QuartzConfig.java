@@ -79,7 +79,7 @@ public class QuartzConfig {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(15)
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleMarketCapIndexer())
+        return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
                 .withIdentity("txn_payload")
                 .withSchedule(scheduleBuilder)
                 .build();

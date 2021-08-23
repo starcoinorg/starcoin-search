@@ -341,12 +341,14 @@ public class ElasticSearchHandler {
 
         BulkRequest bulkRequest = new BulkRequest();
         for (Transaction transaction : transactionList) {
-            String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
-            TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
+            if(transaction.getUserTransaction() != null) {
+                String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
+                TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
 
-            IndexRequest blockContent = new IndexRequest(payloadIndex);
-            blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
-            bulkRequest.add(blockContent);
+                IndexRequest blockContent = new IndexRequest(payloadIndex);
+                blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
+                bulkRequest.add(blockContent);
+            }
         }
         BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
         logger.info("bulk block result: {}", response.buildFailureMessage());
@@ -636,6 +638,8 @@ public class ElasticSearchHandler {
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
             if (userTransaction != null) {
                 transaction.setUserTransaction(userTransaction.getUserTransaction());
+            }else{
+                logger.warn("get transation inner txn is null: {}", transaction.getTransactionHash());
             }
         }
     }

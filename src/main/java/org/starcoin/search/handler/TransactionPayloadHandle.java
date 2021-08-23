@@ -66,6 +66,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
             elasticSearchHandler.bulkAddPayload(transactionList, objectMapper);
             Offset currentOffset = new Offset(transactionList.get(transactionList.size() - 1).getTimestamp(), null);
             elasticSearchHandler.setRemoteOffset(currentOffset, Constant.PAYLOAD_INDEX);
+            logger.info("update payload ok: {}", currentOffset);
         } catch (IOException | DeserializationError | JSONRPC2SessionException e) {
             logger.warn("query es failed .", e);
         }

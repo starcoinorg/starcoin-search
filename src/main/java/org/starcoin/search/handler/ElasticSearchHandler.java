@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.bouncycastle.util.Arrays;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -36,6 +37,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
+import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.Offset;
 import org.starcoin.search.constant.Constant;
@@ -55,12 +57,14 @@ public class ElasticSearchHandler {
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchHandler.class);
     private final RestHighLevelClient client;
     private final StateRPCClient stateRPCClient;
+    private final TransactionRPCClient transactionRPCClient;
     @Value("${starcoin.network}")
     private String network;
 
-    public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient) {
+    public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient, TransactionRPCClient transactionRPCClient) {
         this.client = client;
         this.stateRPCClient = stateRPCClient;
+        this.transactionRPCClient = transactionRPCClient;
     }
 
     @PostConstruct
@@ -625,6 +629,15 @@ public class ElasticSearchHandler {
 
         List<Transaction> transactions = result.getContents();
         return transactions;
+    }
+
+    public void addUserTransactionToList(List<Transaction> transactionList) throws JSONRPC2SessionException {
+        for(Transaction transaction: transactionList) {
+            Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
+            if (userTransaction != null) {
+                transaction.setUserTransaction(userTransaction.getUserTransaction());
+            }
+        }
     }
 
     static class AddressHolder {

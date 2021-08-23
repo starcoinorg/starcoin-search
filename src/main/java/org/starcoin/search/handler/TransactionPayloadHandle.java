@@ -3,6 +3,7 @@ package org.starcoin.search.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.serde.DeserializationError;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
@@ -61,10 +62,11 @@ public class TransactionPayloadHandle extends QuartzJobBean {
 
         try {
             List<Transaction> transactionList = elasticSearchHandler.getByTimestamp(network, transactionPayloadRemoteOffset.getBlockHeight());
+            elasticSearchHandler.addUserTransactionToList(transactionList);
             elasticSearchHandler.bulkAddPayload(transactionList, objectMapper);
             Offset currentOffset = new Offset(transactionList.get(transactionList.size() - 1).getTimestamp(), null);
             elasticSearchHandler.setRemoteOffset(currentOffset, Constant.PAYLOAD_INDEX);
-        } catch (IOException | DeserializationError e) {
+        } catch (IOException | DeserializationError | JSONRPC2SessionException e) {
             logger.warn("query es failed .", e);
         }
     }

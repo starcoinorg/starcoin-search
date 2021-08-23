@@ -24,7 +24,10 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -71,6 +74,7 @@ public class ElasticSearchHandler {
             ServiceUtils.createIndexIfNotExist(client, network, Constant.EVENT_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.PENDING_TXN_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
+            ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
             logger.info("index init ok!");
         } catch (IOException e) {
             logger.error("init index error:", e);
@@ -97,7 +101,7 @@ public class ElasticSearchHandler {
         return null;
     }
 
-    public void setRemoteOffset(Offset offset,String index) {
+    public void setRemoteOffset(Offset offset, String index) {
         String offsetIndex = ServiceUtils.getIndex(network, index);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
         try {
@@ -147,6 +151,7 @@ public class ElasticSearchHandler {
         }
         return null;
     }
+
     public Block getBlockContent(String blockHash) {
         GetRequest getRequest = new GetRequest(ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX), blockHash);
         GetResponse getResponse = null;
@@ -159,7 +164,7 @@ public class ElasticSearchHandler {
                 logger.error("not found block by id: {}", blockHash);
             }
         } catch (IOException e) {
-           logger.error("get block content: ",e);
+            logger.error("get block content: ", e);
         }
         return null;
     }
@@ -205,10 +210,10 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, Collections.EMPTY_SET,new Offset(0,""));
+        bulk(blocks, Collections.EMPTY_SET, new Offset(0, ""));
     }
 
-    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds,Offset payloadOffset) {
+    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds, Offset payloadOffset) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -231,16 +236,16 @@ public class ElasticSearchHandler {
             block.setHeader(header);
             //add block ids
             if (deleteForkBlockIds.size() > 0) {
-                if(! isDeleted) {
-                    for(long forkId: deleteForkBlockIds) {
+                if (!isDeleted) {
+                    for (long forkId : deleteForkBlockIds) {
                         DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
                         deleteRequest.id(String.valueOf(forkId));
                         bulkRequest.add(deleteRequest);
                     }
-                    try{
-                        this.deleteTransactionPayload(deleteForkBlockIds,bulkRequest);
-                    }catch (IOException e){
-                        logger.warn("delete payload exception",e);
+                    try {
+                        this.deleteTransactionPayload(deleteForkBlockIds, bulkRequest);
+                    } catch (IOException e) {
+                        logger.warn("delete payload exception", e);
                     }
                     isDeleted = true;
                     logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
@@ -283,7 +288,7 @@ public class ElasticSearchHandler {
                         bulkRequest.add(request);
                     }
                 }
-                if(minTimestamp> transaction.getTimestamp()){
+                if (minTimestamp > transaction.getTimestamp()) {
                     minTimestamp = transaction.getTimestamp();
                 }
             }
@@ -294,7 +299,7 @@ public class ElasticSearchHandler {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            if(isDeleted)
+            if (isDeleted)
                 payloadOffset.setBlockHeight(minTimestamp);
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
@@ -303,13 +308,13 @@ public class ElasticSearchHandler {
     }
 
     public void deleteTransactionPayload(Set<Long> deleteForkBlockIds, BulkRequest bulkRequest) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network , Constant.TRANSACTION_INDEX));
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
         boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
-        for(long id:deleteForkBlockIds){
-            boolQuery.should(QueryBuilders.termQuery("block_metadata.number",id));
+        for (long id : deleteForkBlockIds) {
+            boolQuery.should(QueryBuilders.termQuery("block_metadata.number", id));
         }
         searchSourceBuilder.query(boolQuery);
         searchRequest.source(searchSourceBuilder);
@@ -320,8 +325,8 @@ public class ElasticSearchHandler {
 
         List<String> transactions = result.getContents();
 
-        for(String transactionHash:transactions){
-            DeleteRequest deleteRequest = new DeleteRequest(ServiceUtils.getIndex(network , Constant.PAYLOAD_INDEX));
+        for (String transactionHash : transactions) {
+            DeleteRequest deleteRequest = new DeleteRequest(ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX));
             deleteRequest.id(transactionHash);
             bulkRequest.add(deleteRequest);
         }
@@ -331,7 +336,7 @@ public class ElasticSearchHandler {
         String payloadIndex = ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX);
 
         BulkRequest bulkRequest = new BulkRequest();
-        for(Transaction transaction:transactionList){
+        for (Transaction transaction : transactionList) {
             String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
             TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
 
@@ -602,18 +607,8 @@ public class ElasticSearchHandler {
         return request;
     }
 
-    static class AddressHolder {
-        private final String address;
-        private final String tokenCode;
-
-        AddressHolder(String address, String tokenCode) {
-            this.address = address;
-            this.tokenCode = tokenCode;
-        }
-    }
-
     public List<Transaction> getByTimestamp(String network, long ts) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network , Constant.TRANSACTION_INDEX));
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(20);
 
@@ -630,6 +625,16 @@ public class ElasticSearchHandler {
 
         List<Transaction> transactions = result.getContents();
         return transactions;
+    }
+
+    static class AddressHolder {
+        private final String address;
+        private final String tokenCode;
+
+        AddressHolder(String address, String tokenCode) {
+            this.address = address;
+            this.tokenCode = tokenCode;
+        }
     }
 
 }

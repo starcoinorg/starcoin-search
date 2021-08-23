@@ -29,14 +29,14 @@ public class SearchApplication {
         Map<String, String> envMap = System.getenv();
         String progArgs = envMap.get("PROG_ARGS");
         logger.info("PROG_ARGS: {}", progArgs);
-        if(progArgs!= null && progArgs.length() > 0) {
-         //set env to args for docker environment
-         String[] progs = progArgs.split(" ");
-         int i = 0;
-         for(String prog: progs) {
-             args[i] = prog;
-             i++;
-         }
+        if (progArgs != null && progArgs.length() > 0) {
+            //set env to args for docker environment
+            String[] progs = progArgs.split(" ");
+            int i = 0;
+            for (String prog : progs) {
+                args[i] = prog;
+                i++;
+            }
         }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
         if (args != null && args.length >= 2) {

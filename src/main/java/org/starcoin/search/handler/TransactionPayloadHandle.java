@@ -24,6 +24,10 @@ public class TransactionPayloadHandle extends QuartzJobBean {
     private static Logger logger = LoggerFactory.getLogger(TransactionPayloadHandle.class);
 
     private ObjectMapper objectMapper;
+    @Autowired
+    private ElasticSearchHandler elasticSearchHandler;
+    @Value("${starcoin.network}")
+    private String network;
 
     public TransactionPayloadHandle() {
         objectMapper = new ObjectMapper();
@@ -42,12 +46,6 @@ public class TransactionPayloadHandle extends QuartzJobBean {
 
         objectMapper.registerModule(module);
     }
-
-    @Autowired
-    private ElasticSearchHandler elasticSearchHandler;
-
-    @Value("${starcoin.network}")
-    private String network;
 
     public ElasticSearchHandler getElasticSearchHandler() {
         return elasticSearchHandler;

@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_search:sha-98bc5d8
+          image: starcoin/starcoin_search:sha-f1fa802
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard1.seed.starcoin.org"
+              value: "barnard2.seed.starcoin.org"
             - name: NETWORK
               value: "barnard"
             - name: BULK_SIZE

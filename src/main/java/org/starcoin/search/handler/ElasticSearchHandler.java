@@ -39,7 +39,7 @@ import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
-import org.starcoin.search.bean.Offset;
+import org.starcoin.search.bean.BlockOffset;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -67,6 +67,10 @@ public class ElasticSearchHandler {
         this.transactionRPCClient = transactionRPCClient;
     }
 
+    public RestHighLevelClient getClient() {
+        return client;
+    }
+
     @PostConstruct
     public void initIndexes() {
         logger.info("init indices...");
@@ -85,7 +89,7 @@ public class ElasticSearchHandler {
         }
     }
 
-    public Offset getRemoteOffset(String index) {
+    public BlockOffset getRemoteOffset(String index) {
         GetMappingsRequest request = new GetMappingsRequest();
         try {
             String offsetIndex = ServiceUtils.getIndex(network, index);
@@ -97,7 +101,7 @@ public class ElasticSearchHandler {
                 Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<String, Object>) meta).get("tip");
                 String blockHash = tip.get("block_hash").toString();
                 Integer blockHeight = (Integer) tip.get("block_number");
-                return new Offset(blockHeight.longValue(), blockHash);
+                return new BlockOffset(blockHeight.longValue(), blockHash);
             }
         } catch (Exception e) {
             logger.error("get remote offset error:", e);
@@ -105,7 +109,7 @@ public class ElasticSearchHandler {
         return null;
     }
 
-    public void setRemoteOffset(Offset offset, String index) {
+    public void setRemoteOffset(BlockOffset blockOffset, String index) {
         String offsetIndex = ServiceUtils.getIndex(network, index);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
         try {
@@ -116,8 +120,8 @@ public class ElasticSearchHandler {
                 {
                     builder.startObject("tip");
                     {
-                        builder.field("block_hash", offset.getBlockHash());
-                        builder.field("block_number", offset.getBlockHeight());
+                        builder.field("block_hash", blockOffset.getBlockHash());
+                        builder.field("block_number", blockOffset.getBlockHeight());
                     }
                     builder.endObject();
                 }
@@ -126,7 +130,7 @@ public class ElasticSearchHandler {
             builder.endObject();
             request.source(builder);
             client.indices().putMapping(request, RequestOptions.DEFAULT);
-            logger.info("remote offset update ok : {}", offset);
+            logger.info("remote offset update ok : {}", blockOffset);
         } catch (Exception e) {
             logger.error("get remote offset error:", e);
         }
@@ -214,10 +218,10 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, Collections.EMPTY_SET, new Offset(0, ""));
+        bulk(blocks, Collections.EMPTY_SET, new BlockOffset(0, ""));
     }
 
-    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds, Offset payloadOffset) {
+    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds, BlockOffset payloadOffset) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -336,22 +340,19 @@ public class ElasticSearchHandler {
         }
     }
 
-    public void bulkAddPayload(List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
-        String payloadIndex = ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX);
-
+    public void bulkAddPayload(String  payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
         for (Transaction transaction : transactionList) {
-            if(transaction.getUserTransaction() != null) {
+            if (transaction.getUserTransaction() != null) {
                 String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
                 TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
-
                 IndexRequest blockContent = new IndexRequest(payloadIndex);
                 blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
                 bulkRequest.add(blockContent);
             }
         }
         BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-        logger.info("bulk block result: {}", response.buildFailureMessage());
+        logger.info("bulk txn payload result: {}", response.buildFailureMessage());
     }
 
     private void transferDifficulty(BlockHeader header) {
@@ -613,16 +614,18 @@ public class ElasticSearchHandler {
         return request;
     }
 
-    public List<Transaction> getByTimestamp(String network, long ts) throws IOException {
+
+    public List<Transaction> getTransactionByTimestamp(String network, String timestamp) throws IOException {
         SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(20);
 
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("timestamp").gte(ts);
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("timestamp").gt(timestamp);
         boolQuery.must(termQueryBuilder);
         boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
         searchSourceBuilder.query(boolQuery);
+
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.sort("timestamp", SortOrder.ASC);
 
@@ -634,11 +637,11 @@ public class ElasticSearchHandler {
     }
 
     public void addUserTransactionToList(List<Transaction> transactionList) throws JSONRPC2SessionException {
-        for(Transaction transaction: transactionList) {
+        for (Transaction transaction : transactionList) {
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
             if (userTransaction != null) {
                 transaction.setUserTransaction(userTransaction.getUserTransaction());
-            }else{
+            } else {
                 logger.warn("get transation inner txn is null: {}", transaction.getTransactionHash());
             }
         }

@@ -2,13 +2,13 @@ package org.starcoin.search.bean;
 
 import com.alibaba.fastjson.annotation.JSONField;
 
-public class Offset {
+public class BlockOffset {
     @JSONField(name = "block_number")
     private long blockHeight;
     @JSONField(name = "block_hash")
     private String blockHash;
 
-    public Offset(long blockHeight, String blockHash) {
+    public BlockOffset(long blockHeight, String blockHash) {
         this.blockHeight = blockHeight;
         this.blockHash = blockHash;
     }

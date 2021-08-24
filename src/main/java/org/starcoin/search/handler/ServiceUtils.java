@@ -6,21 +6,24 @@ import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.client.indices.*;
+import org.elasticsearch.cluster.metadata.MappingMetadata;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.SearchHit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starcoin.api.Result;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
+import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.Hex;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ServiceUtils {
 
@@ -47,6 +50,49 @@ public class ServiceUtils {
         GetIndexRequest getRequest = new GetIndexRequest(currentIndex);
         if (!client.indices().exists(getRequest, RequestOptions.DEFAULT)) {
             CreateIndexResponse response = client.indices().create(new CreateIndexRequest(currentIndex), RequestOptions.DEFAULT);
+        }
+    }
+
+    static TransferOffset getRemoteOffset(RestHighLevelClient client, String offsetIndex) {
+        GetMappingsRequest request = new GetMappingsRequest();
+        try {
+            request.indices(offsetIndex);
+            GetMappingsResponse response = client.indices().getMapping(request, RequestOptions.DEFAULT);
+            MappingMetadata data = response.mappings().get(offsetIndex);
+            Object meta = data.getSourceAsMap().get("_meta");
+            if (meta != null) {
+                TransferOffset transferOffset = new TransferOffset();
+                Map<String, Object> map = (Map<String, Object>) meta;
+                String timestamp = (String) map.get("timestamp");
+                Integer offset = (Integer) map.get("offset");
+                transferOffset.setTimestamp(timestamp);
+                transferOffset.setOffset(offset);
+                return transferOffset;
+            }
+        } catch (Exception e) {
+            logger.error("get offset error:", e);
+        }
+        return null;
+    }
+
+    static void setRemoteOffset(RestHighLevelClient client, String offsetIndex, TransferOffset offset) {
+        PutMappingRequest request = new PutMappingRequest(offsetIndex);
+        try {
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            {
+                builder.startObject("_meta");
+
+                builder.field("timestamp", offset.getTimestamp());
+                builder.field("offset", offset.getOffset());
+                builder.endObject();
+            }
+            builder.endObject();
+            request.source(builder);
+            client.indices().putMapping(request, RequestOptions.DEFAULT);
+            logger.info("remote offset update ok : {}", offset);
+        } catch (Exception e) {
+            logger.error("get transfer offset error:", e);
         }
     }
 

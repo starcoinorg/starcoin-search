@@ -7,10 +7,6 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.GetMappingsRequest;
-import org.elasticsearch.client.indices.GetMappingsResponse;
-import org.elasticsearch.client.indices.PutMappingRequest;
-import org.elasticsearch.cluster.metadata.MappingMetadata;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -30,7 +26,6 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
 
 import static org.starcoin.search.constant.Constant.TRANSFER_INDEX;
 
@@ -39,6 +34,7 @@ public class TransferHandle {
 
     private static final Logger logger = LoggerFactory.getLogger(TransferHandle.class);
     private final RestHighLevelClient client;
+    private String offsetIndex;
     @Value("${starcoin.network}")
     private String network;
 
@@ -53,6 +49,7 @@ public class TransferHandle {
             ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.ADDRESS_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_JOURNAL_INDEX);
+            offsetIndex = ServiceUtils.getIndex(network, TRANSFER_INDEX);
             logger.info(" transfer index init ok!");
         } catch (IOException e) {
             logger.error("init index error:", e);
@@ -60,48 +57,11 @@ public class TransferHandle {
     }
 
     public TransferOffset getRemoteOffset() {
-        GetMappingsRequest request = new GetMappingsRequest();
-        try {
-            String offsetIndex = ServiceUtils.getIndex(network, TRANSFER_INDEX);
-            request.indices(offsetIndex);
-            GetMappingsResponse response = client.indices().getMapping(request, RequestOptions.DEFAULT);
-            MappingMetadata data = response.mappings().get(offsetIndex);
-            Object meta = data.getSourceAsMap().get("_meta");
-            if (meta != null) {
-                TransferOffset transferOffset = new TransferOffset();
-                Map<String, Object> map = (Map<String, Object>) meta;
-                String timestamp = (String) map.get("timestamp");
-                Integer offset = (Integer) map.get("offset");
-                transferOffset.setTimestamp(timestamp);
-                transferOffset.setOffset(offset);
-                return transferOffset;
-            }
-        } catch (Exception e) {
-            logger.error("get transfer offset error:", e);
-        }
-        return null;
+        return ServiceUtils.getRemoteOffset(client, offsetIndex);
     }
 
     public void setRemoteOffset(TransferOffset offset) {
-        String offsetIndex = ServiceUtils.getIndex(network, TRANSFER_INDEX);
-        PutMappingRequest request = new PutMappingRequest(offsetIndex);
-        try {
-            XContentBuilder builder = XContentFactory.jsonBuilder();
-            builder.startObject();
-            {
-                builder.startObject("_meta");
-
-                builder.field("timestamp", offset.getTimestamp());
-                builder.field("offset", offset.getOffset());
-                builder.endObject();
-            }
-            builder.endObject();
-            request.source(builder);
-            client.indices().putMapping(request, RequestOptions.DEFAULT);
-            logger.info("remote offset update ok : {}", offset);
-        } catch (Exception e) {
-            logger.error("get transfer offset error:", e);
-        }
+        ServiceUtils.setRemoteOffset(client, offsetIndex, offset);
     }
 
     public Result<Transfer> getRangeTransfers(TransferOffset transferOffset, int count) {

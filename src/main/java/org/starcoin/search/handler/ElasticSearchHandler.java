@@ -1,8 +1,10 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.bouncycastle.util.Arrays;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -23,21 +25,25 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
+import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
-import org.starcoin.search.bean.Offset;
+import org.starcoin.search.bean.BlockOffset;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
+import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.event.DepositEvent;
 import org.starcoin.utils.Hex;
 
@@ -51,12 +57,18 @@ public class ElasticSearchHandler {
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchHandler.class);
     private final RestHighLevelClient client;
     private final StateRPCClient stateRPCClient;
+    private final TransactionRPCClient transactionRPCClient;
     @Value("${starcoin.network}")
     private String network;
 
-    public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient) {
+    public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient, TransactionRPCClient transactionRPCClient) {
         this.client = client;
         this.stateRPCClient = stateRPCClient;
+        this.transactionRPCClient = transactionRPCClient;
+    }
+
+    public RestHighLevelClient getClient() {
+        return client;
     }
 
     @PostConstruct
@@ -70,16 +82,17 @@ public class ElasticSearchHandler {
             ServiceUtils.createIndexIfNotExist(client, network, Constant.EVENT_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.PENDING_TXN_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
+            ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
             logger.info("index init ok!");
         } catch (IOException e) {
             logger.error("init index error:", e);
         }
     }
 
-    public Offset getRemoteOffset() {
+    public BlockOffset getRemoteOffset(String index) {
         GetMappingsRequest request = new GetMappingsRequest();
         try {
-            String offsetIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
+            String offsetIndex = ServiceUtils.getIndex(network, index);
             request.indices(offsetIndex);
             GetMappingsResponse response = client.indices().getMapping(request, RequestOptions.DEFAULT);
             MappingMetadata data = response.mappings().get(offsetIndex);
@@ -88,7 +101,7 @@ public class ElasticSearchHandler {
                 Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<String, Object>) meta).get("tip");
                 String blockHash = tip.get("block_hash").toString();
                 Integer blockHeight = (Integer) tip.get("block_number");
-                return new Offset(blockHeight.longValue(), blockHash);
+                return new BlockOffset(blockHeight.longValue(), blockHash);
             }
         } catch (Exception e) {
             logger.error("get remote offset error:", e);
@@ -96,8 +109,8 @@ public class ElasticSearchHandler {
         return null;
     }
 
-    public void setRemoteOffset(Offset offset) {
-        String offsetIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
+    public void setRemoteOffset(BlockOffset blockOffset, String index) {
+        String offsetIndex = ServiceUtils.getIndex(network, index);
         PutMappingRequest request = new PutMappingRequest(offsetIndex);
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -107,8 +120,8 @@ public class ElasticSearchHandler {
                 {
                     builder.startObject("tip");
                     {
-                        builder.field("block_hash", offset.getBlockHash());
-                        builder.field("block_number", offset.getBlockHeight());
+                        builder.field("block_hash", blockOffset.getBlockHash());
+                        builder.field("block_number", blockOffset.getBlockHeight());
                     }
                     builder.endObject();
                 }
@@ -117,7 +130,7 @@ public class ElasticSearchHandler {
             builder.endObject();
             request.source(builder);
             client.indices().putMapping(request, RequestOptions.DEFAULT);
-            logger.info("remote offset update ok : {}", offset);
+            logger.info("remote offset update ok : {}", blockOffset);
         } catch (Exception e) {
             logger.error("get remote offset error:", e);
         }
@@ -146,6 +159,7 @@ public class ElasticSearchHandler {
         }
         return null;
     }
+
     public Block getBlockContent(String blockHash) {
         GetRequest getRequest = new GetRequest(ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX), blockHash);
         GetResponse getResponse = null;
@@ -158,7 +172,7 @@ public class ElasticSearchHandler {
                 logger.error("not found block by id: {}", blockHash);
             }
         } catch (IOException e) {
-           logger.error("get block content: ",e);
+            logger.error("get block content: ", e);
         }
         return null;
     }
@@ -204,11 +218,10 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, Collections.EMPTY_SET);
+        bulk(blocks, Collections.EMPTY_SET, new BlockOffset(0, ""));
     }
 
-
-    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds) {
+    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds, BlockOffset payloadOffset) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
@@ -222,6 +235,8 @@ public class ElasticSearchHandler {
         String pendingIndex = ServiceUtils.getIndex(network, Constant.PENDING_TXN_INDEX);
         String transferIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_INDEX);
         boolean isDeleted = false;
+        long minTimestamp = Long.MAX_VALUE;
+
         for (Block block : blockList) {
             //transform difficulty
             BlockHeader header = block.getHeader();
@@ -229,11 +244,16 @@ public class ElasticSearchHandler {
             block.setHeader(header);
             //add block ids
             if (deleteForkBlockIds.size() > 0) {
-                if(! isDeleted) {
-                    for(long forkId: deleteForkBlockIds) {
+                if (!isDeleted) {
+                    for (long forkId : deleteForkBlockIds) {
                         DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
                         deleteRequest.id(String.valueOf(forkId));
                         bulkRequest.add(deleteRequest);
+                    }
+                    try {
+                        this.deleteTransactionPayload(deleteForkBlockIds, bulkRequest);
+                    } catch (IOException e) {
+                        logger.warn("delete payload exception", e);
                     }
                     isDeleted = true;
                     logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
@@ -276,6 +296,9 @@ public class ElasticSearchHandler {
                         bulkRequest.add(request);
                     }
                 }
+                if (minTimestamp > transaction.getTimestamp()) {
+                    minTimestamp = transaction.getTimestamp();
+                }
             }
             //add uncles
             for (BlockHeader uncle : block.getUncles()) {
@@ -284,10 +307,52 @@ public class ElasticSearchHandler {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+            if (isDeleted)
+                payloadOffset.setBlockHeight(minTimestamp);
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block error:", e);
         }
+    }
+
+    public void deleteTransactionPayload(Set<Long> deleteForkBlockIds, BulkRequest bulkRequest) throws IOException {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        for (long id : deleteForkBlockIds) {
+            boolQuery.should(QueryBuilders.termQuery("block_metadata.number", id));
+        }
+        searchSourceBuilder.query(boolQuery);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.fetchSource("transaction_hash", null);
+
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        Result<String> result = ServiceUtils.getSearchResult(searchResponse, String.class);
+
+        List<String> transactions = result.getContents();
+
+        for (String transactionHash : transactions) {
+            DeleteRequest deleteRequest = new DeleteRequest(ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX));
+            deleteRequest.id(transactionHash);
+            bulkRequest.add(deleteRequest);
+        }
+    }
+
+    public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
+        BulkRequest bulkRequest = new BulkRequest();
+        for (Transaction transaction : transactionList) {
+            if (transaction.getUserTransaction() != null) {
+                String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
+                TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
+                IndexRequest blockContent = new IndexRequest(payloadIndex);
+                blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
+                bulkRequest.add(blockContent);
+            }
+        }
+        BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+        logger.info("bulk txn payload result: {}", response.buildFailureMessage());
     }
 
     private void transferDifficulty(BlockHeader header) {
@@ -549,6 +614,39 @@ public class ElasticSearchHandler {
         return request;
     }
 
+
+    public List<Transaction> getTransactionByTimestamp(String network, String timestamp) throws IOException {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(20);
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("timestamp").gt(timestamp);
+        boolQuery.must(termQueryBuilder);
+        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        searchSourceBuilder.query(boolQuery);
+
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.sort("timestamp", SortOrder.ASC);
+
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        Result<Transaction> result = ServiceUtils.getSearchResult(searchResponse, Transaction.class);
+
+        List<Transaction> transactions = result.getContents();
+        return transactions;
+    }
+
+    public void addUserTransactionToList(List<Transaction> transactionList) throws JSONRPC2SessionException {
+        for (Transaction transaction : transactionList) {
+            Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
+            if (userTransaction != null) {
+                transaction.setUserTransaction(userTransaction.getUserTransaction());
+            } else {
+                logger.warn("get transation inner txn is null: {}", transaction.getTransactionHash());
+            }
+        }
+    }
+
     static class AddressHolder {
         private final String address;
         private final String tokenCode;
@@ -558,4 +656,5 @@ public class ElasticSearchHandler {
             this.tokenCode = tokenCode;
         }
     }
+
 }

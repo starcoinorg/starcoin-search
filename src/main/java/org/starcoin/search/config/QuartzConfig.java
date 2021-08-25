@@ -9,6 +9,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.starcoin.search.handler.IndexerHandle;
 import org.starcoin.search.handler.MarketCapIndexer;
 import org.starcoin.search.handler.SecondaryIndexer;
+import org.starcoin.search.handler.TransactionPayloadHandle;
 
 import java.util.Properties;
 
@@ -36,9 +37,14 @@ public class QuartzConfig {
     }
 
     @Bean
+    public JobDetail handleTransactionPayload() {
+        return JobBuilder.newJob(TransactionPayloadHandle.class).withIdentity("txn_payload").storeDurably().build();
+    }
+
+    @Bean
     public Trigger startQuartzTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(15)  //设置时间周期单位秒
+                .withIntervalInSeconds(20)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleIndexer())
                 .withIdentity("indexer")
@@ -49,7 +55,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startSecondTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(15)  //设置时间周期单位秒
+                .withIntervalInSeconds(30)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
                 .withIdentity("secondary")
@@ -64,6 +70,17 @@ public class QuartzConfig {
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleMarketCapIndexer())
                 .withIdentity("market")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
+    public Trigger startTransactionPayload() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(1)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
+                .withIdentity("txn_payload")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
@@ -99,7 +116,8 @@ public class QuartzConfig {
         scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
         scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
-        if(autoStart) {
+        scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
+        if (autoStart) {
             scheduler.start();
         }
         return scheduler;

@@ -340,7 +340,7 @@ public class ElasticSearchHandler {
         }
     }
 
-    public void bulkAddPayload(String  payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
+    public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
         for (Transaction transaction : transactionList) {
             if (transaction.getUserTransaction() != null) {

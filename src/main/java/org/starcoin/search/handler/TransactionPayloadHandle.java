@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
-import org.springframework.stereotype.Service;
 import org.starcoin.bean.Transaction;
 import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.search.constant.Constant;
@@ -55,22 +54,27 @@ public class TransactionPayloadHandle extends QuartzJobBean {
         //init client and index
         if (elasticSearchHandler != null) {
             client = elasticSearchHandler.getClient();
-            logger.info("init client ok!");
         }
         index = ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX);
-        logger.info("init transaction payload handle ok: {}", index);
     }
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        if(client == null) {
+        if (client == null) {
             init();
         }
         TransferOffset transactionPayloadRemoteOffset = ServiceUtils.getRemoteOffset(client, index);
         logger.info("handle txn payload: {}", transactionPayloadRemoteOffset);
+        if(transactionPayloadRemoteOffset == null) {
+            //init offset
+            transactionPayloadRemoteOffset = new TransferOffset();
+            transactionPayloadRemoteOffset.setTimestamp("0");
+            ServiceUtils.setRemoteOffset(client, index, transactionPayloadRemoteOffset);
+            logger.info("offset not init, init ok!");
+        }
         try {
             List<Transaction> transactionList = elasticSearchHandler.getTransactionByTimestamp(network, transactionPayloadRemoteOffset.getTimestamp());
-            if(!transactionList.isEmpty()) {
+            if (!transactionList.isEmpty()) {
                 elasticSearchHandler.addUserTransactionToList(transactionList);
                 elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper);
                 Transaction last = transactionList.get(transactionList.size() - 1);
@@ -78,7 +82,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                 currentOffset.setTimestamp(String.valueOf(last.getTimestamp()));
                 ServiceUtils.setRemoteOffset(client, index, currentOffset);
                 logger.info("update payload ok: {}", currentOffset);
-            }else {
+            } else {
                 logger.warn("get txn_info null");
             }
 

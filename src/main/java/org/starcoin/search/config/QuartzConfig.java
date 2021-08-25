@@ -44,7 +44,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startQuartzTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(60)  //设置时间周期单位秒
+                .withIntervalInSeconds(20)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleIndexer())
                 .withIdentity("indexer")
@@ -55,7 +55,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startSecondTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(60)  //设置时间周期单位秒
+                .withIntervalInSeconds(30)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
                 .withIdentity("secondary")

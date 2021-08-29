@@ -98,6 +98,9 @@ public class ServiceUtils {
 
     static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {
         List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
+        if(transactionList == null) {
+            return;
+        }
         for (Transaction transaction : transactionList) {
             BlockMetadata metadata = null;
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());

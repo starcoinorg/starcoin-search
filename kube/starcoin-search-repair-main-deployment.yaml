@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-search-repair
-          image: starcoin/starcoin_search:sha-98bc5d8
+          image: starcoin/starcoin_search:sha-8e351b2
           ports:
             - containerPort: 8300
           env:
@@ -36,7 +36,7 @@ spec:
             - name: STARCOIN_ES_USER
               value: elastic
             - name: PROG_ARGS
-              value: "auto_repair 1"
+              value: "auto_repair 1679900"
             - name: INDEXER_AUTO_START
               value: "false"
             - name: STARCOIN_ES_PWD

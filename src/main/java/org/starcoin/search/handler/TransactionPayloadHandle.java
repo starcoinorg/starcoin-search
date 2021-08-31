@@ -65,7 +65,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
         }
         TransferOffset transactionPayloadRemoteOffset = ServiceUtils.getRemoteOffset(client, index);
         logger.info("handle txn payload: {}", transactionPayloadRemoteOffset);
-        if(transactionPayloadRemoteOffset == null) {
+        if (transactionPayloadRemoteOffset == null) {
             //init offset
             transactionPayloadRemoteOffset = new TransferOffset();
             transactionPayloadRemoteOffset.setTimestamp("0");

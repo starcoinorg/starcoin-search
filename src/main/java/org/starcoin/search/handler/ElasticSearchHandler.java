@@ -40,7 +40,6 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.BlockOffset;
-import org.starcoin.search.bean.EventAddress;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -350,27 +349,44 @@ public class ElasticSearchHandler {
             }
             //delete event
             if(!transactionHashes.isEmpty()) {
-               List<EventAddress> events = getEventsByTransaction(transactionHashes);
+               List<EventFull> events = getEventsByTransaction(transactionHashes);
                if(events != null && !events.isEmpty()) {
-                   for (EventAddress event: events) {
+                   for (EventFull event: events) {
                        addUpdateRequest(eventIndex, event.getId(), bulkRequest);
+                       addToHolders(event, holderAddress, event.getEventAddress());
+                   }
+               }
+               //delete transfer
+                List<Transfer> transferList = getTransferByHash(network, transactionHashes);
+               if(!transferList.isEmpty()) {
+                   for (Transfer transfer: transferList
+                        ) {
+                       addUpdateRequest(transferIndex, transfer.getId(), bulkRequest);
                    }
                }
             }
-
         }
-        //delete holder
-
-        //delete transfer
+        //flush address holder
+        if(!holderAddress.isEmpty()) {
+            for(AddressHolder holder: holderAddress) {
+                long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
+                bulkRequest.add(buildHolderRequest(holder, amount));
+            }
+        }
 
         //delete transfer_journal
 
         //delete uncle
+        List<BlockHeader> uncleHeaders = block.getUncles();
+        if(!uncleHeaders.isEmpty()) {
+            for(BlockHeader header: uncleHeaders) {
 
+            }
+        }
         return true;
     }
 
-    public List<EventAddress> getEventsByTransaction(List<String> txnHashes) {
+    public List<EventFull> getEventsByTransaction(List<String> txnHashes) {
         SearchRequest searchRequest = new SearchRequest(eventIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(ELASTICSEARCH_MAX_HITS);
@@ -380,7 +396,7 @@ public class ElasticSearchHandler {
 
         BoolQueryBuilder exersiceBoolQuery = QueryBuilders.boolQuery();
         exersiceBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", txnHashes));
-        searchSourceBuilder.query(exersiceBoolQuery).fetchSource(new String[]{"_id", "event_address"}, null);
+        searchSourceBuilder.query(exersiceBoolQuery).fetchSource(new String[]{"_id", "event_address", "data"}, null);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
@@ -391,7 +407,7 @@ public class ElasticSearchHandler {
         } catch (IOException e) {
             logger.error("get events:", e);
         }
-        Result<EventAddress> result = ServiceUtils.getSearchResult(searchResponse, EventAddress.class);
+        Result<EventFull> result = ServiceUtils.getSearchResult(searchResponse, EventFull.class);
         return result.getContents();
     }
 
@@ -689,17 +705,7 @@ public class ElasticSearchHandler {
                 String tagModule = struct.getModule();
                 if (tagAddress.equals(Constant.EVENT_FILTER_ADDRESS) && tagModule.equals(Constant.EVENT_FILTER__MODULE)
                         && tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
-                    try {
-                        DepositEvent inner = DepositEvent.bcsDeserialize(Hex.decode(event.getData()));
-                        String sb = inner.token_code.address +
-                                "::" +
-                                inner.token_code.module +
-                                "::" +
-                                inner.token_code.name;
-                        holders.add(new AddressHolder(eventAddress, sb));
-                    } catch (DeserializationError deserializationError) {
-                        logger.error("decode event data error:", deserializationError);
-                    }
+                    addToHolders(event, holders, eventAddress);
                 }
                 builder.field("tag_address", tagAddress);
                 builder.field("tag_module", tagModule);
@@ -716,6 +722,43 @@ public class ElasticSearchHandler {
         return request;
     }
 
+    private void addToHolders(Event event, Set<AddressHolder> holders, String eventAddress) {
+        try {
+            DepositEvent inner = DepositEvent.bcsDeserialize(Hex.decode(event.getData()));
+            String sb = inner.token_code.address +
+                    "::" +
+                    inner.token_code.module +
+                    "::" +
+                    inner.token_code.name;
+            holders.add(new AddressHolder(eventAddress, sb));
+        } catch (DeserializationError deserializationError) {
+            logger.error("decode event data error:", deserializationError);
+        }
+    }
+
+    public List<Transfer> getTransferByHash(String network, List<String> txnHashList) {
+        List<Transfer> transfers = new ArrayList<>();
+        SearchRequest searchRequest = new SearchRequest(transferIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        //page size
+        searchSourceBuilder.size(0);
+        searchSourceBuilder.from(0);
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.must(QueryBuilders.termsQuery("txn_hash", txnHashList));
+        searchSourceBuilder.query(boolQueryBuilder).fetchSource("_id", null);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.trackTotalHits(true);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get transfer error:", e);
+            return transfers;
+        }
+        Result<Transfer> result = ServiceUtils.getSearchResult(searchResponse, Transfer.class);
+        transfers = result.getContents();
+        return transfers;
+    }
 
     public List<Transaction> getTransactionByTimestamp(String network, String timestamp) throws IOException {
         SearchRequest searchRequest = new SearchRequest(transactionIndex);

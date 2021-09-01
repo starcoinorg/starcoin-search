@@ -92,21 +92,20 @@ public class IndexerHandle extends QuartzJobBean {
                 long readNumber = localBlockOffset.getBlockHeight() + index;
                 Block block = blockRPCClient.getBlockByHeight(readNumber);
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
-                    //fork occurs
+                    //fork handle until reach forked point block
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
                     Block lastForkBlock, lastMasterBlock;
                     BlockHeader forkHeader = currentHandleHeader;
                     long lastMasterNumber = readNumber - 1;
                     String forkHeaderParentHash;
-                    deleteForkBlockIds.add(currentHandleHeader.getHeight());
                     int retryCount = 0;
                     do {
-                        //获取上一个block
+                        //获取上一个分叉的block
+                        lastForkBlock = blockRPCClient.getBlockByHash(forkHeader.getBlockHash());
+                        elasticSearchHandler.bulkForkedUpdate(lastForkBlock);
+                        //获取上一个高度主块
                         lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
                         if (lastMasterBlock != null) {
-                            // add master block to es
-                            ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastMasterBlock);
-                            logger.info("add master block:{}", lastMasterNumber);
                             forkHeaderParentHash = forkHeader.getParentHash();
                             long forkNumber = forkHeader.getHeight();
                             logger.info("fork number: {}", forkNumber);
@@ -115,6 +114,7 @@ public class IndexerHandle extends QuartzJobBean {
                                 logger.info("find fork height: {}", lastMasterNumber);
                                 break;
                             } else {
+                                logger.info("continue last forked block: {}", lastMasterNumber);
                                 lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
                                 if (lastForkBlock == null) {
                                     logger.warn("get last fork block null: {}", forkHeaderParentHash);
@@ -123,21 +123,15 @@ public class IndexerHandle extends QuartzJobBean {
                                 }
                                 if (lastForkBlock != null) {
                                     forkHeader = lastForkBlock.getHeader();
-                                    deleteForkBlockIds.add(lastMasterNumber);
                                     lastMasterNumber--;
                                 } else {
                                     logger.warn("forked block es and node both null: {}", forkHeaderParentHash);
-                                    retryCount++;
                                 }
                             }
                         } else {
                             logger.warn("get last aster Block null: {}", lastMasterNumber);
-                            retryCount++;
                         }
-                        if (retryCount > 100) {
-                            logger.error("fork handle retry 100 times,must manual handle: {}", lastMasterNumber);
-                            break;
-                        }
+
                     } while (true);
                 }
                 //set event

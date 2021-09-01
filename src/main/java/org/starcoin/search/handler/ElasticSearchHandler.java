@@ -25,10 +25,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -323,8 +320,8 @@ public class ElasticSearchHandler {
         }
     }
 
-    public boolean bulkForkedUpdate(Block block) {
-        if(block == null) return false;
+    public void bulkForkedUpdate(Block block) {
+        if(block == null) return;
         String blockHash = block.getHeader().getBlockHash();
         BulkRequest bulkRequest = new BulkRequest();
         //delete ids
@@ -359,9 +356,19 @@ public class ElasticSearchHandler {
                //delete transfer
                 List<Transfer> transferList = getTransferByHash(network, transactionHashes);
                if(!transferList.isEmpty()) {
+                   List<String> transferIdList = new ArrayList<>();
                    for (Transfer transfer: transferList
                         ) {
                        addUpdateRequest(transferIndex, transfer.getId(), bulkRequest);
+                       transferIdList.add(transfer.getId());
+                   }
+                   //delete transfer_journal
+                   //TODO history data must clear
+                   List<TransferJournal> transferJournalList = getTransferJournals(network, transferIdList);
+                   if(transferJournalList != null && ! transferJournalList.isEmpty()){
+                       for(TransferJournal journal : transferJournalList) {
+                           addUpdateRequest(transferJournalIndex, journal.getId(), bulkRequest);
+                       }
                    }
                }
             }
@@ -374,16 +381,61 @@ public class ElasticSearchHandler {
             }
         }
 
-        //delete transfer_journal
-
         //delete uncle
         List<BlockHeader> uncleHeaders = block.getUncles();
         if(!uncleHeaders.isEmpty()) {
+            List<String> blockHashes = new ArrayList<>();
             for(BlockHeader header: uncleHeaders) {
-
+                blockHashes.add(header.getBlockHash());
+            }
+            List<UncleBlock> uncles = getUncleBlockByHash(network, block.getHeader().getHeight(), blockHashes);
+            if(uncles != null && !uncles.isEmpty()) {
+                for(UncleBlock uncle : uncles) {
+                    addUpdateRequest(uncleBlockIndex, uncle.getId(), bulkRequest);
+                }
             }
         }
-        return true;
+        try {
+            BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+            logger.info("bulk forked result: {}", response.buildFailureMessage());
+        } catch (IOException e) {
+            logger.error("bulk forked error:", e);
+        }
+    }
+
+    private  List<TransferJournal> getTransferJournals(String network, List<String> transferIds) {
+        SearchRequest searchRequest = new SearchRequest(transferJournalIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.termsQuery("transfer_id", transferIds));
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get uncle block by hash error:", e);
+            return null;
+        }
+        Result<TransferJournal> result = ServiceUtils.getSearchResult(searchResponse, TransferJournal.class);
+        return result.getContents();
+    }
+
+    private  List<UncleBlock> getUncleBlockByHash(String network, long blockHeight, List<String> blockHashes) {
+        SearchRequest searchRequest = new SearchRequest(uncleBlockIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
+        boolQueryBuilder.must(QueryBuilders.termQuery("uncle_block_number", blockHeight));
+        boolQueryBuilder.must(QueryBuilders.termsQuery("header.block_hash", blockHashes));
+        searchSourceBuilder.query(boolQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get uncle block by hash error:", e);
+            return null;
+        }
+        Result<UncleBlock> result = ServiceUtils.getSearchResult(searchResponse, UncleBlock.class);
+        return result.getContents();
     }
 
     public List<EventFull> getEventsByTransaction(List<String> txnHashes) {

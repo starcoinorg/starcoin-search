@@ -44,7 +44,7 @@ public class IndexerHandle extends QuartzJobBean {
 
     @PostConstruct
     public void initOffset() {
-        localBlockOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
+        localBlockOffset = elasticSearchHandler.getRemoteOffset();
         //update current handle header
         try {
             if (localBlockOffset != null) {
@@ -53,7 +53,7 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.warn("offset is null,init reset to genesis");
                 currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
                 localBlockOffset = new BlockOffset(0, currentHandleHeader.getBlockHash());
-                elasticSearchHandler.setRemoteOffset(localBlockOffset, Constant.BLOCK_CONTENT_INDEX);
+                elasticSearchHandler.setRemoteOffset(localBlockOffset);
                 logger.info("init offset ok: {}", localBlockOffset);
             }
         } catch (JSONRPC2SessionException e) {
@@ -68,7 +68,7 @@ public class IndexerHandle extends QuartzJobBean {
 //            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
             initOffset();
         }
-        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
+        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
         logger.info("current remote offset: {}", remoteBlockOffset);
         if (remoteBlockOffset == null) {
             logger.warn("offset must not null, please check blocks.mapping!!");
@@ -153,7 +153,7 @@ public class IndexerHandle extends QuartzJobBean {
             //update offset
             localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
             localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
-            elasticSearchHandler.setRemoteOffset(localBlockOffset, Constant.BLOCK_CONTENT_INDEX);
+            elasticSearchHandler.setRemoteOffset(localBlockOffset);
             //fixme must rollback handle payload offset
 //            elasticSearchHandler.setRemoteOffset(payloadOffset, Constant.PAYLOAD_INDEX);
             logger.info("indexer update success: {}", localBlockOffset);

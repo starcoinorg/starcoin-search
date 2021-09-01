@@ -40,6 +40,7 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.BlockOffset;
+import org.starcoin.search.bean.EventAddress;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -51,6 +52,8 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 
+import static org.starcoin.search.constant.Constant.ELASTICSEARCH_MAX_HITS;
+
 @Service
 public class ElasticSearchHandler {
 
@@ -60,6 +63,18 @@ public class ElasticSearchHandler {
     private final TransactionRPCClient transactionRPCClient;
     @Value("${starcoin.network}")
     private String network;
+
+    private String blockIdsIndex;
+    private String blockContentIndex;
+    private String transactionIndex;
+    private String uncleBlockIndex;
+    private String eventIndex;
+    private String pendingTxnIndex;
+    private String transferIndex;
+    private String payloadIndex;
+    private String addressHolderIndex;
+    private String transferJournalIndex;
+    private XContentBuilder deletedBuilder;
 
     public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient, TransactionRPCClient transactionRPCClient) {
         this.client = client;
@@ -75,27 +90,29 @@ public class ElasticSearchHandler {
     public void initIndexes() {
         logger.info("init indices...");
         try {
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.BLOCK_IDS_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.BLOCK_CONTENT_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.UNCLE_BLOCK_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSACTION_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.EVENT_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.PENDING_TXN_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
-            ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
+            blockIdsIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.BLOCK_IDS_INDEX);
+            blockContentIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.BLOCK_CONTENT_INDEX);
+            uncleBlockIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.UNCLE_BLOCK_INDEX);
+            transactionIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSACTION_INDEX);
+            eventIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.EVENT_INDEX);
+            pendingTxnIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.PENDING_TXN_INDEX);
+            transferIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
+            payloadIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
+            addressHolderIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.ADDRESS_INDEX);
+            transferJournalIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_JOURNAL_INDEX);
+            deletedBuilder = deletedBuilder();
             logger.info("index init ok!");
         } catch (IOException e) {
             logger.error("init index error:", e);
         }
     }
 
-    public BlockOffset getRemoteOffset(String index) {
+    public BlockOffset getRemoteOffset() {
         GetMappingsRequest request = new GetMappingsRequest();
         try {
-            String offsetIndex = ServiceUtils.getIndex(network, index);
-            request.indices(offsetIndex);
+            request.indices(blockContentIndex);
             GetMappingsResponse response = client.indices().getMapping(request, RequestOptions.DEFAULT);
-            MappingMetadata data = response.mappings().get(offsetIndex);
+            MappingMetadata data = response.mappings().get(blockContentIndex);
             Object meta = data.getSourceAsMap().get("_meta");
             if (meta != null) {
                 Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<String, Object>) meta).get("tip");
@@ -109,9 +126,8 @@ public class ElasticSearchHandler {
         return null;
     }
 
-    public void setRemoteOffset(BlockOffset blockOffset, String index) {
-        String offsetIndex = ServiceUtils.getIndex(network, index);
-        PutMappingRequest request = new PutMappingRequest(offsetIndex);
+    public void setRemoteOffset(BlockOffset blockOffset) {
+        PutMappingRequest request = new PutMappingRequest(blockContentIndex);
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
@@ -137,7 +153,7 @@ public class ElasticSearchHandler {
     }
 
     public Block getBlockId(long blockNumber) {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
+        SearchRequest searchRequest = new SearchRequest(blockIdsIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("header.number", blockNumber);
         searchSourceBuilder.query(termQueryBuilder);
@@ -161,7 +177,7 @@ public class ElasticSearchHandler {
     }
 
     public Block getBlockContent(String blockHash) {
-        GetRequest getRequest = new GetRequest(ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX), blockHash);
+        GetRequest getRequest = new GetRequest(blockContentIndex, blockHash);
         GetResponse getResponse = null;
         try {
             getResponse = client.get(getRequest, RequestOptions.DEFAULT);
@@ -179,7 +195,7 @@ public class ElasticSearchHandler {
 
 
     public Result<Block> getBlockIds(long blockNumber, int count) {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX));
+        SearchRequest searchRequest = new SearchRequest(blockIdsIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("header.number").gt(blockNumber);
         searchSourceBuilder.query(termQueryBuilder);
@@ -198,14 +214,13 @@ public class ElasticSearchHandler {
     }
 
     public void updateBlock(List<Block> blocks) {
-        String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
         for (Block block : blocks
         ) {
             String id = String.valueOf(block.getHeader().getHeight());
             UpdateRequest updateRequest = new UpdateRequest();
-            updateRequest.index(blockIndex);
+            updateRequest.index(blockIdsIndex);
             updateRequest.id(id);
-            IndexRequest indexRequest = new IndexRequest(blockIndex);
+            IndexRequest indexRequest = new IndexRequest(blockIdsIndex);
             XContentBuilder blockBuild = getBlockBuilder(block);
             indexRequest.id(id).source(blockBuild);
             updateRequest.doc(blockBuild);
@@ -227,13 +242,6 @@ public class ElasticSearchHandler {
             return;
         }
         BulkRequest bulkRequest = new BulkRequest();
-        String blockIndex = ServiceUtils.getIndex(network, Constant.BLOCK_IDS_INDEX);
-        String blockContentIndex = ServiceUtils.getIndex(network, Constant.BLOCK_CONTENT_INDEX);
-        String uncleIndex = ServiceUtils.getIndex(network, Constant.UNCLE_BLOCK_INDEX);
-        String txnIndex = ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX);
-        String eventIndex = ServiceUtils.getIndex(network, Constant.EVENT_INDEX);
-        String pendingIndex = ServiceUtils.getIndex(network, Constant.PENDING_TXN_INDEX);
-        String transferIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_INDEX);
         boolean isDeleted = false;
         long minTimestamp = Long.MAX_VALUE;
 
@@ -246,7 +254,7 @@ public class ElasticSearchHandler {
             if (deleteForkBlockIds.size() > 0) {
                 if (!isDeleted) {
                     for (long forkId : deleteForkBlockIds) {
-                        DeleteRequest deleteRequest = new DeleteRequest(blockIndex);
+                        DeleteRequest deleteRequest = new DeleteRequest(blockIdsIndex);
                         deleteRequest.id(String.valueOf(forkId));
                         bulkRequest.add(deleteRequest);
                     }
@@ -259,34 +267,27 @@ public class ElasticSearchHandler {
                     logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
                 }
             } else {
-                bulkRequest.add(buildBlockRequest(block, blockIndex));
+                bulkRequest.add(buildBlockRequest(block, blockIdsIndex));
             }
             //  add block content
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
             bulkRequest.add(blockContent);
+            Set<AddressHolder> holderAddress = new HashSet<>();
             //add transactions
             for (Transaction transaction : block.getTransactionList()) {
-                IndexRequest transactionReq = new IndexRequest(txnIndex);
+                IndexRequest transactionReq = new IndexRequest(transactionIndex);
                 transactionReq.id(transaction.getTransactionHash()).source(JSON.toJSONString(transaction), XContentType.JSON);
                 bulkRequest.add(transactionReq);
                 //delete pending txn
-                DeleteRequest deleteRequest = new DeleteRequest(pendingIndex);
+                DeleteRequest deleteRequest = new DeleteRequest(pendingTxnIndex);
                 deleteRequest.id(transaction.getTransactionHash());
                 bulkRequest.add(deleteRequest);
                 //add events
                 List<Event> events = transaction.getEvents();
                 if (events != null && events.size() > 0) {
-                    Set<AddressHolder> holderAddress = new HashSet<>();
                     for (Event event : events) {
                         bulkRequest.add(buildEventRequest(event, transaction.getTimestamp(), eventIndex, holderAddress));
-                    }
-                    if (!holderAddress.isEmpty()) {
-                        for (AddressHolder holder : holderAddress
-                        ) {
-                            long amount = stateRPCClient.getAddressAmount(holder.address);
-                            bulkRequest.add(buildHolderRequest(holder, amount));
-                        }
                     }
                 }
                 //add transfer
@@ -300,9 +301,17 @@ public class ElasticSearchHandler {
                     minTimestamp = transaction.getTimestamp();
                 }
             }
+            //add holder
+            if (!holderAddress.isEmpty()) {
+                for (AddressHolder holder : holderAddress
+                ) {
+                    long amount = stateRPCClient.getAddressAmount(holder.address);
+                    bulkRequest.add(buildHolderRequest(holder, amount));
+                }
+            }
             //add uncles
             for (BlockHeader uncle : block.getUncles()) {
-                bulkRequest.add(buildUncleRequest(uncle, header.getHeight(), uncleIndex));
+                bulkRequest.add(buildUncleRequest(uncle, header.getHeight(), uncleBlockIndex));
             }
         }
         try {
@@ -315,8 +324,87 @@ public class ElasticSearchHandler {
         }
     }
 
+    public boolean bulkForkedUpdate(Block block) {
+        if(block == null) return false;
+        String blockHash = block.getHeader().getBlockHash();
+        BulkRequest bulkRequest = new BulkRequest();
+        //delete ids
+        DeleteRequest deleteRequest = new DeleteRequest(blockIdsIndex);
+        deleteRequest.id(String.valueOf(block.getHeader().getHeight()));
+        bulkRequest.add(deleteRequest);
+
+        //delete block content
+        addUpdateRequest(blockContentIndex, blockHash, bulkRequest);
+        //delete transaction
+        List<Transaction> transactionList = block.getTransactionList();
+        Set<AddressHolder> holderAddress = new HashSet<>();
+        if(transactionList != null && !transactionList.isEmpty()) {
+            String transactionHash = "";
+            List<String> transactionHashes = new ArrayList<>();
+            for(Transaction transaction: transactionList) {
+                transactionHash = transaction.getTransactionHash();
+                transactionHashes.add(transactionHash);
+                addUpdateRequest(transactionIndex, transactionHash, bulkRequest);
+                //delete payload
+                addUpdateRequest(payloadIndex, transactionHash, bulkRequest);
+            }
+            //delete event
+            if(!transactionHashes.isEmpty()) {
+               List<EventAddress> events = getEventsByTransaction(transactionHashes);
+               if(events != null && !events.isEmpty()) {
+                   for (EventAddress event: events) {
+                       addUpdateRequest(eventIndex, event.getId(), bulkRequest);
+                   }
+               }
+            }
+
+        }
+        //delete holder
+
+        //delete transfer
+
+        //delete transfer_journal
+
+        //delete uncle
+
+        return true;
+    }
+
+    public List<EventAddress> getEventsByTransaction(List<String> txnHashes) {
+        SearchRequest searchRequest = new SearchRequest(eventIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(ELASTICSEARCH_MAX_HITS);
+        //begin offset
+        int offset = 0;
+        searchSourceBuilder.from(0);
+
+        BoolQueryBuilder exersiceBoolQuery = QueryBuilders.boolQuery();
+        exersiceBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", txnHashes));
+        searchSourceBuilder.query(exersiceBoolQuery).fetchSource(new String[]{"_id", "event_address"}, null);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.trackTotalHits(true);
+        searchSourceBuilder.sort("timestamp", SortOrder.DESC);
+
+        SearchResponse searchResponse = null;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("get events:", e);
+        }
+        Result<EventAddress> result = ServiceUtils.getSearchResult(searchResponse, EventAddress.class);
+        return result.getContents();
+    }
+
+    private void addUpdateRequest(String indexName, String id, BulkRequest bulkRequest) {
+        UpdateRequest updateRequest = new UpdateRequest();
+        updateRequest.index(indexName);
+        updateRequest.id(id);
+        updateRequest.doc(deletedBuilder);
+        bulkRequest.add(updateRequest);
+    }
+
     public void deleteTransactionPayload(Set<Long> deleteForkBlockIds, BulkRequest bulkRequest) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
+        SearchRequest searchRequest = new SearchRequest(transactionIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
@@ -334,7 +422,7 @@ public class ElasticSearchHandler {
         List<String> transactions = result.getContents();
 
         for (String transactionHash : transactions) {
-            DeleteRequest deleteRequest = new DeleteRequest(ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX));
+            DeleteRequest deleteRequest = new DeleteRequest(payloadIndex);
             deleteRequest.id(transactionHash);
             bulkRequest.add(deleteRequest);
         }
@@ -521,8 +609,22 @@ public class ElasticSearchHandler {
         return requests;
     }
 
+    private XContentBuilder deletedBuilder() {
+        try {
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            {
+                builder.field("deleted", true);
+            }
+            builder.endObject();
+            return builder;
+        } catch (IOException e) {
+            logger.error("deleted build error:", e);
+            return null;
+        }
+    }
+
     private UpdateRequest buildHolderRequest(AddressHolder holder, long amount) {
-        String addressIndex = ServiceUtils.getIndex(network, Constant.ADDRESS_INDEX);
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
@@ -532,10 +634,10 @@ public class ElasticSearchHandler {
                 builder.field("amount", amount);
             }
             builder.endObject();
-            IndexRequest indexRequest = new IndexRequest(addressIndex);
+            IndexRequest indexRequest = new IndexRequest(addressHolderIndex);
             indexRequest.id(holder.address).source(builder);
             UpdateRequest updateRequest = new UpdateRequest();
-            updateRequest.index(addressIndex);
+            updateRequest.index(addressHolderIndex);
             updateRequest.id(holder.address);
             updateRequest.doc(builder);
             updateRequest.upsert(indexRequest);
@@ -616,7 +718,7 @@ public class ElasticSearchHandler {
 
 
     public List<Transaction> getTransactionByTimestamp(String network, String timestamp) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX));
+        SearchRequest searchRequest = new SearchRequest(transactionIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(20);
 

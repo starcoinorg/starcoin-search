@@ -305,7 +305,7 @@ public class ElasticSearchHandler {
             if (!holderAddress.isEmpty()) {
                 for (AddressHolder holder : holderAddress
                 ) {
-                    long amount = stateRPCClient.getAddressAmount(holder.address);
+                    long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
                     bulkRequest.add(buildHolderRequest(holder, amount));
                 }
             }
@@ -688,7 +688,7 @@ public class ElasticSearchHandler {
                 String tagAddress = struct.getAddress();
                 String tagModule = struct.getModule();
                 if (tagAddress.equals(Constant.EVENT_FILTER_ADDRESS) && tagModule.equals(Constant.EVENT_FILTER__MODULE)
-                        && (tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT) || tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT))) {
+                        && tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
                     try {
                         DepositEvent inner = DepositEvent.bcsDeserialize(Hex.decode(event.getData()));
                         String sb = inner.token_code.address +
@@ -756,6 +756,22 @@ public class ElasticSearchHandler {
         AddressHolder(String address, String tokenCode) {
             this.address = address;
             this.tokenCode = tokenCode;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public String getTokenCode() {
+            return tokenCode;
+        }
+
+        @Override
+        public String toString() {
+            return "AddressHolder{" +
+                    "address='" + address + '\'' +
+                    ", tokenCode='" + tokenCode + '\'' +
+                    '}';
         }
     }
 

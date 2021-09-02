@@ -229,16 +229,15 @@ public class ElasticSearchHandler {
                 return;
             }
         }
-        bulk(blocks, Collections.EMPTY_SET, new BlockOffset(0, ""));
+        bulk(blocks);
     }
 
-    public void bulk(List<Block> blockList, Set<Long> deleteForkBlockIds, BlockOffset payloadOffset) {
+    public void bulk(List<Block> blockList) {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
         }
         BulkRequest bulkRequest = new BulkRequest();
-        boolean isDeleted = false;
         long minTimestamp = Long.MAX_VALUE;
 
         for (Block block : blockList) {
@@ -247,24 +246,7 @@ public class ElasticSearchHandler {
             transferDifficulty(header);
             block.setHeader(header);
             //add block ids
-            if (deleteForkBlockIds.size() > 0) {
-                if (!isDeleted) {
-                    for (long forkId : deleteForkBlockIds) {
-                        DeleteRequest deleteRequest = new DeleteRequest(blockIdsIndex);
-                        deleteRequest.id(String.valueOf(forkId));
-                        bulkRequest.add(deleteRequest);
-                    }
-                    try {
-                        this.deleteTransactionPayload(deleteForkBlockIds, bulkRequest);
-                    } catch (IOException e) {
-                        logger.warn("delete payload exception", e);
-                    }
-                    isDeleted = true;
-                    logger.info("delete fork block ids: {}", deleteForkBlockIds.size());
-                }
-            } else {
-                bulkRequest.add(buildBlockRequest(block, blockIdsIndex));
-            }
+            bulkRequest.add(buildBlockRequest(block, blockIdsIndex));
             //  add block content
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
@@ -312,8 +294,6 @@ public class ElasticSearchHandler {
         }
         try {
             BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            if (isDeleted)
-                payloadOffset.setBlockHeight(minTimestamp);
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block error:", e);

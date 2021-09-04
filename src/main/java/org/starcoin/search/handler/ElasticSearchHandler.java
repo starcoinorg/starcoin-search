@@ -37,6 +37,7 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.BlockOffset;
+import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -482,8 +483,9 @@ public class ElasticSearchHandler {
             if (transaction.getUserTransaction() != null) {
                 String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
                 TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
+                TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(packagePayload,transaction.getTimestamp(),transaction.getTransactionHash());
                 IndexRequest blockContent = new IndexRequest(payloadIndex);
-                blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(packagePayload), XContentType.JSON);
+                blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(payloadInfo), XContentType.JSON);
                 bulkRequest.add(blockContent);
             }
         }

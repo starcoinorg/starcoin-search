@@ -12,6 +12,7 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -44,6 +45,7 @@ import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
+import org.starcoin.types.TokenCode;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.event.DepositEvent;
 import org.starcoin.utils.Hex;
@@ -61,6 +63,7 @@ public class ElasticSearchHandler {
     private final TransactionRPCClient transactionRPCClient;
     @Value("${starcoin.network}")
     private String network;
+    private Set<TokenCode> tokenList;
 
     public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient, TransactionRPCClient transactionRPCClient) {
         this.client = client;
@@ -85,6 +88,7 @@ public class ElasticSearchHandler {
             ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_INDEX);
             ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
             logger.info("index init ok!");
+            tokenList = new HashSet<>();
         } catch (IOException e) {
             logger.error("init index error:", e);
         }
@@ -266,6 +270,7 @@ public class ElasticSearchHandler {
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
             bulkRequest.add(blockContent);
+
             //add transactions
             for (Transaction transaction : block.getTransactionList()) {
                 IndexRequest transactionReq = new IndexRequest(txnIndex);
@@ -313,6 +318,41 @@ public class ElasticSearchHandler {
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block error:", e);
+        }
+        //flush token list
+        if(!tokenList.isEmpty()) {
+            for(TokenCode token: tokenList) {
+                try {
+                    String codeStr = token.address + "::" + token.module + "::" + token.name;
+                    TokenInfo tokenInfo = stateRPCClient.getTokenInfo(token.address.toString(), codeStr);
+                    addTokenInfo(tokenInfo, token.address.toString(), codeStr);
+                } catch (JSONRPC2SessionException e) {
+                    logger.error("flush token error:", e);
+                }
+            }
+        }
+    }
+
+    public void addTokenInfo(TokenInfo tokenInfo, String tokenAddress, String tokenCode) {
+        IndexRequest request = new IndexRequest(ServiceUtils.getIndex(network, Constant.TOKEN_INFO_INDEX));
+        XContentBuilder builder = null;
+        try {
+            builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            builder.field("token_address", tokenAddress);
+            builder.field("token_code", tokenCode);
+            builder.field("total_value", tokenInfo.getTotalValue());
+            builder.field("scaling_factor", tokenInfo.getScalingFactor());
+            builder.endObject();
+        } catch (IOException e) {
+            logger.error("build token_info error:", e);
+        }
+        request.source(builder);
+        try {
+            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+            logger.info("add token info ok: {}", response.getResult());
+        } catch (IOException e) {
+            logger.error("add token info error:", e);
         }
     }
 
@@ -597,6 +637,8 @@ public class ElasticSearchHandler {
                                 "::" +
                                 inner.token_code.name;
                         holders.add(new AddressHolder(eventAddress, sb));
+                        //add tokenCode to tokenList
+                        tokenList.add(inner.token_code);
                     } catch (DeserializationError deserializationError) {
                         logger.error("decode event data error:", deserializationError);
                     }

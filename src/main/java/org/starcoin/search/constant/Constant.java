@@ -14,6 +14,7 @@ public class Constant {
     public static final String TRANSFER_JOURNAL_INDEX = "transfer_journal";
     public static final String MARKET_CAP_INDEX = "market_cap";
     public static final String PAYLOAD_INDEX = "txn_payloads";
+    public static final String TOKEN_INFO_INDEX = "token_info";
 
 
     public static final String EVENT_FILTER_ADDRESS = "0x00000000000000000000000000000001";

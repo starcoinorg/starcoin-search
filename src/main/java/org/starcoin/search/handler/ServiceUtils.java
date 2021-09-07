@@ -22,12 +22,16 @@ import org.starcoin.utils.Hex;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ServiceUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
+
+    //缓存token info
+    static Map<String, TokenInfo> tokenCache = new HashMap<>();
 
     public static String getIndex(String network, String indexConstant) {
         return network + "." + indexConstant;

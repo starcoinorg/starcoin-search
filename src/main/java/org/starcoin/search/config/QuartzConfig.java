@@ -77,7 +77,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startTransactionPayload() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(1)
+                .withIntervalInSeconds(20)
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
                 .withIdentity("txn_payload")

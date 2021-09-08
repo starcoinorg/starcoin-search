@@ -22,13 +22,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.api.TokenContractRPCClient;
+import org.starcoin.bean.TokenInfo;
 import org.starcoin.search.bean.TokenMarketCap;
 import org.starcoin.search.constant.Constant;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
 @Service
 public class MarketCapHandle {
@@ -80,6 +84,13 @@ public class MarketCapHandle {
             List<TokenMarketCap> marketCaps = tokenMarketCapResult.getContents();
             BulkRequest bulkRequest = new BulkRequest();
             for (TokenMarketCap marketCap : marketCaps) {
+                //factor
+                TokenInfo tokenInfo = tokenCache.get(marketCap.getTypeTag());
+                if(tokenInfo != null) {
+                    marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
+                }else {
+                    logger.warn("when handle market cap, token info not exist: {}", marketCap.getTypeTag());
+                }
                 bulkRequest.add(buildMarketCapRequest(marketCap));
             }
             try {

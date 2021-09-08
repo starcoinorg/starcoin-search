@@ -14,6 +14,10 @@ public class StructTagUtil {
         return sb.toString();
     }
 
+    public static final String structTagToSwapUsdtPair(StructTag structTag){
+        return String.format("%s / USD",structTag.name.value);
+    }
+
     public static final String structTagsToTokenPair(StructTag structTagFirst,StructTag structTagSecond){
         String tagFirst = structTagToString(structTagFirst);
         String tagSecond = structTagToString(structTagSecond);

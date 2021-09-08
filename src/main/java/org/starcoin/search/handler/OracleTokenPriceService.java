@@ -60,16 +60,9 @@ public class OracleTokenPriceService {
         }
     }
 
-    public OracleTokenPrice getPriceByTimeRange(List<String> tokenPairNames, long startTimeStamp, long endTimeStamp){
-        List<Object> params = new ArrayList<>();
-        params.add(startTimeStamp);
-        params.add(endTimeStamp);
-
-        String inSql = String.join(",", Collections.nCopies(tokenPairNames.size(), "?"));
-        tokenPairNames.addAll(tokenPairNames);
-
-        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query(String.format("select * from oracle_token_price where ts between ? and ? and token_pair_name in (%s)",inSql),
-                new OracleTokenPairRowMapper(),params);
+    public OracleTokenPrice getPriceByTimeRange(long startTimeStamp, long endTimeStamp){
+        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query("select * from oracle_token_price where ts between ? and ?",
+                new OracleTokenPairRowMapper(),new Object[]{startTimeStamp,endTimeStamp});
         return new OracleTokenPrice(oracleTokenPairList);
     }
 

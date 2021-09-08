@@ -19,6 +19,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
+import org.starcoin.bean.TokenInfo;
+import org.starcoin.search.bean.NoTokenPriceException;
+import org.starcoin.search.bean.OracleTokenPrice;
 import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.search.utils.StructTagUtil;
@@ -26,9 +29,12 @@ import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.TypeTag;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
 @Service
 public class SwapHandle {
@@ -54,12 +60,27 @@ public class SwapHandle {
 
     void volumeStats(long startTime,long endTime) {
         Set<String> handledTxn = new HashSet<>();
-        Map<String, BigInteger> resultMap= new HashMap<>();
-        Map<String, BigInteger> poolMap = new HashMap<>();
+        Map<String, BigDecimal> resultMap= new HashMap<>();
+        Map<String, BigDecimal> poolMap = new HashMap<>();
         long localStartTime = startTime;
+
         while (true) {
             Result<TransactionPayloadInfo> payloadInfoResult = volumeStatsByTimeRange(localStartTime,endTime);
             logger.info("fetch "+payloadInfoResult.getContents().size()+" from "+localStartTime + " to "+ endTime);
+
+            if(payloadInfoResult.getContents().size()==0){
+                break;
+            }
+
+            long localEndTime = 0;
+            for(TransactionPayloadInfo payloadInfo:payloadInfoResult.getContents()) {
+                if(payloadInfo.getTimestamp()>localEndTime){
+                    localEndTime = payloadInfo.getTimestamp();
+                }
+            }
+
+            OracleTokenPrice oracleTokenPrice = oracleTokenPriceService.getPriceByTimeRange(localStartTime,localEndTime);
+
             for(TransactionPayloadInfo payloadInfo:payloadInfoResult.getContents()){
                 if(handledTxn.contains(payloadInfo.getTransactionHash())){
                     continue;
@@ -86,10 +107,15 @@ public class SwapHandle {
                     BigInteger argFirst = deserializeU128(scriptFunctionPayload.value.args.get(0));
                     BigInteger argSecond = deserializeU128(scriptFunctionPayload.value.args.get(1));
 
-                    sum(resultMap,typeTagFirst,argFirst);
-                    sum(resultMap,typeTagSecond,argSecond);
+                    try {
+                        sum(resultMap,typeTagFirst,argFirst,oracleTokenPrice,payloadInfo.getTimestamp());
+                        sum(resultMap,typeTagSecond,argSecond,oracleTokenPrice,payloadInfo.getTimestamp());
 
-                    poolSum(poolMap,typeTagFirst,typeTagSecond,argFirst);
+                        poolSum(poolMap,typeTagFirst,typeTagSecond,argFirst,oracleTokenPrice,payloadInfo.getTimestamp());
+
+                    } catch (NoTokenPriceException e) {
+                        logger.error("no price in oracle,skip it .");
+                    }
 
                     handledTxn.add(payloadInfo.getTransactionHash());
                     if(localStartTime < payloadInfo.getTimestamp()) {
@@ -97,32 +123,51 @@ public class SwapHandle {
                     }
                 }
             }
-            if(payloadInfoResult.getContents().size()==0){
-                break;
-            }
         }
 
     }
 
-
-
-    void sum(Map<String,BigInteger> result,TypeTag.Struct typeTag,BigInteger amount){
+    void sum(Map<String, BigDecimal> result, TypeTag.Struct typeTag, BigInteger amount,OracleTokenPrice oracleTokenPrice,long ts) throws NoTokenPriceException {
         String key = StructTagUtil.structTagToString(typeTag.value);
-        BigInteger sum = result.get(key);
+        BigDecimal sum = result.get(key);
+
+        BigDecimal actualValue = getValue(typeTag, amount, oracleTokenPrice, ts);
         if (sum == null) {
-            result.put(key,amount);
+            result.put(key,actualValue);
         }else {
-            sum.add(amount);
+            sum.add(actualValue);
         }
     }
 
-    void poolSum(Map<String,BigInteger> result,TypeTag.Struct typeTagFirst,TypeTag.Struct typeTagSecond,BigInteger amount){
+    private BigDecimal getValue(TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
+        TokenInfo tokenInfo = tokenCache.get(StructTagUtil.structTagToString(typeTag.value));
+        BigDecimal actualValue = new BigDecimal(amount);
+        actualValue.movePointLeft((int)tokenInfo.getScalingFactor());
+
+        BigDecimal price = oracleTokenPrice.getPrice(StructTagUtil.structTagToSwapUsdtPair(typeTag.value), ts);
+        if(price == null) {
+            throw new NoTokenPriceException();
+        }
+        actualValue.multiply(price);
+        return actualValue;
+    }
+
+    void poolSum(Map<String,BigDecimal> result,TypeTag.Struct typeTagFirst,TypeTag.Struct typeTagSecond,BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
         String key = StructTagUtil.structTagsToTokenPair(typeTagFirst.value,typeTagSecond.value);
-        BigInteger sum = result.get(key);
+        BigDecimal sum = result.get(key);
+
+        BigDecimal actualValue;
+        try{
+            actualValue = getValue(typeTagFirst, amount, oracleTokenPrice, ts);
+        }catch ( NoTokenPriceException e){
+            logger.error("coun't find token price");
+            actualValue = getValue(typeTagSecond, amount, oracleTokenPrice, ts);
+        }
+
         if (sum == null) {
-            result.put(key,amount);
+            result.put(key,actualValue);
         }else {
-            sum.add(amount);
+            sum.add(actualValue);
         }
     }
 

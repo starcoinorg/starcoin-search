@@ -14,6 +14,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
@@ -39,8 +40,11 @@ public class SwapHandle {
 
     private StateRPCClient starcoinClient;
 
-    @Value("${contract.address}")
+    @Value("${swap.contract.address}")
     private String contractAddress;
+
+    @Autowired
+    private OracleTokenPriceService oracleTokenPriceService;
 
     static long getTimeStamp(int day) {
         Calendar calendar = Calendar.getInstance();

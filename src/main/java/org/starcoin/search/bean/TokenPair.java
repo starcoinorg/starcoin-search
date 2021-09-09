@@ -10,6 +10,11 @@ public class TokenPair {
     @JSONField(name = "token_second")
     private String tokenSecond;
 
+    public TokenPair(String tokenFirst, String tokenSecond) {
+        this.tokenFirst = tokenFirst;
+        this.tokenSecond = tokenSecond;
+    }
+
     public String getTokenFirst() {
         return tokenFirst;
     }

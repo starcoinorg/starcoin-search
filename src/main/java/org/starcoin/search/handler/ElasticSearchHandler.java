@@ -718,6 +718,7 @@ public class ElasticSearchHandler {
     private UpdateRequest buildHolderRequest(AddressHolder holder, long amount) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
+            String id = holder.address + "-" + holder.tokenCode;
             builder.startObject();
             {
                 builder.field("address", holder.address);
@@ -726,9 +727,10 @@ public class ElasticSearchHandler {
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(addressHolderIndex);
-            indexRequest.source(builder);
+            indexRequest.id(id).source(builder);
             UpdateRequest updateRequest = new UpdateRequest();
             updateRequest.index(addressHolderIndex);
+            updateRequest.id(id);
             updateRequest.doc(builder);
             updateRequest.upsert(indexRequest);
             return updateRequest;

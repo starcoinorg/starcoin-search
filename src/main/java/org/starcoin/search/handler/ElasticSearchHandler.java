@@ -12,6 +12,7 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -41,6 +42,7 @@ import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
+import org.starcoin.types.TokenCode;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.event.DepositEvent;
 import org.starcoin.utils.Hex;
@@ -49,7 +51,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 
-import static org.starcoin.search.constant.Constant.ELASTICSEARCH_MAX_HITS;
+import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
 @Service
 public class ElasticSearchHandler {
@@ -60,6 +62,7 @@ public class ElasticSearchHandler {
     private final TransactionRPCClient transactionRPCClient;
     @Value("${starcoin.network}")
     private String network;
+    private Set<TokenCode> tokenCodeList = new HashSet<>();
 
     private String blockIdsIndex;
     private String blockContentIndex;
@@ -71,6 +74,7 @@ public class ElasticSearchHandler {
     private String payloadIndex;
     private String addressHolderIndex;
     private String transferJournalIndex;
+    private String tokenInfoIndex;
     private XContentBuilder deletedBuilder;
 
     public ElasticSearchHandler(RestHighLevelClient client, StateRPCClient stateRPCClient, TransactionRPCClient transactionRPCClient) {
@@ -97,8 +101,10 @@ public class ElasticSearchHandler {
             payloadIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.PAYLOAD_INDEX);
             addressHolderIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.ADDRESS_INDEX);
             transferJournalIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.TRANSFER_JOURNAL_INDEX);
+            tokenInfoIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.TOKEN_INFO_INDEX);
             deletedBuilder = deletedBuilder();
             logger.info("index init ok!");
+            loadTokenInfo();
         } catch (IOException e) {
             logger.error("init index error:", e);
         }
@@ -298,6 +304,65 @@ public class ElasticSearchHandler {
             logger.info("bulk block result: {}", response.buildFailureMessage());
         } catch (IOException e) {
             logger.error("bulk block error:", e);
+        }
+        //flush token list
+        if(!tokenCodeList.isEmpty()) {
+            for(TokenCode token: tokenCodeList) {
+                try {
+                    String codeStr = token.address + "::" + token.module + "::" + token.name;
+                    TokenInfo tokenInfo = stateRPCClient.getTokenInfo(token.address.toString(), codeStr);
+                    addTokenInfo(tokenInfo, codeStr);
+                    //add to cache
+                    tokenCache.put(codeStr, tokenInfo);
+                } catch (JSONRPC2SessionException e) {
+                    logger.error("flush token error:", e);
+                }
+            }
+            tokenCodeList.clear();
+        }
+    }
+
+    public void loadTokenInfo() {
+        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TOKEN_INFO_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            Result<TokenInfo>  result = ServiceUtils.getSearchResult(searchResponse, TokenInfo.class);
+            List<TokenInfo> tokenInfoList = result.getContents();
+            if(!tokenInfoList.isEmpty()) {
+                for(TokenInfo tokenInfo : tokenInfoList) {
+                    tokenCache.put(tokenInfo.getTokenCode(), tokenInfo);
+                }
+                logger.info("load token info to cache ok: {}", tokenInfoList.size());
+            }
+        } catch (IOException e) {
+            logger.error("get token infos error:", e);
+        }
+    }
+
+    public void addTokenInfo(TokenInfo tokenInfo, String tokenCode) {
+        IndexRequest request = new IndexRequest(ServiceUtils.getIndex(network, Constant.TOKEN_INFO_INDEX));
+        XContentBuilder builder = null;
+        try {
+            builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            builder.field("token_code", tokenInfo.getTokenCode());
+            builder.field("total_value", tokenInfo.getTotalValue());
+            builder.field("scaling_factor", tokenInfo.getScalingFactor());
+            builder.endObject();
+        } catch (IOException e) {
+            logger.error("build token_info error:", e);
+        }
+        request.id(tokenCode);
+        request.source(builder);
+        try {
+            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+            logger.info("add token info ok: {}", response.getResult());
+        } catch (IOException e) {
+            logger.error("add token info error:", e);
         }
     }
 

@@ -51,6 +51,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 
+import static org.starcoin.search.constant.Constant.ELASTICSEARCH_MAX_HITS;
 import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
 @Service
@@ -517,31 +518,6 @@ public class ElasticSearchHandler {
         bulkRequest.add(updateRequest);
     }
 
-    public void deleteTransactionPayload(Set<Long> deleteForkBlockIds, BulkRequest bulkRequest) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(transactionIndex);
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-
-        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
-        for (long id : deleteForkBlockIds) {
-            boolQuery.should(QueryBuilders.termQuery("block_metadata.number", id));
-        }
-        searchSourceBuilder.query(boolQuery);
-        searchRequest.source(searchSourceBuilder);
-        searchSourceBuilder.fetchSource("transaction_hash", null);
-
-        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        Result<String> result = ServiceUtils.getSearchResult(searchResponse, String.class);
-
-        List<String> transactions = result.getContents();
-
-        for (String transactionHash : transactions) {
-            DeleteRequest deleteRequest = new DeleteRequest(payloadIndex);
-            deleteRequest.id(transactionHash);
-            bulkRequest.add(deleteRequest);
-        }
-    }
-
     public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
         for (Transaction transaction : transactionList) {
@@ -750,10 +726,9 @@ public class ElasticSearchHandler {
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(addressHolderIndex);
-            indexRequest.id(holder.address).source(builder);
+            indexRequest.source(builder);
             UpdateRequest updateRequest = new UpdateRequest();
             updateRequest.index(addressHolderIndex);
-            updateRequest.id(holder.address);
             updateRequest.doc(builder);
             updateRequest.upsert(indexRequest);
             return updateRequest;

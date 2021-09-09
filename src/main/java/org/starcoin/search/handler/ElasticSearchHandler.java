@@ -291,8 +291,7 @@ public class ElasticSearchHandler {
             if (!holderAddress.isEmpty()) {
                 for (AddressHolder holder : holderAddress
                 ) {
-                    long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
-                    bulkRequest.add(buildHolderRequest(holder, amount));
+                    updateAddressHolder(bulkRequest, holder);
                 }
             }
             //add uncles
@@ -323,8 +322,20 @@ public class ElasticSearchHandler {
         }
     }
 
+    private void updateAddressHolder(BulkRequest bulkRequest, AddressHolder holder) {
+        long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
+        if(amount == -1) {
+            //resource not exist
+            DeleteRequest deleteRequest = new DeleteRequest(addressHolderIndex);
+            deleteRequest.id(holder.address + "-" + holder.tokenCode);
+            bulkRequest.add(deleteRequest);
+        }else {
+            bulkRequest.add(buildHolderRequest(holder, amount));
+        }
+    }
+
     public void loadTokenInfo() {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TOKEN_INFO_INDEX));
+        SearchRequest searchRequest = new SearchRequest(tokenInfoIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.matchAllQuery());
         searchRequest.source(searchSourceBuilder);
@@ -423,8 +434,7 @@ public class ElasticSearchHandler {
         //flush address holder
         if(!holderAddress.isEmpty()) {
             for(AddressHolder holder: holderAddress) {
-                long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
-                bulkRequest.add(buildHolderRequest(holder, amount));
+                updateAddressHolder(bulkRequest, holder);
             }
         }
 

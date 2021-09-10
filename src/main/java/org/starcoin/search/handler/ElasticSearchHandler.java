@@ -45,12 +45,14 @@ import org.starcoin.types.StructTag;
 import org.starcoin.types.TokenCode;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.event.DepositEvent;
+import org.starcoin.types.event.WithdrawEvent;
 import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 
+import static org.starcoin.api.TokenContractRPCClient.STCTypeTag;
 import static org.starcoin.search.constant.Constant.ELASTICSEARCH_MAX_HITS;
 import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
@@ -273,7 +275,7 @@ public class ElasticSearchHandler {
                 List<Event> events = transaction.getEvents();
                 if (events != null && events.size() > 0) {
                     for (Event event : events) {
-                        bulkRequest.add(buildEventRequest(event, transaction.getTimestamp(), eventIndex, holderAddress));
+                        bulkRequest.add(buildEventRequest(event, header.getAuthor(), transaction.getTimestamp(), eventIndex, holderAddress));
                     }
                 }
                 //add transfer
@@ -356,7 +358,7 @@ public class ElasticSearchHandler {
     }
 
     public void addTokenInfo(TokenInfo tokenInfo, String tokenCode) {
-        IndexRequest request = new IndexRequest(ServiceUtils.getIndex(network, Constant.TOKEN_INFO_INDEX));
+        IndexRequest request = new IndexRequest(tokenInfoIndex);
         XContentBuilder builder = null;
         try {
             builder = XContentFactory.jsonBuilder();
@@ -381,6 +383,7 @@ public class ElasticSearchHandler {
     public void bulkForkedUpdate(Block block) {
         if(block == null) return;
         String blockHash = block.getHeader().getBlockHash();
+        String blockAuthor = block.getHeader().getAuthor();
         BulkRequest bulkRequest = new BulkRequest();
         //delete ids
         DeleteRequest deleteRequest = new DeleteRequest(blockIdsIndex);
@@ -408,7 +411,10 @@ public class ElasticSearchHandler {
                if(events != null && !events.isEmpty()) {
                    for (EventFull event: events) {
                        addUpdateRequest(eventIndex, event.getId(), bulkRequest);
-                       addToHolders(event, holderAddress, event.getEventAddress());
+                       Struct struct = Struct.fromRPC(event.getTypeTag());
+                       if(struct != null) {
+                           addToHolders(event,struct.getName(), struct.getModule(), blockAuthor, holderAddress, event.getEventAddress());
+                       }
                    }
                }
                //delete transfer
@@ -767,7 +773,7 @@ public class ElasticSearchHandler {
         return sb.toString();
     }
 
-    private IndexRequest buildEventRequest(Event event, long timestamp, String indexName, Set<AddressHolder> holders) {
+    private IndexRequest buildEventRequest(Event event, String blockAuthor, long timestamp, String indexName, Set<AddressHolder> holders) {
         IndexRequest request = new IndexRequest(indexName);
         XContentBuilder builder = null;
         try {
@@ -789,9 +795,10 @@ public class ElasticSearchHandler {
                 String tagName = struct.getName();
                 String tagAddress = struct.getAddress();
                 String tagModule = struct.getModule();
-                if (tagAddress.equals(Constant.EVENT_FILTER_ADDRESS) && tagModule.equals(Constant.EVENT_FILTER__MODULE)
-                        && tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
-                    addToHolders(event, holders, eventAddress);
+                if (tagAddress.equals(Constant.EVENT_FILTER_ADDRESS)
+                        && (tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT) ||
+                        tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT))) {
+                    addToHolders(event, tagName, tagModule, blockAuthor, holders, eventAddress);
                 }
                 builder.field("tag_address", tagAddress);
                 builder.field("tag_module", tagModule);
@@ -808,17 +815,34 @@ public class ElasticSearchHandler {
         return request;
     }
 
-    private void addToHolders(Event event, Set<AddressHolder> holders, String eventAddress) {
+    private void addToHolders(Event event, String tagName, String tagModule, String blockAuthor, Set<AddressHolder> holders, String eventAddress) {
+        byte[] bytes = Hex.decode(event.getData());
         try {
-            DepositEvent inner = DepositEvent.bcsDeserialize(Hex.decode(event.getData()));
-            String sb = inner.token_code.address +
-                    "::" +
-                    inner.token_code.module +
-                    "::" +
-                    inner.token_code.name;
-            holders.add(new AddressHolder(eventAddress, sb));
+            if(tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
+                DepositEvent inner = DepositEvent.bcsDeserialize(bytes);
+                String sb = inner.token_code.address +
+                        "::" +
+                        inner.token_code.module +
+                        "::" +
+                        inner.token_code.name;
+                holders.add(new AddressHolder(eventAddress, sb));
+                tokenCodeList.add(inner.token_code);
+            }else if( tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT)) {
+                if(tagModule.equalsIgnoreCase(Constant.EVENT_TREASURY_MODULE)) {
+                    holders.add(new AddressHolder(blockAuthor, STCTypeTag));
+                }else {
+                    WithdrawEvent inner = WithdrawEvent.bcsDeserialize(bytes);
+                    String sb = inner.token_code.address +
+                            "::" +
+                            inner.token_code.module +
+                            "::" +
+                            inner.token_code.name;
+                    holders.add(new AddressHolder(eventAddress, sb));
+                    tokenCodeList.add(inner.token_code);
+                }
+            }
         } catch (DeserializationError deserializationError) {
-            logger.error("decode event data error:", deserializationError);
+            logger.error("decode event data error:{}", event, deserializationError);
         }
     }
 

@@ -49,12 +49,13 @@ public class ServiceUtils {
         return result;
     }
 
-    static void createIndexIfNotExist(RestHighLevelClient client, String network, String index) throws IOException {
+    static String createIndexIfNotExist(RestHighLevelClient client, String network, String index) throws IOException {
         String currentIndex = getIndex(network, index);
         GetIndexRequest getRequest = new GetIndexRequest(currentIndex);
         if (!client.indices().exists(getRequest, RequestOptions.DEFAULT)) {
             CreateIndexResponse response = client.indices().create(new CreateIndexRequest(currentIndex), RequestOptions.DEFAULT);
         }
+        return currentIndex;
     }
 
     static TransferOffset getRemoteOffset(RestHighLevelClient client, String offsetIndex) {

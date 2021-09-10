@@ -44,16 +44,22 @@ public class IndexerHandle extends QuartzJobBean {
 
     @PostConstruct
     public void initOffset() {
-        localBlockOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
+        localBlockOffset = elasticSearchHandler.getRemoteOffset();
         //update current handle header
         try {
             if (localBlockOffset != null) {
-                currentHandleHeader = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight()).getHeader();
+                Block  block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
+                if(block != null) {
+                    currentHandleHeader = block.getHeader();
+                }else {
+                    logger.error("init offset block not exist on chain: {}", localBlockOffset);
+                }
+
             } else {
                 logger.warn("offset is null,init reset to genesis");
                 currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
                 localBlockOffset = new BlockOffset(0, currentHandleHeader.getBlockHash());
-                elasticSearchHandler.setRemoteOffset(localBlockOffset, Constant.BLOCK_CONTENT_INDEX);
+                elasticSearchHandler.setRemoteOffset(localBlockOffset);
                 logger.info("init offset ok: {}", localBlockOffset);
             }
         } catch (JSONRPC2SessionException e) {
@@ -68,7 +74,7 @@ public class IndexerHandle extends QuartzJobBean {
 //            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
             initOffset();
         }
-        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset(Constant.BLOCK_CONTENT_INDEX);
+        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
         logger.info("current remote offset: {}", remoteBlockOffset);
         if (remoteBlockOffset == null) {
             logger.warn("offset must not null, please check blocks.mapping!!");
@@ -85,60 +91,65 @@ public class IndexerHandle extends QuartzJobBean {
             long headHeight = chainHeader.getHeight();
             long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
             int index = 1;
-            long deleteOrSkipIndex = 0;
-            Set<Long> deleteForkBlockIds = new HashSet<>();
             List<Block> blockList = new ArrayList<>();
             while (index <= bulkNumber) {
                 long readNumber = localBlockOffset.getBlockHeight() + index;
                 Block block = blockRPCClient.getBlockByHeight(readNumber);
                 if (!block.getHeader().getParentHash().equals(currentHandleHeader.getBlockHash())) {
-                    //fork occurs
+                    //fork handle until reach forked point block
                     logger.warn("Fork detected, roll back: {}, {}, {}", readNumber, block.getHeader().getParentHash(), currentHandleHeader.getBlockHash());
                     Block lastForkBlock, lastMasterBlock;
                     BlockHeader forkHeader = currentHandleHeader;
                     long lastMasterNumber = readNumber - 1;
-                    String forkHeaderParentHash;
-                    deleteForkBlockIds.add(currentHandleHeader.getHeight());
-                    int retryCount = 0;
+                    String forkHeaderParentHash = null;
                     do {
-                        //获取上一个block
+                        //获取分叉的block
+                        if(forkHeaderParentHash == null) {
+                            //第一次先回滚当前最高的分叉块
+                            forkHeaderParentHash = forkHeader.getBlockHash();
+                        }else {
+                            forkHeaderParentHash = forkHeader.getParentHash();
+                        }
+                        lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
+                        if (lastForkBlock == null) {
+                            logger.warn("get fork block null: {}", forkHeaderParentHash);
+                            //read from node
+                            lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
+                        }
+                        if (lastForkBlock != null) {
+                            elasticSearchHandler.bulkForkedUpdate(lastForkBlock);
+                            logger.info("rollback forked block ok: {}, {}", lastForkBlock.getHeader().getHeight(), forkHeaderParentHash);
+                        }else {
+                            //如果块取不到，先退出当前任务，下一个轮询周期再执行
+                            logger.warn("get forked block is null: {}", forkHeaderParentHash);
+                            return;
+                        }
+
+                        //获取上一个高度主块
                         lastMasterBlock = blockRPCClient.getBlockByHeight(lastMasterNumber);
                         if (lastMasterBlock != null) {
-                            // add master block to es
-                            ServiceUtils.addBlockToList(transactionRPCClient, blockList, lastMasterBlock);
-                            logger.info("add master block:{}", lastMasterNumber);
-                            forkHeaderParentHash = forkHeader.getParentHash();
                             long forkNumber = forkHeader.getHeight();
                             logger.info("fork number: {}", forkNumber);
                             if (lastMasterNumber == forkNumber && lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
                                 //find fork point
                                 logger.info("find fork height: {}", lastMasterNumber);
                                 break;
-                            } else {
-                                lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
-                                if (lastForkBlock == null) {
-                                    logger.warn("get last fork block null: {}", forkHeaderParentHash);
-                                    //read from node
-                                    lastForkBlock = blockRPCClient.getBlockByHash(forkHeaderParentHash);
-                                }
-                                if (lastForkBlock != null) {
-                                    forkHeader = lastForkBlock.getHeader();
-                                    deleteForkBlockIds.add(lastMasterNumber);
-                                    lastMasterNumber--;
-                                } else {
-                                    logger.warn("forked block es and node both null: {}", forkHeaderParentHash);
-                                    retryCount++;
-                                }
                             }
+                            //继续找下一个分叉
+                            forkHeader = lastForkBlock.getHeader();
+                            lastMasterNumber--;
+                            logger.info("continue last forked block: {}", lastMasterNumber);
                         } else {
                             logger.warn("get last aster Block null: {}", lastMasterNumber);
-                            retryCount++;
-                        }
-                        if (retryCount > 100) {
-                            logger.error("fork handle retry 100 times,must manual handle: {}", lastMasterNumber);
-                            break;
                         }
                     } while (true);
+                    //reset offset to forked point block
+                    currentHandleHeader = lastMasterBlock.getHeader();
+                    localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
+                    localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
+                    elasticSearchHandler.setRemoteOffset(localBlockOffset);
+                    logger.info("set forked point offset ok: {}", localBlockOffset);
+                    return; //退出当前任务，重新添加从分叉点之后的block
                 }
                 //set event
                 ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
@@ -148,14 +159,11 @@ public class IndexerHandle extends QuartzJobBean {
                 logger.debug("add block: {}", block.getHeader());
             }
             //bulk execute
-            BlockOffset payloadOffset = new BlockOffset(0, "");
-            elasticSearchHandler.bulk(blockList, deleteForkBlockIds, payloadOffset);
+            elasticSearchHandler.bulk(blockList);
             //update offset
             localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
             localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
-            elasticSearchHandler.setRemoteOffset(localBlockOffset, Constant.BLOCK_CONTENT_INDEX);
-            //fixme must rollback handle payload offset
-//            elasticSearchHandler.setRemoteOffset(payloadOffset, Constant.PAYLOAD_INDEX);
+            elasticSearchHandler.setRemoteOffset(localBlockOffset);
             logger.info("indexer update success: {}", localBlockOffset);
         } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);

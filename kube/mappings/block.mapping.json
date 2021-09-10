@@ -238,6 +238,9 @@
           }
         }
       },
+      "deleted" : {
+        "type" : "boolean"
+      },
       "metadata": {
         "properties": {
           "author": {

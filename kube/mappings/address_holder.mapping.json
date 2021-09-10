@@ -13,6 +13,9 @@
       "amount": {
         "type": "long"
       },
+      "deleted" : {
+        "type" : "boolean"
+      },
       "type_tag": {
         "type": "text",
         "fields": {

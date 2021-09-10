@@ -1,6 +1,15 @@
 {
   "mappings": {
     "properties": {
+      "transfer_id": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
       "address": {
         "type": "text",
         "fields": {
@@ -21,6 +30,9 @@
             "ignore_above": 256
           }
         }
+      },
+      "deleted" : {
+        "type" : "boolean"
       },
       "timestamp": {
         "type": "date"

@@ -48,7 +48,13 @@ public class IndexerHandle extends QuartzJobBean {
         //update current handle header
         try {
             if (localBlockOffset != null) {
-                currentHandleHeader = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight()).getHeader();
+                Block  block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
+                if(block != null) {
+                    currentHandleHeader = block.getHeader();
+                }else {
+                    logger.error("init offset block not exist on chain: {}", localBlockOffset);
+                }
+
             } else {
                 logger.warn("offset is null,init reset to genesis");
                 currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();

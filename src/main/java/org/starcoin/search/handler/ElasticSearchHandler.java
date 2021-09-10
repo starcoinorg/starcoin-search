@@ -262,6 +262,7 @@ public class ElasticSearchHandler {
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
             bulkRequest.add(blockContent);
             Set<AddressHolder> holderAddress = new HashSet<>();
+
             //add transactions
             for (Transaction transaction : block.getTransactionList()) {
                 IndexRequest transactionReq = new IndexRequest(transactionIndex);
@@ -323,6 +324,7 @@ public class ElasticSearchHandler {
             tokenCodeList.clear();
         }
     }
+
 
     private void updateAddressHolder(BulkRequest bulkRequest, AddressHolder holder) {
         long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());

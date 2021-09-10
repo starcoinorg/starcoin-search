@@ -31,6 +31,9 @@
           }
         }
       },
+      "deleted" : {
+        "type" : "boolean"
+      },
       "timestamp": {
         "type": "date"
       }

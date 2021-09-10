@@ -113,6 +113,10 @@ public class IndexerHandle extends QuartzJobBean {
                         if (lastForkBlock != null) {
                             elasticSearchHandler.bulkForkedUpdate(lastForkBlock);
                             logger.info("rollback forked block ok: {}, {}", lastForkBlock.getHeader().getHeight(), forkHeaderParentHash);
+                        }else {
+                            //如果块取不到，先退出当前任务，下一个轮询周期再执行
+                            logger.warn("get forked block is null: {}", forkHeaderParentHash);
+                            return;
                         }
 
                         //获取上一个高度主块

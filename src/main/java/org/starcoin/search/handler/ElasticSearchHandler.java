@@ -362,7 +362,7 @@ public class ElasticSearchHandler {
             builder = XContentFactory.jsonBuilder();
             builder.startObject();
             builder.field("token_code", tokenInfo.getTokenCode());
-            builder.field("total_value", tokenInfo.getTotalValue());
+            builder.field("total_value", String.valueOf(tokenInfo.getTotalValue()));
             builder.field("scaling_factor", tokenInfo.getScalingFactor());
             builder.endObject();
         } catch (IOException e) {

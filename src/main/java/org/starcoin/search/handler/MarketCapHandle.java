@@ -134,7 +134,7 @@ public class MarketCapHandle {
             builder.startObject();
             {
                 builder.field("type_tag", marketCap.getTypeTag());
-                builder.field("market_cap", marketCap.getMarketCap());
+                builder.field("market_cap", String.valueOf(marketCap.getMarketCap()));
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(marketCapIndex);

@@ -81,6 +81,15 @@ public class SearchApplication {
                     }
                 }
             }
+            if (args[0].equals("add_token")) {
+                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+                elasticSearchHandler.insertToken(args[1]);
+            }
+            //update mapping for add deleted tag
+            if(args[0].equals("update_mapping")) {
+                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+                elasticSearchHandler.updateMapping();
+            }
         }
     }
 

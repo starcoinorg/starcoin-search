@@ -16,6 +16,7 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.GetMappingsRequest;
@@ -26,7 +27,13 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -309,8 +316,8 @@ public class ElasticSearchHandler {
             logger.error("bulk block error:", e);
         }
         //flush token list
-        if(!tokenCodeList.isEmpty()) {
-            for(TokenCode token: tokenCodeList) {
+        if (!tokenCodeList.isEmpty()) {
+            for (TokenCode token : tokenCodeList) {
                 try {
                     String codeStr = token.address + "::" + token.module + "::" + token.name;
                     TokenInfo tokenInfo = stateRPCClient.getTokenInfo(token.address.toString(), codeStr);
@@ -328,12 +335,12 @@ public class ElasticSearchHandler {
 
     private void updateAddressHolder(BulkRequest bulkRequest, AddressHolder holder) {
         long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
-        if(amount == -1) {
+        if (amount == -1) {
             //resource not exist
             DeleteRequest deleteRequest = new DeleteRequest(addressHolderIndex);
             deleteRequest.id(holder.address + "-" + holder.tokenCode);
             bulkRequest.add(deleteRequest);
-        }else {
+        } else {
             bulkRequest.add(buildHolderRequest(holder, amount));
         }
     }
@@ -346,10 +353,10 @@ public class ElasticSearchHandler {
         SearchResponse searchResponse;
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-            Result<TokenInfo>  result = ServiceUtils.getSearchResult(searchResponse, TokenInfo.class);
+            Result<TokenInfo> result = ServiceUtils.getSearchResult(searchResponse, TokenInfo.class);
             List<TokenInfo> tokenInfoList = result.getContents();
-            if(!tokenInfoList.isEmpty()) {
-                for(TokenInfo tokenInfo : tokenInfoList) {
+            if (!tokenInfoList.isEmpty()) {
+                for (TokenInfo tokenInfo : tokenInfoList) {
                     tokenCache.put(tokenInfo.getTokenCode(), tokenInfo);
                 }
                 logger.info("load token info to cache ok: {}", tokenInfoList.size());
@@ -382,8 +389,47 @@ public class ElasticSearchHandler {
         }
     }
 
+    public void updateMapping() {
+        //read one index
+        SearchRequest searchRequest = new SearchRequest(blockContentIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.matchAllQuery()).size(1);
+
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            SearchHit[] hits = searchResponse.getHits().getHits();
+            if(hits.length > 0) {
+                UpdateRequest updateRequest = new UpdateRequest();
+                updateRequest.index(blockContentIndex);
+                updateRequest.id(hits[0].getId());
+                updateRequest.script(Script.parse("if (ctx._source.deleted == null) {ctx._source.deleted = false}"));
+                UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
+                logger.info("update result: {}", response.toString());
+            }
+        } catch (IOException e) {
+            logger.error("update error:", e);
+        }
+    }
+
+    public void insertToken(String tokenCode) {
+            TokenInfo tokenInfo = null;
+            try {
+                tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
+                if (tokenInfo != null) {
+                    addTokenInfo(tokenInfo, tokenCode);
+                } else {
+                    logger.info("token info is null:{}", tokenCode);
+                }
+            } catch (Exception e) {
+                logger.error("insert token error:", e);
+            }
+        logger.info("insert token ok: {}", tokenCode);
+    }
+
     public void bulkForkedUpdate(Block block) {
-        if(block == null) return;
+        if (block == null) return;
         String blockHash = block.getHeader().getBlockHash();
         String blockAuthor = block.getHeader().getAuthor();
         BulkRequest bulkRequest = new BulkRequest();
@@ -397,10 +443,10 @@ public class ElasticSearchHandler {
         //delete transaction
         List<Transaction> transactionList = block.getTransactionList();
         Set<AddressHolder> holderAddress = new HashSet<>();
-        if(transactionList != null && !transactionList.isEmpty()) {
+        if (transactionList != null && !transactionList.isEmpty()) {
             String transactionHash = "";
             List<String> transactionHashes = new ArrayList<>();
-            for(Transaction transaction: transactionList) {
+            for (Transaction transaction : transactionList) {
                 transactionHash = transaction.getTransactionHash();
                 transactionHashes.add(transactionHash);
                 addUpdateRequest(transactionIndex, transactionHash, bulkRequest);
@@ -408,54 +454,54 @@ public class ElasticSearchHandler {
                 addUpdateRequest(payloadIndex, transactionHash, bulkRequest);
             }
             //delete event
-            if(!transactionHashes.isEmpty()) {
-               List<EventFull> events = getEventsByTransaction(transactionHashes);
-               if(events != null && !events.isEmpty()) {
-                   for (EventFull event: events) {
-                       addUpdateRequest(eventIndex, event.getId(), bulkRequest);
-                       Struct struct = Struct.fromRPC(event.getTypeTag());
-                       if(struct != null) {
-                           addToHolders(event,struct.getName(), struct.getModule(), blockAuthor, holderAddress, event.getEventAddress());
-                       }
-                   }
-               }
-               //delete transfer
+            if (!transactionHashes.isEmpty()) {
+                List<EventFull> events = getEventsByTransaction(transactionHashes);
+                if (events != null && !events.isEmpty()) {
+                    for (EventFull event : events) {
+                        addUpdateRequest(eventIndex, event.getId(), bulkRequest);
+                        Struct struct = Struct.fromRPC(event.getTypeTag());
+                        if (struct != null) {
+                            addToHolders(event, struct.getName(), struct.getModule(), blockAuthor, holderAddress, event.getEventAddress());
+                        }
+                    }
+                }
+                //delete transfer
                 List<Transfer> transferList = getTransferByHash(network, transactionHashes);
-               if(!transferList.isEmpty()) {
-                   List<String> transferIdList = new ArrayList<>();
-                   for (Transfer transfer: transferList
-                        ) {
-                       addUpdateRequest(transferIndex, transfer.getId(), bulkRequest);
-                       transferIdList.add(transfer.getId());
-                   }
-                   //delete transfer_journal
-                   //TODO history data must clear
-                   List<TransferJournal> transferJournalList = getTransferJournals(network, transferIdList);
-                   if(transferJournalList != null && ! transferJournalList.isEmpty()){
-                       for(TransferJournal journal : transferJournalList) {
-                           addUpdateRequest(transferJournalIndex, journal.getId(), bulkRequest);
-                       }
-                   }
-               }
+                if (!transferList.isEmpty()) {
+                    List<String> transferIdList = new ArrayList<>();
+                    for (Transfer transfer : transferList
+                    ) {
+                        addUpdateRequest(transferIndex, transfer.getId(), bulkRequest);
+                        transferIdList.add(transfer.getId());
+                    }
+                    //delete transfer_journal
+                    //TODO history data must clear
+                    List<TransferJournal> transferJournalList = getTransferJournals(network, transferIdList);
+                    if (transferJournalList != null && !transferJournalList.isEmpty()) {
+                        for (TransferJournal journal : transferJournalList) {
+                            addUpdateRequest(transferJournalIndex, journal.getId(), bulkRequest);
+                        }
+                    }
+                }
             }
         }
         //flush address holder
-        if(!holderAddress.isEmpty()) {
-            for(AddressHolder holder: holderAddress) {
+        if (!holderAddress.isEmpty()) {
+            for (AddressHolder holder : holderAddress) {
                 updateAddressHolder(bulkRequest, holder);
             }
         }
 
         //delete uncle
         List<BlockHeader> uncleHeaders = block.getUncles();
-        if(!uncleHeaders.isEmpty()) {
+        if (!uncleHeaders.isEmpty()) {
             List<String> blockHashes = new ArrayList<>();
-            for(BlockHeader header: uncleHeaders) {
+            for (BlockHeader header : uncleHeaders) {
                 blockHashes.add(header.getBlockHash());
             }
             List<UncleBlock> uncles = getUncleBlockByHash(network, block.getHeader().getHeight(), blockHashes);
-            if(uncles != null && !uncles.isEmpty()) {
-                for(UncleBlock uncle : uncles) {
+            if (uncles != null && !uncles.isEmpty()) {
+                for (UncleBlock uncle : uncles) {
                     addUpdateRequest(uncleBlockIndex, uncle.getId(), bulkRequest);
                 }
             }
@@ -468,7 +514,7 @@ public class ElasticSearchHandler {
         }
     }
 
-    private  List<TransferJournal> getTransferJournals(String network, List<String> transferIds) {
+    private List<TransferJournal> getTransferJournals(String network, List<String> transferIds) {
         SearchRequest searchRequest = new SearchRequest(transferJournalIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.termsQuery("transfer_id", transferIds));
@@ -484,7 +530,7 @@ public class ElasticSearchHandler {
         return result.getContents();
     }
 
-    private  List<UncleBlock> getUncleBlockByHash(String network, long blockHeight, List<String> blockHashes) {
+    private List<UncleBlock> getUncleBlockByHash(String network, long blockHeight, List<String> blockHashes) {
         SearchRequest searchRequest = new SearchRequest(uncleBlockIndex);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
@@ -542,7 +588,7 @@ public class ElasticSearchHandler {
             if (transaction.getUserTransaction() != null) {
                 String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
                 TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
-                TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(packagePayload,transaction.getTimestamp(),transaction.getTransactionHash());
+                TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(packagePayload, transaction.getTimestamp(), transaction.getTransactionHash());
                 IndexRequest blockContent = new IndexRequest(payloadIndex);
                 blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(payloadInfo), XContentType.JSON);
                 bulkRequest.add(blockContent);
@@ -820,7 +866,7 @@ public class ElasticSearchHandler {
     private void addToHolders(Event event, String tagName, String tagModule, String blockAuthor, Set<AddressHolder> holders, String eventAddress) {
         byte[] bytes = Hex.decode(event.getData());
         try {
-            if(tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
+            if (tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
                 DepositEvent inner = DepositEvent.bcsDeserialize(bytes);
                 String sb = inner.token_code.address +
                         "::" +
@@ -829,10 +875,10 @@ public class ElasticSearchHandler {
                         inner.token_code.name;
                 holders.add(new AddressHolder(eventAddress, sb));
                 tokenCodeList.add(inner.token_code);
-            }else if( tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT)) {
-                if(tagModule.equalsIgnoreCase(Constant.EVENT_TREASURY_MODULE)) {
+            } else if (tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT)) {
+                if (tagModule.equalsIgnoreCase(Constant.EVENT_TREASURY_MODULE)) {
                     holders.add(new AddressHolder(blockAuthor, STCTypeTag));
-                }else {
+                } else {
                     WithdrawEvent inner = WithdrawEvent.bcsDeserialize(bytes);
                     String sb = inner.token_code.address +
                             "::" +

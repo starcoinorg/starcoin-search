@@ -87,9 +87,9 @@ public class MarketCapHandle {
             for (TokenMarketCap marketCap : marketCaps) {
                 //factor
                 TokenInfo tokenInfo = tokenCache.get(marketCap.getTypeTag());
-                if(tokenInfo != null) {
+                if (tokenInfo != null) {
                     marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
-                }else {
+                } else {
                     logger.warn("when handle market cap, token info not exist: {}", marketCap.getTypeTag());
                 }
                 bulkRequest.add(buildMarketCapRequest(marketCap));
@@ -111,9 +111,9 @@ public class MarketCapHandle {
         for (SearchHit hit : searchHit) {
             TokenMarketCap marketCap = JSON.parseObject(hit.getSourceAsString(), TokenMarketCap.class);
             try {
-                if(marketCap.getTypeTag().equals(STCTypeTag)) {
+                if (marketCap.getTypeTag().equals(STCTypeTag)) {
                     marketCap.setMarketCap(tokenContractRPCClient.getSTCCurrentSupply());
-                }else {
+                } else {
                     marketCap.setMarketCap(tokenContractRPCClient.getTokenCurrentSupply(marketCap.getTypeTag()));
                 }
                 tokens.add(marketCap);

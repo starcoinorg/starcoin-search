@@ -5,8 +5,8 @@
         "timestamp": {
           "type": "date"
         },
-        "deleted" : {
-          "type" : "boolean"
+        "deleted": {
+          "type": "boolean"
         },
         "block_hash": {
           "type": "text",

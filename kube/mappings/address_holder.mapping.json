@@ -13,8 +13,8 @@
       "amount": {
         "type": "long"
       },
-      "deleted" : {
-        "type" : "boolean"
+      "deleted": {
+        "type": "boolean"
       },
       "type_tag": {
         "type": "text",

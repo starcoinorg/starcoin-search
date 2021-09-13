@@ -5,8 +5,8 @@
         "uncle_block_number": {
           "type": "long"
         },
-        "deleted" : {
-          "type" : "boolean"
+        "deleted": {
+          "type": "boolean"
         },
         "header": {
           "properties": {

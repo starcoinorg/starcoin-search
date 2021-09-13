@@ -77,8 +77,8 @@
         "timestamp": {
           "type": "date"
         },
-        "deleted" : {
-          "type" : "boolean"
+        "deleted": {
+          "type": "boolean"
         },
         "transaction_hash": {
           "type": "text",

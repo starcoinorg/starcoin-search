@@ -17,6 +17,7 @@ import org.starcoin.api.Result;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.TransferOffset;
+import org.starcoin.search.utils.ResultWithId;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.Hex;
 
@@ -46,6 +47,21 @@ public class ServiceUtils {
             blocks.add(JSON.parseObject(hit.getSourceAsString(), object));
         }
         result.setContents(blocks);
+        return result;
+    }
+
+    public static <T> ResultWithId<T> getSearchResultWithIds(SearchResponse searchResponse, Class<T> object) {
+        SearchHit[] searchHit = searchResponse.getHits().getHits();
+        ResultWithId<T> result = new ResultWithId<>();
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
+        List<T> blocks = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (SearchHit hit : searchHit) {
+            blocks.add(JSON.parseObject(hit.getSourceAsString(), object));
+            ids.add(hit.getId());
+        }
+        result.setContents(blocks);
+        result.setIds(ids);
         return result;
     }
 

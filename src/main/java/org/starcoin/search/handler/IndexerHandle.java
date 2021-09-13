@@ -12,13 +12,10 @@ import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
 import org.starcoin.search.bean.BlockOffset;
-import org.starcoin.search.constant.Constant;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 
 public class IndexerHandle extends QuartzJobBean {
@@ -48,10 +45,10 @@ public class IndexerHandle extends QuartzJobBean {
         //update current handle header
         try {
             if (localBlockOffset != null) {
-                Block  block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
-                if(block != null) {
+                Block block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
+                if (block != null) {
                     currentHandleHeader = block.getHeader();
-                }else {
+                } else {
                     logger.error("init offset block not exist on chain: {}", localBlockOffset);
                 }
 
@@ -104,10 +101,10 @@ public class IndexerHandle extends QuartzJobBean {
                     String forkHeaderParentHash = null;
                     do {
                         //获取分叉的block
-                        if(forkHeaderParentHash == null) {
+                        if (forkHeaderParentHash == null) {
                             //第一次先回滚当前最高的分叉块
                             forkHeaderParentHash = forkHeader.getBlockHash();
-                        }else {
+                        } else {
                             forkHeaderParentHash = forkHeader.getParentHash();
                         }
                         lastForkBlock = elasticSearchHandler.getBlockContent(forkHeaderParentHash);
@@ -119,7 +116,7 @@ public class IndexerHandle extends QuartzJobBean {
                         if (lastForkBlock != null) {
                             elasticSearchHandler.bulkForkedUpdate(lastForkBlock);
                             logger.info("rollback forked block ok: {}, {}", lastForkBlock.getHeader().getHeight(), forkHeaderParentHash);
-                        }else {
+                        } else {
                             //如果块取不到，先退出当前任务，下一个轮询周期再执行
                             logger.warn("get forked block is null: {}", forkHeaderParentHash);
                             return;

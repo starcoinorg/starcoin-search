@@ -87,6 +87,13 @@ PUT _component_template/block-mappings
       }
     }
 
+    PUT _component_template/txn_payload-mappings
+        {
+          "template": {
+            # copy txn_payload.mapping.json to here.
+          }
+        }
+
 4.
   PUT _index_template/blocks-template
   {
@@ -150,6 +157,12 @@ PUT _component_template/block-mappings
       "composed_of": ["address-holder-mappings"]
     }
 
+    PUT _index_template/txn_payload-template
+    {
+      "index_patterns": ["*.txn_payloads"],
+      "priority": 500,
+      "composed_of": ["xn_payload-mappings"]
+    }
 
 POST _reindex
 {

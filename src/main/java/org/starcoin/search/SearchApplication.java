@@ -11,6 +11,7 @@ import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
+import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
 
 import java.io.BufferedReader;

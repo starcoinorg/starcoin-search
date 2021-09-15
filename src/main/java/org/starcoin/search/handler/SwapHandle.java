@@ -42,14 +42,10 @@ import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 public class SwapHandle {
 
     private static final Logger logger = LoggerFactory.getLogger(SwapHandle.class);
-<<<<<<< HEAD
 
     @Autowired
     private RestHighLevelClient client;
 
-=======
-    private RestHighLevelClient client;
->>>>>>> db24fe2 (add stats function and price service)
     @Value("${starcoin.network}")
     private String network;
 
@@ -64,17 +60,7 @@ public class SwapHandle {
     @Autowired
     private SwapStatService swapStatService;
 
-<<<<<<< HEAD
     public void volumeStats(long startTime, long endTime) {
-=======
-    static long getTimeStamp(int day) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH) + day, 0, 0, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    void volumeStats(long startTime, long endTime) {
->>>>>>> db24fe2 (add stats function and price service)
         Set<String> handledTxn = new HashSet<>();
         Map<String, TokenStat> statHashMap = new HashMap<>();
         Map<String, TokenPoolStat> poolMap = new HashMap<>();
@@ -217,15 +203,7 @@ public class SwapHandle {
     private BigDecimal moveScalingFactor(String key, BigInteger amount) {
         TokenInfo tokenInfo = tokenCache.get(key);
         BigDecimal actualValue = new BigDecimal(amount);
-<<<<<<< HEAD
-        if(tokenInfo != null){
-            actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
-        }else{
-            logger.info("could not find token info with name"+key);
-        }
-=======
         actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
->>>>>>> db24fe2 (add stats function and price service)
         return actualValue;
     }
 
@@ -281,11 +259,7 @@ public class SwapHandle {
 
         try {
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-<<<<<<< HEAD
             return ServiceUtils.getSearchResultJackson(searchResponse, TransactionPayloadInfo.class);
-=======
-            return ServiceUtils.getSearchResult(searchResponse, TransactionPayloadInfo.class);
->>>>>>> db24fe2 (add stats function and price service)
         } catch (IOException e) {
             logger.error("get transfer error:", e);
             return Result.EmptyResult;

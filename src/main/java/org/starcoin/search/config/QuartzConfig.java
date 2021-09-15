@@ -6,10 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
-import org.starcoin.search.handler.IndexerHandle;
-import org.starcoin.search.handler.MarketCapIndexer;
-import org.starcoin.search.handler.SecondaryIndexer;
-import org.starcoin.search.handler.TransactionPayloadHandle;
+import org.starcoin.search.handler.*;
 
 import java.util.Properties;
 
@@ -39,6 +36,11 @@ public class QuartzConfig {
     @Bean
     public JobDetail handleTransactionPayload() {
         return JobBuilder.newJob(TransactionPayloadHandle.class).withIdentity("txn_payload").storeDurably().build();
+    }
+
+    @Bean
+    public JobDetail handleSwapStats() {
+        return JobBuilder.newJob(SwapIndexer.class).withIdentity("swap_stats").storeDurably().build();
     }
 
     @Bean
@@ -86,6 +88,17 @@ public class QuartzConfig {
     }
 
     @Bean
+    public Trigger startSwapStats() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(24)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(handleSwapStats())
+                .withIdentity("swap_stats")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
         try {
@@ -117,6 +130,7 @@ public class QuartzConfig {
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
         scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
         scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
+        scheduler.scheduleJob(handleSwapStats(),startSwapStats());
         if (autoStart) {
             scheduler.start();
         }

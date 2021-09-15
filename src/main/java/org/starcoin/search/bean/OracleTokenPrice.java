@@ -26,6 +26,9 @@ public class OracleTokenPrice {
 
     public BigDecimal getPrice(String tokenPairName,long timestamp){
         TreeMap<Long,BigDecimal> priceMap = tokenPriceMap.get(tokenPairName);
+        if(priceMap==null){
+            return null;
+        }
         Map.Entry<Long,BigDecimal> floorEntry = priceMap.floorEntry(timestamp);
         Map.Entry<Long,BigDecimal> higherEntry = priceMap.higherEntry(timestamp);
         if(Math.abs(timestamp-floorEntry.getKey())<=Math.abs(timestamp-higherEntry.getKey())){

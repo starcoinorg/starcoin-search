@@ -32,6 +32,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.starcoin.api.TokenContractRPCClient.STCTypeTag;
 import static org.starcoin.search.handler.ServiceUtils.tokenCache;
 
 @Service
@@ -73,7 +74,7 @@ public class MarketCapHandle {
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
-            logger.error("get transfer error:", e);
+            logger.error("get token market cap error:", e);
             return Result.EmptyResult;
         }
         return getResult(searchResponse);
@@ -86,9 +87,9 @@ public class MarketCapHandle {
             for (TokenMarketCap marketCap : marketCaps) {
                 //factor
                 TokenInfo tokenInfo = tokenCache.get(marketCap.getTypeTag());
-                if(tokenInfo != null) {
+                if (tokenInfo != null) {
                     marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
-                }else {
+                } else {
                     logger.warn("when handle market cap, token info not exist: {}", marketCap.getTypeTag());
                 }
                 bulkRequest.add(buildMarketCapRequest(marketCap));
@@ -110,7 +111,11 @@ public class MarketCapHandle {
         for (SearchHit hit : searchHit) {
             TokenMarketCap marketCap = JSON.parseObject(hit.getSourceAsString(), TokenMarketCap.class);
             try {
-                marketCap.setMarketCap(tokenContractRPCClient.getTokenMarketCap(marketCap.getTypeTag()));
+                if (marketCap.getTypeTag().equals(STCTypeTag)) {
+                    marketCap.setMarketCap(tokenContractRPCClient.getSTCCurrentSupply());
+                } else {
+                    marketCap.setMarketCap(tokenContractRPCClient.getTokenCurrentSupply(marketCap.getTypeTag()));
+                }
                 tokens.add(marketCap);
             } catch (JSONRPC2SessionException e) {
                 logger.error("get market cap err:", e);
@@ -129,7 +134,7 @@ public class MarketCapHandle {
             builder.startObject();
             {
                 builder.field("type_tag", marketCap.getTypeTag());
-                builder.field("market_cap", marketCap.getMarketCap());
+                builder.field("market_cap", String.valueOf(marketCap.getMarketCap()));
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(marketCapIndex);

@@ -49,6 +49,9 @@
       "timestamp": {
         "type": "date"
       },
+      "deleted": {
+        "type": "boolean"
+      },
       "txn_hash": {
         "type": "text",
         "fields": {

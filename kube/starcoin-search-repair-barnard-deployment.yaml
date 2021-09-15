@@ -1,44 +1,44 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-search-deployment
+  name: starcoin-search-repair-deployment
   namespace: starcoin-barnard
   labels:
-    app: starcoin-search
+    app: starcoin-search-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-search
+      app: starcoin-search-repair
   template:
     metadata:
       labels:
-        app: starcoin-search
+        app: starcoin-search-repair
     spec:
       containers:
-        - name: starcoin-search
-          image: starcoin/starcoin_search:sha-d847ec3
+        - name: starcoin-search-repair
+          image: starcoin/starcoin_search:sha-98bc5d8
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard2.seed.starcoin.org"
+              value: "barnard5.seed.starcoin.org"
             - name: NETWORK
-              value: "barnard"
+              value: "barnard.0727"
             - name: BULK_SIZE
-              value: "80"
+              value: "100"
             - name: STARCOIN_ES_URL
-              value: "123.57.40.36"
+              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: STARCOIN_ES_PROTOCOL
-              value: "http"
+              value: "https"
             - name: STARCOIN_ES_PORT
-              value: "9200"
+              value: "443"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: PROG_ARGS
-              value: ""
+              value: "auto_repair 682540"
             - name: INDEXER_AUTO_START
-              value: "true"
+              value: "false"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

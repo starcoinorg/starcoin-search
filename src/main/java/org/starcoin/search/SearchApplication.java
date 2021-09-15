@@ -11,6 +11,7 @@ import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
+import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
 
 import java.io.BufferedReader;
@@ -80,6 +81,15 @@ public class SearchApplication {
                         logger.error("auto repair error:", e);
                     }
                 }
+            }
+            if (args[0].equals("add_token")) {
+                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+                elasticSearchHandler.insertToken(args[1]);
+            }
+            //update mapping for add deleted tag
+            if(args[0].equals("update_mapping")) {
+                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+                elasticSearchHandler.updateMapping();
             }
         }
     }

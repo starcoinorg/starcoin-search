@@ -1,9 +1,6 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
@@ -23,8 +20,9 @@ import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.types.ModuleId;
 import org.starcoin.types.ScriptFunction;
 import org.starcoin.types.StructTag;
+import org.starcoin.search.utils.ResultWithId;
 import org.starcoin.types.TransactionPayload;
-import org.starcoin.utils.*;
+import org.starcoin.utils.Hex;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,12 +85,28 @@ public class ServiceUtils {
         return result;
     }
 
-    static void createIndexIfNotExist(RestHighLevelClient client, String network, String index) throws IOException {
+    public static <T> ResultWithId<T> getSearchResultWithIds(SearchResponse searchResponse, Class<T> object) {
+        SearchHit[] searchHit = searchResponse.getHits().getHits();
+        ResultWithId<T> result = new ResultWithId<>();
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
+        List<T> blocks = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (SearchHit hit : searchHit) {
+            blocks.add(JSON.parseObject(hit.getSourceAsString(), object));
+            ids.add(hit.getId());
+        }
+        result.setContents(blocks);
+        result.setIds(ids);
+        return result;
+    }
+
+    static String createIndexIfNotExist(RestHighLevelClient client, String network, String index) throws IOException {
         String currentIndex = getIndex(network, index);
         GetIndexRequest getRequest = new GetIndexRequest(currentIndex);
         if (!client.indices().exists(getRequest, RequestOptions.DEFAULT)) {
             CreateIndexResponse response = client.indices().create(new CreateIndexRequest(currentIndex), RequestOptions.DEFAULT);
         }
+        return currentIndex;
     }
 
     static TransferOffset getRemoteOffset(RestHighLevelClient client, String offsetIndex) {

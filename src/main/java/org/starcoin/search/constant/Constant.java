@@ -21,4 +21,5 @@ public class Constant {
     public static final String EVENT_FILTER__MODULE = "Account";
     public static final String DEPOSIT_EVENT = "DepositEvent";
     public static final String WITHDRAW_EVENT = "WithdrawEvent";
+    public static final String EVENT_TREASURY_MODULE = "Treasury";
 }

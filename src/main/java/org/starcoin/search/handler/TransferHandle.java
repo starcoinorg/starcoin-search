@@ -21,6 +21,7 @@ import org.starcoin.api.Result;
 import org.starcoin.bean.Transfer;
 import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.search.constant.Constant;
+import org.starcoin.search.utils.ResultWithId;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -84,7 +85,16 @@ public class TransferHandle {
             logger.error("get transfer error:", e);
             return Result.EmptyResult;
         }
-        return ServiceUtils.getSearchResult(searchResponse, Transfer.class);
+        //set ids
+        ResultWithId<Transfer> result = ServiceUtils.getSearchResultWithIds(searchResponse, Transfer.class);
+        List<Transfer> transferList = result.getContents();
+        List<String> ids = result.getIds();
+        if (!transferList.isEmpty()) {
+            for (int i = 0; i < transferList.size(); i++) {
+                transferList.get(i).setId(ids.get(i));
+            }
+        }
+        return result;
     }
 
     public void bulk(List<Transfer> transferList, int offset) {
@@ -99,13 +109,13 @@ public class TransferHandle {
         for (Transfer transfer : transferList) {
             // update token index
             BigInteger amount = transfer.getAmountValue();
-            IndexRequest senderRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getSender(), amount.negate(), transfer.getTimestamp());
+            IndexRequest senderRequest = buildJournalRequest(transfer.getId(), transfer.getTypeTag(), transfer.getSender(), amount.negate(), transfer.getTimestamp());
             if (senderRequest != null) {
                 bulkRequest.add(senderRequest);
             } else {
                 break;
             }
-            IndexRequest receiveRequest = buildJournalRequest(transfer.getTypeTag(), transfer.getReceiver(), amount, transfer.getTimestamp());
+            IndexRequest receiveRequest = buildJournalRequest(transfer.getId(), transfer.getTypeTag(), transfer.getReceiver(), amount, transfer.getTimestamp());
             if (senderRequest != null) {
                 bulkRequest.add(receiveRequest);
             } else {
@@ -127,8 +137,8 @@ public class TransferHandle {
         }
     }
 
-    private IndexRequest buildJournalRequest(String typeTag, String address, BigInteger amount, long timestamp) {
-        XContentBuilder addressBuilder = getJournalBuilder(typeTag, address, amount, timestamp);
+    private IndexRequest buildJournalRequest(String transferId, String typeTag, String address, BigInteger amount, long timestamp) {
+        XContentBuilder addressBuilder = getJournalBuilder(transferId, typeTag, address, amount, timestamp);
         if (addressBuilder != null) {
             String addressIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_JOURNAL_INDEX);
             IndexRequest indexRequest = new IndexRequest(addressIndex);
@@ -138,11 +148,12 @@ public class TransferHandle {
         return null;
     }
 
-    private XContentBuilder getJournalBuilder(String typeTag, String address, BigInteger amount, long timestamp) {
+    private XContentBuilder getJournalBuilder(String transferId, String typeTag, String address, BigInteger amount, long timestamp) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
             {
+                builder.field("transfer_id", transferId);
                 builder.field("type_tag", typeTag);
                 builder.field("address", address);
                 builder.field("amount", amount);

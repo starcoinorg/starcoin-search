@@ -5,6 +5,9 @@
         "uncle_block_number": {
           "type": "long"
         },
+        "deleted": {
+          "type": "boolean"
+        },
         "header": {
           "properties": {
             "accumulator_root": {

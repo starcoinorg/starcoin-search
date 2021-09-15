@@ -16,7 +16,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -66,9 +65,10 @@ public class OracleTokenPriceService {
 
     public OracleTokenPrice getPriceByTimeRange(long startTimeStamp, long endTimeStamp){
         LocalDateTime startTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTimeStamp), ZoneId.systemDefault());
+        LocalDateTime endTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTimeStamp), ZoneId.systemDefault());
 
         List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query("select * from oracle_token_price where ts > ? and ts< ?",
-                new OracleTokenPairRowMapper(),new Object[]{startTimeStamp,endTimeStamp});
+                new OracleTokenPairRowMapper(),new Object[]{startTs,endTs});
         return new OracleTokenPrice(oracleTokenPairList);
     }
 

@@ -1,6 +1,9 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
@@ -17,8 +20,11 @@ import org.starcoin.api.Result;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.TransferOffset;
+import org.starcoin.types.ModuleId;
+import org.starcoin.types.ScriptFunction;
+import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;
-import org.starcoin.utils.Hex;
+import org.starcoin.utils.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,6 +43,25 @@ public class ServiceUtils {
         return network + "." + indexConstant;
     }
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    static {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(StructTag.class, new StructTagDeserializer());
+        module.addDeserializer(org.starcoin.types.TypeTag.class, new TypeTagDeserializer());
+        module.addDeserializer(ModuleId.class, new ModuleDeserializer());
+        module.addDeserializer(ScriptFunction.class, new ScriptFunctionDeserializer());
+        module.addDeserializer(TransactionPayload.class, new TransactionPayloadDeserializer());
+
+        module.addSerializer(TransactionPayload.class, new TransactionPayloadSerializer());
+        module.addSerializer(org.starcoin.types.TypeTag.class, new TypeTagSerializer());
+        module.addSerializer(StructTag.class, new StructTagSerializer());
+        module.addSerializer(ScriptFunction.class, new ScriptFunctionSerializer());
+        module.addSerializer(ModuleId.class, new ModuleIdSerializer());
+
+        objectMapper.registerModule(module);
+    }
+
     public static <T> Result<T> getSearchResult(SearchResponse searchResponse, Class<T> object) {
         SearchHit[] searchHit = searchResponse.getHits().getHits();
         Result<T> result = new Result<>();
@@ -44,6 +69,19 @@ public class ServiceUtils {
         List<T> blocks = new ArrayList<>();
         for (SearchHit hit : searchHit) {
             blocks.add(JSON.parseObject(hit.getSourceAsString(), object));
+        }
+        result.setContents(blocks);
+        return result;
+    }
+
+
+    public static <T> Result<T> getSearchResultJackson(SearchResponse searchResponse, Class<T> object) throws JsonProcessingException {
+        SearchHit[] searchHit = searchResponse.getHits().getHits();
+        Result<T> result = new Result<>();
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
+        List<T> blocks = new ArrayList<>();
+        for (SearchHit hit : searchHit) {
+            blocks.add(objectMapper.readValue(hit.getSourceAsString(), object));
         }
         result.setContents(blocks);
         return result;

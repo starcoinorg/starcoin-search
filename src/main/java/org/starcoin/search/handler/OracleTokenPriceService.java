@@ -14,6 +14,10 @@ import org.starcoin.search.bean.OracleTokenPrice;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -61,8 +65,11 @@ public class OracleTokenPriceService {
     }
 
     public OracleTokenPrice getPriceByTimeRange(long startTimeStamp, long endTimeStamp){
-        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query("select * from oracle_token_price where ts between ? and ?",
-                new OracleTokenPairRowMapper(),new Object[]{startTimeStamp,endTimeStamp});
+        LocalDateTime startTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTimeStamp), ZoneId.systemDefault());
+        LocalDateTime endTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTimeStamp), ZoneId.systemDefault());
+
+        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query("select * from oracle_token_price where ts > ? and ts< ?",
+                new OracleTokenPairRowMapper(),new Object[]{startTs,endTs});
         return new OracleTokenPrice(oracleTokenPairList);
     }
 

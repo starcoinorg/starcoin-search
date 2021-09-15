@@ -40,7 +40,7 @@ public class QuartzConfig {
 
     @Bean
     public JobDetail handleOracleTokenPrice() {
-        return JobBuilder.newJob(TransactionPayloadHandle.class).withIdentity("oracle_token_price").storeDurably().build();
+        return JobBuilder.newJob(OracleIndexer.class).withIdentity("oracle_token_price").storeDurably().build();
     }
 
     @Bean
@@ -97,7 +97,7 @@ public class QuartzConfig {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(15)
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
+        return TriggerBuilder.newTrigger().forJob(handleOracleTokenPrice())
                 .withIdentity("oracle_token_price")
                 .withSchedule(scheduleBuilder)
                 .build();

@@ -36,8 +36,6 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static org.starcoin.search.handler.ServiceUtils.tokenCache;
-
 @Service
 public class SwapHandle {
 
@@ -49,7 +47,8 @@ public class SwapHandle {
     @Value("${starcoin.network}")
     private String network;
 
-    private StateRPCClient starcoinClient;
+    @Autowired
+    private StateRPCClient stateRPCClient;
 
     @Value("${swap.contract.address}")
     private String contractAddress;
@@ -152,7 +151,7 @@ public class SwapHandle {
     }
 
     Map<String, Tvl> getTvls() throws JSONRPC2SessionException {
-        ListResource resources = starcoinClient.getState(contractAddress);
+        ListResource resources = stateRPCClient.getState(contractAddress);
 
         Map<String, Tvl> tokenMap = new HashMap<>();
 
@@ -201,9 +200,13 @@ public class SwapHandle {
     }
 
     private BigDecimal moveScalingFactor(String key, BigInteger amount) {
-        TokenInfo tokenInfo = tokenCache.get(key);
+        TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
         BigDecimal actualValue = new BigDecimal(amount);
-        actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
+        if(tokenInfo!= null) {
+            actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
+        }else{
+            logger.warn("token info not exist:{}", key);
+        }
         return actualValue;
     }
 

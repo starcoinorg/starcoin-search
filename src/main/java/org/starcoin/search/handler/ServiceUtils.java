@@ -17,6 +17,7 @@ import org.elasticsearch.search.SearchHit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starcoin.api.Result;
+import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.TransferOffset;
@@ -153,6 +154,21 @@ public class ServiceUtils {
         } catch (Exception e) {
             logger.error("get transfer offset error:", e);
         }
+    }
+
+    static TokenInfo getTokenInfo(StateRPCClient stateRPCClient, String tokenCode) {
+        TokenInfo tokenInfo = tokenCache.get(tokenCode);
+        if(tokenInfo != null) {
+            try {
+                tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
+                if(tokenInfo != null) {
+                    tokenCache.put(tokenCode, tokenInfo);
+                }
+            } catch (JSONRPC2SessionException e) {
+                logger.error("get token info error:", e);
+            }
+        }
+        return tokenInfo;
     }
 
     static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {

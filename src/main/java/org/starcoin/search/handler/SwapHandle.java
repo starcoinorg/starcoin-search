@@ -244,14 +244,9 @@ public class SwapHandle {
         searchSourceBuilder.size(100);
 
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        queryBuilder.must(
-                QueryBuilders.boolQuery()
-                        .should(QueryBuilders.rangeQuery("timestamp").gt(startTime))
-                        .should(QueryBuilders.rangeQuery("timestamp").lt(endTime)));
-        queryBuilder.must(
-                QueryBuilders.boolQuery().should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_exact_token_for_token"))
-                        .should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_token_for_exact_token"))
-        );
+        queryBuilder.must(QueryBuilders.rangeQuery("timestamp").gt(startTime).lt(endTime));
+        queryBuilder.should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_exact_token_for_token"))
+                    .should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_token_for_exact_token"));
         searchSourceBuilder.query(queryBuilder);
 
         searchSourceBuilder.from(0);

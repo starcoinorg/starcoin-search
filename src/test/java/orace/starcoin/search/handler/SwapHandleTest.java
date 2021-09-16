@@ -29,7 +29,7 @@ public class SwapHandleTest {
         long endTs = getTimeStamp(0);
         long startTs = getTimeStamp(-1);
 
-        swapHandle.volumeStats(startTs,endTs);
+        swapHandle.volumeStats(1631605899615L, 1631606054361L);
     }
 
     static long getTimeStamp(int day) {

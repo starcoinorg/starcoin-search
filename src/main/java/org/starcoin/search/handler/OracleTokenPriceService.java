@@ -25,6 +25,9 @@ public class OracleTokenPriceService {
     @Value("${starcoin.oracle.base.url}")
     private String oracleBaseUrl;
 
+    @Value("${starcoin.network}")
+    private String network;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
     private static final Logger logger = LoggerFactory.getLogger(OracleTokenPriceService.class);
@@ -57,7 +60,7 @@ public class OracleTokenPriceService {
                 }
                 values.add(new Object[]{tokenPair.getPairName(),tokenPair.getLatestPrice(),tokenPair.getDecimals(),status,statusMap.get("onChainTransactionHash")});
             }
-            jdbcTemplate.batchUpdate("insert into oracle_token_price(token_pair_name,price,decimals,status,txn_hash) values(?,?,?,?,?)",values);
+            jdbcTemplate.batchUpdate(String.format("insert into %s.oracle_token_price(token_pair_name,price,decimals,status,txn_hash) values(?,?,?,?,?)",network),values);
         } catch (IOException e) {
             logger.error("fetch oracle failed",e);
         }
@@ -67,7 +70,7 @@ public class OracleTokenPriceService {
         LocalDateTime startTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTimeStamp), ZoneId.systemDefault());
         LocalDateTime endTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTimeStamp), ZoneId.systemDefault());
 
-        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query("select * from oracle_token_price where ts > ? and ts< ?",
+        List<OracleTokenPair> oracleTokenPairList = jdbcTemplate.query(String.format("select * from %s.oracle_token_price where ts > ? and ts< ?",network),
                 new OracleTokenPairRowMapper(),new Object[]{startTs,endTs});
         return new OracleTokenPrice(oracleTokenPairList);
     }

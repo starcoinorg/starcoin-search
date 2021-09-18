@@ -33,7 +33,6 @@ import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -400,7 +399,7 @@ public class ElasticSearchHandler {
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
             SearchHit[] hits = searchResponse.getHits().getHits();
-            if(hits.length > 0) {
+            if (hits.length > 0) {
                 UpdateRequest updateRequest = new UpdateRequest();
                 updateRequest.index(blockContentIndex);
                 updateRequest.id(hits[0].getId());
@@ -414,17 +413,17 @@ public class ElasticSearchHandler {
     }
 
     public void insertToken(String tokenCode) {
-            TokenInfo tokenInfo = null;
-            try {
-                tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
-                if (tokenInfo != null) {
-                    addTokenInfo(tokenInfo, tokenCode);
-                } else {
-                    logger.info("token info is null:{}", tokenCode);
-                }
-            } catch (Exception e) {
-                logger.error("insert token error:", e);
+        TokenInfo tokenInfo = null;
+        try {
+            tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
+            if (tokenInfo != null) {
+                addTokenInfo(tokenInfo, tokenCode);
+            } else {
+                logger.info("token info is null:{}", tokenCode);
             }
+        } catch (Exception e) {
+            logger.error("insert token error:", e);
+        }
         logger.info("insert token ok: {}", tokenCode);
     }
 
@@ -973,6 +972,19 @@ public class ElasticSearchHandler {
                     "address='" + address + '\'' +
                     ", tokenCode='" + tokenCode + '\'' +
                     '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            AddressHolder holder = (AddressHolder) o;
+            return address.equals(holder.address) && tokenCode.equals(holder.tokenCode);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(address, tokenCode);
         }
     }
 

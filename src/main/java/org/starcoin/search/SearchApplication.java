@@ -12,6 +12,7 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.search.handler.ElasticSearchHandler;
+import org.starcoin.search.handler.HolderHistoryHandle;
 import org.starcoin.search.handler.RepairHandle;
 
 import java.io.BufferedReader;
@@ -40,8 +41,9 @@ public class SearchApplication {
             }
         }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
-        if (args != null && args.length >= 2) {
+        if (args != null && args.length >= 1) {
             RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
+            ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
             if (args[0].equals("repair")) {
                 long blockNumber = Long.parseLong(args[1]);
                 repairHandle.repair(blockNumber);
@@ -83,14 +85,19 @@ public class SearchApplication {
                 }
             }
             if (args[0].equals("add_token")) {
-                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
                 elasticSearchHandler.insertToken(args[1]);
             }
             //update mapping for add deleted tag
-            if(args[0].equals("update_mapping")) {
-                ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+            if (args[0].equals("update_mapping")) {
                 elasticSearchHandler.updateMapping();
             }
+            //holder history rebuild
+            if (args[0].equals("holder")) {
+                HolderHistoryHandle handle = (HolderHistoryHandle) context.getBean("holderHistoryHandle");
+                handle.handle();
+            }
+        } else {
+            logger.warn("arg error: {}", args);
         }
     }
 

@@ -87,7 +87,7 @@ public class SearchApplication {
                 elasticSearchHandler.insertToken(args[1]);
             }
             //update mapping for add deleted tag
-            if(args[0].equals("update_mapping")) {
+            if (args[0].equals("update_mapping")) {
                 ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
                 elasticSearchHandler.updateMapping();
             }

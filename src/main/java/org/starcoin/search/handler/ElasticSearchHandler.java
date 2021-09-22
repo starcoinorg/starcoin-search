@@ -33,11 +33,11 @@ import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
@@ -45,8 +45,13 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.BlockOffset;
+import org.starcoin.search.bean.SwapTransaction;
+import org.starcoin.search.bean.SwapType;
 import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
+import org.starcoin.search.service.SwapTxnService;
+import org.starcoin.search.service.TransactionPayloadService;
+import org.starcoin.search.utils.StructTagUtil;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TokenCode;
@@ -57,6 +62,7 @@ import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.*;
 
 import static org.starcoin.api.TokenContractRPCClient.STCTypeTag;
@@ -70,6 +76,11 @@ public class ElasticSearchHandler {
     private final RestHighLevelClient client;
     private final StateRPCClient stateRPCClient;
     private final TransactionRPCClient transactionRPCClient;
+    @Autowired
+    private SwapTxnService swapTxnService;
+    @Autowired
+    private TransactionPayloadService transactionPayloadService;
+
     @Value("${starcoin.network}")
     private String network;
     private Set<TokenCode> tokenCodeList = new HashSet<>();
@@ -400,7 +411,7 @@ public class ElasticSearchHandler {
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
             SearchHit[] hits = searchResponse.getHits().getHits();
-            if(hits.length > 0) {
+            if (hits.length > 0) {
                 UpdateRequest updateRequest = new UpdateRequest();
                 updateRequest.index(blockContentIndex);
                 updateRequest.id(hits[0].getId());
@@ -414,17 +425,17 @@ public class ElasticSearchHandler {
     }
 
     public void insertToken(String tokenCode) {
-            TokenInfo tokenInfo = null;
-            try {
-                tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
-                if (tokenInfo != null) {
-                    addTokenInfo(tokenInfo, tokenCode);
-                } else {
-                    logger.info("token info is null:{}", tokenCode);
-                }
-            } catch (Exception e) {
-                logger.error("insert token error:", e);
+        TokenInfo tokenInfo = null;
+        try {
+            tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
+            if (tokenInfo != null) {
+                addTokenInfo(tokenInfo, tokenCode);
+            } else {
+                logger.info("token info is null:{}", tokenCode);
             }
+        } catch (Exception e) {
+            logger.error("insert token error:", e);
+        }
         logger.info("insert token ok: {}", tokenCode);
     }
 
@@ -584,18 +595,64 @@ public class ElasticSearchHandler {
 
     public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
+        List<SwapTransaction> swapTransactionList = new ArrayList<>();
+        List<org.starcoin.search.bean.TransactionPayload> transactionPayloadList = new ArrayList<>();
         for (Transaction transaction : transactionList) {
             if (transaction.getUserTransaction() != null) {
-                String payload = transaction.getUserTransaction().getRawTransaction().getPayload();
-                TransactionPayload packagePayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
-                TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(packagePayload, transaction.getTimestamp(), transaction.getTransactionHash());
-                IndexRequest blockContent = new IndexRequest(payloadIndex);
-                blockContent.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(payloadInfo), XContentType.JSON);
-                bulkRequest.add(blockContent);
+                RawTransaction rawTransaction = transaction.getUserTransaction().getRawTransaction();
+                String payload = rawTransaction.getPayload();
+                TransactionPayload transactionPayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
+                TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(transactionPayload, transaction.getTimestamp(), transaction.getTransactionHash());
+                //swap txn filter
+                if (transactionPayload instanceof TransactionPayload.ScriptFunction) {
+                    TransactionPayload.ScriptFunction scriptFunctionPayload = ((TransactionPayload.ScriptFunction) transactionPayload);
+                    String function = scriptFunctionPayload.value.function.toString();
+                    if (function.equals("swap_exact_token_for_token") || function.equals("swap_token_for_exact_token")) {
+                        //todo add farm swap function
+                        if (scriptFunctionPayload.value.ty_args.size() > 1 && scriptFunctionPayload.value.args.size() > 1) {
+                            //parse token and amount
+                            String tokenA = StructTagUtil.structTagToString(((org.starcoin.types.TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(0)).value);
+                            String tokenB = StructTagUtil.structTagToString(((org.starcoin.types.TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(1)).value);
+                            BigInteger argFirst = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(0));
+                            BigInteger argSecond = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(1));
+                            SwapTransaction swapTransaction = new SwapTransaction();
+                            swapTransaction.setTransactionHash(transaction.getTransactionHash());
+                            swapTransaction.setTimestamp(transaction.getTimestamp());
+                            swapTransaction.setAccount(rawTransaction.getSender());
+                            swapTransaction.setTokenA(tokenA);
+                            swapTransaction.setTokenB(tokenB);
+                            swapTransaction.setAmountA(argFirst);
+                            swapTransaction.setAmountB(argSecond);
+                            swapTransaction.setSwapType(SwapType.fromValue(function));
+                            swapTransactionList.add(swapTransaction);
+                        } else {
+                            logger.warn("swap txn args error: {}", transaction.getTransactionHash());
+                        }
+                    }
+                }
+                IndexRequest request = new IndexRequest(payloadIndex);
+                request.id(transaction.getTransactionHash()).source(objectMapper.writeValueAsString(payloadInfo), XContentType.JSON);
+                bulkRequest.add(request);
+                org.starcoin.search.bean.TransactionPayload payload1 = new org.starcoin.search.bean.TransactionPayload();
+                payload1.setTransactionHash(transaction.getTransactionHash());
+                payload1.setJson(ServiceUtils.getJsonString(transactionPayload));
+                transactionPayloadList.add(payload1);
             }
         }
         BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
         logger.info("bulk txn payload result: {}", response.buildFailureMessage());
+        //add es success and add swap txn
+        if (!swapTransactionList.isEmpty()) {
+            for (SwapTransaction swapTransaction : swapTransactionList) {
+                //get price
+            }
+            swapTxnService.saveList(swapTransactionList);
+            logger.info("save swap txn ok: {}", swapTransactionList.size());
+        }
+        if (!transactionPayloadList.isEmpty()) {
+            transactionPayloadService.savePayload(transactionPayloadList);
+            logger.info("save txn payload to pg ok: {}", transactionPayloadList.size());
+        }
     }
 
     private void transferDifficulty(BlockHeader header) {
@@ -945,7 +1002,7 @@ public class ElasticSearchHandler {
             if (userTransaction != null) {
                 transaction.setUserTransaction(userTransaction.getUserTransaction());
             } else {
-                logger.warn("get transation inner txn is null: {}", transaction.getTransactionHash());
+                logger.warn("get transaction inner txn is null: {}", transaction.getTransactionHash());
             }
         }
     }

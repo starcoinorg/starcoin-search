@@ -1,8 +1,5 @@
 package org.starcoin.search.handler;
 
-import com.novi.bcs.BcsDeserializer;
-import com.novi.serde.Bytes;
-import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -33,7 +30,10 @@ import org.starcoin.types.TypeTag;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -106,8 +106,8 @@ public class SwapHandle {
                     TypeTag.Struct typeTagFirst = (TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(0);
                     TypeTag.Struct typeTagSecond = (TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(1);
 
-                    BigInteger argFirst = deserializeU128(scriptFunctionPayload.value.args.get(0));
-                    BigInteger argSecond = deserializeU128(scriptFunctionPayload.value.args.get(1));
+                    BigInteger argFirst = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(0));
+                    BigInteger argSecond = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(1));
 
                     try {
                         sum(statHashMap, typeTagFirst, argFirst, oracleTokenPrice, payloadInfo.getTimestamp());
@@ -129,23 +129,23 @@ public class SwapHandle {
 
         // get tvl from contract
         try {
-            Map<String,Tvl> tvlMap = getTvls();
+            Map<String, Tvl> tvlMap = getTvls();
 
             statHashMap.forEach((k, v) -> {
                 v.setToken(k);
-                v.setTvl(this.moveScalingFactor(k,BigInteger.valueOf(tvlMap.get(k).getValue())));
+                v.setTvl(this.moveScalingFactor(k, BigInteger.valueOf(tvlMap.get(k).getValue())));
                 swapStatService.persistTokenStatInfo(v);
             });
 
             poolMap.forEach((k, v) -> {
                 String[] tokens = k.split("/");
-                v.setTokenPair(new TokenPair(tokens[0].trim(),tokens[1].trim()));
-                v.setTvl(this.moveScalingFactor(k,BigInteger.valueOf(tvlMap.get(k).getValue())));
+                v.setTokenPair(new TokenPair(tokens[0].trim(), tokens[1].trim()));
+                v.setTvl(this.moveScalingFactor(k, BigInteger.valueOf(tvlMap.get(k).getValue())));
                 swapStatService.persistTokenPoolStatInfo(v);
             });
 
         } catch (JSONRPC2SessionException e) {
-            logger.error("get tvl failed ",e);
+            logger.error("get tvl failed ", e);
         }
 
     }
@@ -202,9 +202,9 @@ public class SwapHandle {
     private BigDecimal moveScalingFactor(String key, BigInteger amount) {
         TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
         BigDecimal actualValue = new BigDecimal(amount);
-        if(tokenInfo!= null) {
+        if (tokenInfo != null) {
             actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
-        }else{
+        } else {
             logger.warn("token info not exist:{}", key);
         }
         return actualValue;
@@ -228,15 +228,6 @@ public class SwapHandle {
         }
     }
 
-    BigInteger deserializeU128(Bytes data) {
-        BcsDeserializer bcsDeserializer = new BcsDeserializer(data.content());
-        try {
-            return bcsDeserializer.deserialize_u128();
-        } catch (DeserializationError e) {
-            logger.warn("parse to u128 failed", e);
-        }
-        return BigInteger.ZERO;
-    }
 
     Result<TransactionPayloadInfo> volumeStatsByTimeRange(long startTime, long endTime) {
         SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX));
@@ -246,7 +237,7 @@ public class SwapHandle {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
         queryBuilder.must(QueryBuilders.rangeQuery("timestamp").gt(startTime).lt(endTime));
         queryBuilder.should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_exact_token_for_token"))
-                    .should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_token_for_exact_token"));
+                .should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_token_for_exact_token"));
         searchSourceBuilder.query(queryBuilder);
 
         searchSourceBuilder.from(0);

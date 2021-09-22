@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.novi.bcs.BcsDeserializer;
+import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
@@ -21,14 +23,15 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.TransferOffset;
+import org.starcoin.search.utils.ResultWithId;
 import org.starcoin.types.ModuleId;
 import org.starcoin.types.ScriptFunction;
 import org.starcoin.types.StructTag;
-import org.starcoin.search.utils.ResultWithId;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.*;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,15 +40,9 @@ import java.util.Map;
 public class ServiceUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
-
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     //缓存token info
     static Map<String, TokenInfo> tokenCache = new HashMap<>();
-
-    public static String getIndex(String network, String indexConstant) {
-        return network + "." + indexConstant;
-    }
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     static {
         SimpleModule module = new SimpleModule();
@@ -62,6 +59,10 @@ public class ServiceUtils {
         module.addSerializer(ModuleId.class, new ModuleIdSerializer());
 
         objectMapper.registerModule(module);
+    }
+
+    public static String getIndex(String network, String indexConstant) {
+        return network + "." + indexConstant;
     }
 
     public static <T> Result<T> getSearchResult(SearchResponse searchResponse, Class<T> object) {
@@ -89,6 +90,10 @@ public class ServiceUtils {
         return result;
     }
 
+    public static String getJsonString(Object object) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(object);
+    }
+
     public static <T> ResultWithId<T> getSearchResultWithIds(SearchResponse searchResponse, Class<T> object) {
         SearchHit[] searchHit = searchResponse.getHits().getHits();
         ResultWithId<T> result = new ResultWithId<>();
@@ -111,6 +116,16 @@ public class ServiceUtils {
             CreateIndexResponse response = client.indices().create(new CreateIndexRequest(currentIndex), RequestOptions.DEFAULT);
         }
         return currentIndex;
+    }
+
+    static BigInteger deserializeU128(Bytes data) {
+        BcsDeserializer bcsDeserializer = new BcsDeserializer(data.content());
+        try {
+            return bcsDeserializer.deserialize_u128();
+        } catch (DeserializationError e) {
+            logger.warn("parse to u128 failed", e);
+        }
+        return BigInteger.ZERO;
     }
 
     static TransferOffset getRemoteOffset(RestHighLevelClient client, String offsetIndex) {
@@ -158,10 +173,10 @@ public class ServiceUtils {
 
     static TokenInfo getTokenInfo(StateRPCClient stateRPCClient, String tokenCode) {
         TokenInfo tokenInfo = tokenCache.get(tokenCode);
-        if(tokenInfo != null) {
+        if (tokenInfo != null) {
             try {
                 tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
-                if(tokenInfo != null) {
+                if (tokenInfo != null) {
                     tokenCache.put(tokenCode, tokenInfo);
                 }
             } catch (JSONRPC2SessionException e) {

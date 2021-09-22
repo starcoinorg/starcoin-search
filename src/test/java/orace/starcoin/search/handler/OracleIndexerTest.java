@@ -1,6 +1,5 @@
 package orace.starcoin.search.handler;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.quartz.JobExecutionException;
@@ -19,14 +18,12 @@ import org.starcoin.search.handler.OracleTokenPriceService;
 @AutoConfigureMockMvc
 @TestPropertySource(
         locations = "classpath:application-integrationtest.properties")
-@Ignore
 public class OracleIndexerTest {
 
     @Autowired
     private OracleTokenPriceService oracleTokenPriceService;
 
     @Test
-    @Ignore
     public void testFetchAndStoreOracleTokenPrice() throws JobExecutionException {
         oracleTokenPriceService.fetchAndStoreOracleTokenPrice();
     }

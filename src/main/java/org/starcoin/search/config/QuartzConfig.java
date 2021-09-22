@@ -39,11 +39,6 @@ public class QuartzConfig {
     }
 
     @Bean
-    public JobDetail handleOracleTokenPrice() {
-        return JobBuilder.newJob(OracleIndexer.class).withIdentity("oracle_token_price").storeDurably().build();
-    }
-
-    @Bean
     public JobDetail handleSwapStats() {
         return JobBuilder.newJob(SwapIndexer.class).withIdentity("swap_stats").storeDurably().build();
     }
@@ -51,7 +46,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startQuartzTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(20)  //设置时间周期单位秒
+                .withIntervalInSeconds(3)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleIndexer())
                 .withIdentity("indexer")
@@ -62,7 +57,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startSecondTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(20)  //设置时间周期单位秒
+                .withIntervalInSeconds(3)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
                 .withIdentity("secondary")
@@ -84,7 +79,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startTransactionPayload() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(20)
+                .withIntervalInSeconds(2)
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
                 .withIdentity("txn_payload")
@@ -92,16 +87,6 @@ public class QuartzConfig {
                 .build();
     }
 
-    @Bean
-    public Trigger startOracleTokenPrice() {
-        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(15)
-                .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleOracleTokenPrice())
-                .withIdentity("oracle_token_price")
-                .withSchedule(scheduleBuilder)
-                .build();
-    }
 
     @Bean
     public Trigger startSwapStats() {
@@ -142,13 +127,11 @@ public class QuartzConfig {
     @Bean
     public Scheduler scheduler() throws SchedulerException {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
-        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
-        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
-        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
+//        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
+//        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
+//        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
         scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
-        scheduler.scheduleJob(handleSwapStats(),startSwapStats());
-        scheduler.scheduleJob(handleOracleTokenPrice(),startOracleTokenPrice());
-
+//        scheduler.scheduleJob(handleSwapStats(),startSwapStats());
         if (autoStart) {
             scheduler.start();
         }

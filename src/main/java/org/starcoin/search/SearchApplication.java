@@ -13,6 +13,7 @@ import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
+import org.starcoin.search.utils.OracleClient;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -104,6 +105,9 @@ public class SearchApplication {
         return null;
     }
 
+    @Value("${starcoin.oracle.base.url}")
+    private String oracleUrl;
+
     @Bean
     TransactionRPCClient transactionRPCClient(URL baseUrl) {
         return new TransactionRPCClient(baseUrl);
@@ -124,4 +128,14 @@ public class SearchApplication {
         return new TokenContractRPCClient(baseUrl);
     }
 
+    @Bean
+    OracleClient oracleClient() {
+        try {
+            URL oracleBaseUrl = new URL(oracleUrl);
+            return new OracleClient(oracleBaseUrl.getProtocol(), oracleBaseUrl.getHost());
+        } catch (MalformedURLException e) {
+            logger.error("get oracle base url error:", e);
+        }
+        return null;
+    }
 }

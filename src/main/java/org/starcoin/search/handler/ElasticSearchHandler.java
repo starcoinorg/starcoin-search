@@ -51,6 +51,7 @@ import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.search.service.SwapTxnService;
 import org.starcoin.search.service.TransactionPayloadService;
+import org.starcoin.search.utils.OracleClient;
 import org.starcoin.search.utils.StructTagUtil;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -62,6 +63,7 @@ import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -80,6 +82,8 @@ public class ElasticSearchHandler {
     private SwapTxnService swapTxnService;
     @Autowired
     private TransactionPayloadService transactionPayloadService;
+    @Autowired
+    private OracleClient oracleClient;
 
     @Value("${starcoin.network}")
     private String network;
@@ -643,9 +647,26 @@ public class ElasticSearchHandler {
         logger.info("bulk txn payload result: {}", response.buildFailureMessage());
         //add es success and add swap txn
         if (!swapTransactionList.isEmpty()) {
+            Set<String> tokenPair = new HashSet<>();
+            Map<String, BigInteger> tokenPairPrice = new HashMap<>();
+            String pair = null;
             for (SwapTransaction swapTransaction : swapTransactionList) {
-                //get price
+                pair = swapTransaction.getTokenA() + "_" + swapTransaction.getTokenB();
+                BigInteger price = tokenPairPrice.get(pair);
+                if(price == null) {
+                    OracleTokenPair oracleTokenPair= oracleClient.getProximatePriceRound(network, pair, String.valueOf(swapTransaction.getTimestamp()));
+                    if( oracleTokenPair != null) {
+                        price = oracleTokenPair.getLatestPrice();
+                        swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
+                        tokenPairPrice.put(pair, price);
+                    }else {
+                        logger.warn("get oracle null: {}", pair);
+                    }
+                }else {
+                    swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
+                }
             }
+
             swapTxnService.saveList(swapTransactionList);
             logger.info("save swap txn ok: {}", swapTransactionList.size());
         }

@@ -1,5 +1,8 @@
 package org.starcoin.search.handler;
 
+import com.novi.bcs.BcsDeserializer;
+import com.novi.serde.Bytes;
+import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -19,7 +22,6 @@ import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.ListResource;
 import org.starcoin.bean.TokenInfo;
-import org.starcoin.bean.TokenSwapLiquidityToken;
 import org.starcoin.bean.Tvl;
 import org.starcoin.search.bean.*;
 import org.starcoin.search.constant.Constant;
@@ -30,10 +32,9 @@ import org.starcoin.types.TypeTag;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -52,6 +53,9 @@ public class SwapHandle {
 
     @Value("${swap.contract.address}")
     private String contractAddress;
+
+    @Value("${node.address}")
+    private String nodeAddress;
 
     @Autowired
     private OracleTokenPriceService oracleTokenPriceService;
@@ -129,31 +133,44 @@ public class SwapHandle {
 
         // get tvl from contract
         try {
-            Map<String, Tvl> tvlMap = getTvls();
+            TotalTvl totalTvl = getTvls();
 
             statHashMap.forEach((k, v) -> {
                 v.setToken(k);
-                v.setTvl(this.moveScalingFactor(k, BigInteger.valueOf(tvlMap.get(k).getValue())));
+                v.setTvlAmount(this.moveScalingFactor(k,BigInteger.valueOf(totalTvl.getTokenTvlMap().get(k).getValue())));
+
+                BigDecimal price = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,k);
+                v.setTvl(v.getTvlAmount().multiply(price));
+
                 swapStatService.persistTokenStatInfo(v);
             });
 
             poolMap.forEach((k, v) -> {
-                String[] tokens = k.split("/");
-                v.setTokenPair(new TokenPair(tokens[0].trim(), tokens[1].trim()));
-                v.setTvl(this.moveScalingFactor(k, BigInteger.valueOf(tvlMap.get(k).getValue())));
+                v.getxStats().setTvlAmount(this.moveScalingFactor(v.getxStats().getToken(),v.getxStats().getTvlAmount().toBigInteger()));
+                v.getyStats().setTvlAmount(this.moveScalingFactor(v.getyStats().getToken(),v.getyStats().getTvlAmount().toBigInteger()));
+
+                BigDecimal priceX = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,v.getxStats().getToken());
+                BigDecimal priceY = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,v.getyStats().getToken());
+
+                v.getxStats().setTvl(priceX.multiply(v.getxStats().getTvlAmount()));
+                v.getyStats().setTvl(priceY.multiply(v.getyStats().getTvlAmount()));
+
                 swapStatService.persistTokenPoolStatInfo(v);
             });
 
-        } catch (JSONRPC2SessionException e) {
-            logger.error("get tvl failed ", e);
+        } catch (JSONRPC2SessionException | MalformedURLException e) {
+            logger.error("get tvl failed ",e);
         }
 
     }
 
-    Map<String, Tvl> getTvls() throws JSONRPC2SessionException {
+    TotalTvl getTvls() throws JSONRPC2SessionException, MalformedURLException {
         ListResource resources = stateRPCClient.getState(contractAddress);
 
         Map<String, Tvl> tokenMap = new HashMap<>();
+        Map<String, TokenPairTvl> tokenPairTvlMap = new HashMap<>();
+
+        TvlService tvlService =new TvlService(new URL(nodeAddress));
 
         for (String key : resources.getResources().keySet()) {
             if (key.contains("Balance")) {
@@ -167,14 +184,14 @@ public class SwapHandle {
                     if (tokens.length != 2) {
                         continue;
                     }
-                    TokenSwapLiquidityToken tokenSwapLiquidityToken = new TokenSwapLiquidityToken(tokens[0], tokens[1]);
-                    tokenMap.put(token, new Tvl(tokenSwapLiquidityToken, value));
+                    TokenPairTvl tokenPairTvl = tvlService.getTokenPairTvl(tokens[0],tokens[1]);
+                    tokenPairTvlMap.put(tokenPair.trim(),tokenPairTvl);
                 } else {
                     tokenMap.put(token, new Tvl(token, value));
                 }
             }
         }
-        return tokenMap;
+        return new TotalTvl(tokenMap,tokenPairTvlMap);
     }
 
     void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
@@ -196,7 +213,7 @@ public class SwapHandle {
         if (price == null) {
             price = BigDecimal.ZERO;
         }
-        return new TokenStat(null, actualValue.multiply(price), actualValue, null);
+        return new TokenStat(null, actualValue.multiply(price), actualValue, null,null);
     }
 
     private BigDecimal moveScalingFactor(String key, BigInteger amount) {
@@ -214,17 +231,15 @@ public class SwapHandle {
         String key = StructTagUtil.structTagsToTokenPair(typeTagFirst.value, typeTagSecond.value);
         TokenPoolStat sum = result.get(key);
 
-        TokenStat actualValue = getValue(typeTagFirst, amount, oracleTokenPrice, ts);
-        if (actualValue.getVolumeAmount().equals(BigDecimal.ZERO)) {
-            actualValue = getValue(typeTagSecond, amount, oracleTokenPrice, ts);
-        }
+        TokenStat xActualValue = getValue(typeTagFirst, amount, oracleTokenPrice, ts);
+        TokenStat yActualValue = getValue(typeTagSecond, amount, oracleTokenPrice, ts);
+
+        TokenPoolStat poolStat = new TokenPoolStat(xActualValue,yActualValue);
 
         if (sum == null) {
-            TokenPoolStat poolStat = new TokenPoolStat(new TokenPair(typeTagFirst.value.name.value, typeTagSecond.value.name.value),
-                    actualValue.getVolume(), actualValue.getVolumeAmount(), null);
             result.put(key, poolStat);
         } else {
-            sum.add(actualValue);
+            sum.add(poolStat);
         }
     }
 

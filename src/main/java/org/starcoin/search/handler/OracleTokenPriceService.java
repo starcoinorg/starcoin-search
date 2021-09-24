@@ -12,6 +12,7 @@ import org.starcoin.bean.OracleTokenPair;
 import org.starcoin.search.bean.OracleTokenPrice;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -74,6 +75,16 @@ public class OracleTokenPriceService {
                 new OracleTokenPairRowMapper(), new Object[]{startTs, endTs});
         return new OracleTokenPrice(oracleTokenPairList);
     }
+
+    public BigDecimal getPriceByTimeRangeAndToken(long startTimeStamp, long endTimeStamp,String tokenPairName){
+        LocalDateTime startTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTimeStamp), ZoneId.systemDefault());
+        LocalDateTime endTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTimeStamp), ZoneId.systemDefault());
+
+        BigDecimal price = jdbcTemplate.queryForObject(String.format("select avg(price) from %s.oracle_token_price where ts > ? and ts< ? and token_pair_name = ?",network),
+                BigDecimal.class,new Object[]{startTs,endTs,tokenPairName});
+        return price;
+    }
+
 
     class OracleTokenPairRowMapper implements RowMapper<OracleTokenPair> {
 

@@ -1,70 +1,34 @@
 package org.starcoin.search.bean;
 
-import com.alibaba.fastjson.annotation.JSONField;
-
-import java.math.BigDecimal;
 
 public class TokenPoolStat {
+    private TokenStat xStats;
 
-    @JSONField(name = "token_pair")
-    private TokenPair tokenPair;
+    private TokenStat yStats;
 
-    private BigDecimal volume;
-
-    private BigDecimal volumeAmount;
-
-    private BigDecimal tvl;
-
-    public TokenPair getTokenPair() {
-        return tokenPair;
+    public TokenPoolStat(TokenStat xStats, TokenStat yStats) {
+        this.xStats = xStats;
+        this.yStats = yStats;
     }
 
-    public BigDecimal getVolume() {
-        return volume;
+    public TokenStat getxStats() {
+        return xStats;
     }
 
-    public BigDecimal getTvl() {
-        return tvl;
+    public void setxStats(TokenStat xStats) {
+        this.xStats = xStats;
     }
 
-    public BigDecimal getVolumeAmount() {
-        return volumeAmount;
+    public TokenStat getyStats() {
+        return yStats;
     }
 
-    public void setTokenPair(TokenPair tokenPair) {
-        this.tokenPair = tokenPair;
+    public void setyStats(TokenStat yStats) {
+        this.yStats = yStats;
     }
 
-    public void setVolume(BigDecimal volume) {
-        this.volume = volume;
+    public void add(TokenPoolStat tokenPoolStat){
+        xStats.add(tokenPoolStat.xStats);
+        yStats.add(tokenPoolStat.yStats);
     }
-
-    public void setVolumeAmount(BigDecimal volumeAmount) {
-        this.volumeAmount = volumeAmount;
-    }
-
-    public void setTvl(BigDecimal tvl) {
-        this.tvl = tvl;
-    }
-
-    public TokenPoolStat(TokenPair tokenPair, BigDecimal volume, BigDecimal volumeAmount, BigDecimal tvl) {
-        this.tokenPair = tokenPair;
-        this.volume = volume;
-        this.volumeAmount = volumeAmount;
-        this.tvl = tvl;
-    }
-
-    public void addVolumeAmount(BigDecimal bigDecimal){
-        volumeAmount.add(bigDecimal);
-    }
-
-    public void addVolume(BigDecimal bigDecimal){
-        volume.add(bigDecimal);
-    }
-
-    public void add(TokenStat tokenStat){
-        volume.add(tokenStat.getVolume());
-        volumeAmount.add(tokenStat.getVolumeAmount());
-    }
-
 }

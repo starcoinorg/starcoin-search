@@ -12,11 +12,14 @@ public class TokenStat {
 
     private BigDecimal tvl;
 
-    public TokenStat(String token, BigDecimal volume,BigDecimal volumeAmount, BigDecimal tvl) {
+    private BigDecimal tvlAmount;
+
+    public TokenStat(String token, BigDecimal volume,BigDecimal volumeAmount, BigDecimal tvl,BigDecimal tvlAmount) {
         this.token = token;
         this.volume = volume;
         this.volumeAmount = volumeAmount;
         this.tvl = tvl;
+        this.tvlAmount = tvlAmount;
     }
 
     public void setToken(String token) {
@@ -49,6 +52,14 @@ public class TokenStat {
 
     public BigDecimal getVolumeAmount() {
         return volumeAmount;
+    }
+
+    public BigDecimal getTvlAmount() {
+        return tvlAmount;
+    }
+
+    public void setTvlAmount(BigDecimal tvlAmount) {
+        this.tvlAmount = tvlAmount;
     }
 
     public void addVolumeAmount(BigDecimal bigDecimal){

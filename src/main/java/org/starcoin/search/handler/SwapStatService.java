@@ -19,18 +19,26 @@ public class SwapStatService {
     private String network;
 
     public void persistTokenStatInfo(TokenStat tokenStat) {
-        jdbcTemplate.update(String.format("insert into %s.token_swap_stat values(?,?,?,?)", network), new Object[]{tokenStat.getToken(),
+        jdbcTemplate.update(String.format("insert into %s.token_swap_stat values(?,?,?,?,?)",network), new Object[]{tokenStat.getToken(),
                 tokenStat.getVolumeAmount(),
                 tokenStat.getVolume(),
-                tokenStat.getTvl()});
+                tokenStat.getTvlAmount(),
+                tokenStat.getTvl()
+        });
     }
 
     public void persistTokenPoolStatInfo(TokenPoolStat tokenPoolStat) {
-        jdbcTemplate.update(String.format("insert into %s.token_pool_swap_stat values(?,?,?,?,?)", network), new Object[]{tokenPoolStat.getTokenPair().getTokenFirst(),
-                tokenPoolStat.getTokenPair().getTokenSecond(),
-                tokenPoolStat.getVolumeAmount(),
-                tokenPoolStat.getVolume(),
-                tokenPoolStat.getTvl()});
+        jdbcTemplate.update(String.format("insert into %s.token_pool_swap_stat values(?,?,?,?,?,?,?,?,?,?)",network), new Object[]{tokenPoolStat.getxStats().getToken(),
+                tokenPoolStat.getyStats().getToken(),
+                tokenPoolStat.getxStats().getVolumeAmount(),
+                tokenPoolStat.getxStats().getVolume(),
+                tokenPoolStat.getxStats().getTvlAmount(),
+                tokenPoolStat.getxStats().getTvl(),
+                tokenPoolStat.getyStats().getVolumeAmount(),
+                tokenPoolStat.getyStats().getVolume(),
+                tokenPoolStat.getyStats().getTvlAmount(),
+                tokenPoolStat.getyStats().getTvl(),
+        });
     }
 
 }

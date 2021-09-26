@@ -11,6 +11,7 @@ import org.starcoin.api.*;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
 import org.starcoin.search.utils.OracleClient;
+import org.starcoin.search.utils.SwapApiClient;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -105,6 +106,9 @@ public class SearchApplication {
     @Value("${starcoin.oracle.base.url}")
     private String oracleUrl;
 
+    @Value("${starcoin.swap.api.url}")
+    private String swapApiUrl;
+
     @Bean
     TransactionRPCClient transactionRPCClient(URL baseUrl) {
         return new TransactionRPCClient(baseUrl);
@@ -135,6 +139,17 @@ public class SearchApplication {
             return new OracleClient(oracleBaseUrl.getProtocol(), oracleBaseUrl.getHost());
         } catch (MalformedURLException e) {
             logger.error("get oracle base url error:", e);
+        }
+        return null;
+    }
+
+    @Bean
+    SwapApiClient swapApiClient() {
+        try {
+            URL swapUrl = new URL(swapApiUrl);
+            return new SwapApiClient(swapUrl.getProtocol(), swapUrl.getHost());
+        } catch (MalformedURLException e) {
+            logger.error("get swap api url error:", e);
         }
         return null;
     }

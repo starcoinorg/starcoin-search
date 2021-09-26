@@ -25,7 +25,9 @@ import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.Tvl;
 import org.starcoin.search.bean.*;
 import org.starcoin.search.constant.Constant;
+import org.starcoin.search.service.SwapTxnService;
 import org.starcoin.search.utils.StructTagUtil;
+import org.starcoin.search.utils.SwapApiClient;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.TypeTag;
 
@@ -63,11 +65,46 @@ public class SwapHandle {
     @Autowired
     private SwapStatService swapStatService;
 
+    @Autowired
+    private SwapTxnService swapTxnService;
+
+    @Autowired
+    private SwapApiClient swapApiClient;
+
     public void volumeStats(long startTime, long endTime) {
         Set<String> handledTxn = new HashSet<>();
         Map<String, TokenStat> statHashMap = new HashMap<>();
         Map<String, TokenPoolStat> poolMap = new HashMap<>();
         long localStartTime = startTime;
+
+        try {
+           List<SwapPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
+           List<SwapToken> tokenList = swapApiClient.getTokens(network);
+           if(tokenList.isEmpty()) {
+               logger.warn("get token null: {}", network);
+               return;
+           }
+           Map<String, String> tokenMapping = new HashMap<>();
+
+            for(SwapToken token: tokenList) {
+                String tagStr = token.getStructTag().toString();
+                tokenMapping.put(token.getTokenId(), tagStr);
+              //get token volume
+                TokenStat tokenStat = swapTxnService.getTokenVolume(tagStr, startTime, endTime);
+//                statHashMap.put(tagStr,);
+              //todo get token tvl
+
+            }
+
+            //persist token stat
+
+            //
+
+
+
+        } catch (IOException e) {
+           logger.error("get pool info error:", e);
+        }
 
         // sum volume and volume amount in txn
         while (true) {

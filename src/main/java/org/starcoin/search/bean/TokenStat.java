@@ -14,6 +14,8 @@ public class TokenStat {
 
     private BigDecimal tvlAmount;
 
+    public TokenStat() {}
+
     public TokenStat(String token, BigDecimal volume,BigDecimal volumeAmount, BigDecimal tvl,BigDecimal tvlAmount) {
         this.token = token;
         this.volume = volume;
@@ -73,5 +75,16 @@ public class TokenStat {
     public void add(TokenStat tokenStat){
         volume.add(tokenStat.getVolume());
         volumeAmount.add(tokenStat.getVolumeAmount());
+    }
+
+    @Override
+    public String toString() {
+        return "TokenStat{" +
+                "token='" + token + '\'' +
+                ", volumeAmount=" + volumeAmount +
+                ", volume=" + volume +
+                ", tvl=" + tvl +
+                ", tvlAmount=" + tvlAmount +
+                '}';
     }
 }

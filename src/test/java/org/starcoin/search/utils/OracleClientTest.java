@@ -10,6 +10,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.starcoin.bean.OracleTokenPair;
 import org.starcoin.search.SearchApplication;
+import org.starcoin.search.bean.LiquidityPoolInfo;
+import org.starcoin.search.bean.TokenTvl;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,6 +42,18 @@ class OracleClientTest {
     void getProximatePriceRound() throws IOException {
        OracleTokenPair pair = client.getProximatePriceRound("main", "BTC_USD", "1632384134000");
         System.out.println(pair);
+    }
+
+    @Test
+    void testGetPoolInfo() throws IOException {
+        List<LiquidityPoolInfo> infoList = client.getPoolInfo("barnard");
+        System.out.println(infoList);
+    }
+
+    @Test
+    void testGetTokenTvl() throws IOException {
+        List<TokenTvl> infoList = client.getTokenTvl("barnard");
+        System.out.println(infoList);
     }
 
 }

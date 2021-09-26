@@ -127,9 +127,9 @@ public class QuartzConfig {
     @Bean
     public Scheduler scheduler() throws SchedulerException {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
-//        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
-//        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
-//        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
+        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
+        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
+        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
         scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
 //        scheduler.scheduleJob(handleSwapStats(),startSwapStats());
         if (autoStart) {

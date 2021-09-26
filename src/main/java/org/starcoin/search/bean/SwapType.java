@@ -21,6 +21,10 @@ public enum SwapType {
         return SwapType.Unknown; //not found
     }
 
+    public static boolean isSwapType(String value) {
+        return fromValue(value) != SwapType.Unknown;
+    }
+
     public String getValue() {
         return value;
     }

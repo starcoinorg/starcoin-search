@@ -7,10 +7,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.starcoin.api.BlockRPCClient;
-import org.starcoin.api.StateRPCClient;
-import org.starcoin.api.TokenContractRPCClient;
-import org.starcoin.api.TransactionRPCClient;
+import org.starcoin.api.*;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
 import org.starcoin.search.utils.OracleClient;
@@ -127,6 +124,9 @@ public class SearchApplication {
     TokenContractRPCClient tokenContractRPCClient(URL baseUrl) {
         return new TokenContractRPCClient(baseUrl);
     }
+
+    @Bean
+    ContractRPCClient contractRPCClient(URL baseUrl) {return new ContractRPCClient(baseUrl);}
 
     @Bean
     OracleClient oracleClient() {

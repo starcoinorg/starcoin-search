@@ -54,8 +54,8 @@ public class SwapHandle {
     @Value("${swap.contract.address}")
     private String contractAddress;
 
-    @Value("${node.address}")
-    private String nodeAddress;
+    @Autowired
+   private TvlService tvlService;
 
     @Autowired
     private OracleTokenPriceService oracleTokenPriceService;
@@ -169,8 +169,6 @@ public class SwapHandle {
 
         Map<String, Tvl> tokenMap = new HashMap<>();
         Map<String, TokenPairTvl> tokenPairTvlMap = new HashMap<>();
-
-        TvlService tvlService =new TvlService(new URL(nodeAddress));
 
         for (String key : resources.getResources().keySet()) {
             if (key.contains("Balance")) {

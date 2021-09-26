@@ -3,6 +3,8 @@ package org.starcoin.search.handler;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.starcoin.api.ContractRPCClient;
 import org.starcoin.bean.ContractCall;
 import org.starcoin.search.bean.TokenPairTvl;
@@ -13,16 +15,14 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+@Service
 public class TvlService {
 
-    private ContractRPCClient client;
+    @Autowired
+    private ContractRPCClient contractRPCClient;
 
     private static final Logger logger = LoggerFactory.getLogger(TvlService.class);
 
-
-    public TvlService(URL url)  {
-        client = new ContractRPCClient(url);
-    }
 
     public TokenPairTvl getTokenPairTvl(String tokenX, String tokenY){
         try {
@@ -37,7 +37,7 @@ public class TvlService {
             call.setTypeArgs(typeTags);
             call.setArgs(new ArrayList<>());
 
-            List result = client.call(call);
+            List result = contractRPCClient.call(call);
             if (result.size() > 1) {
                 long x = (Long) result.get(0);
                 long y = (Long) result.get(1);

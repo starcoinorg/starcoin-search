@@ -611,7 +611,7 @@ public class ElasticSearchHandler {
                 if (transactionPayload instanceof TransactionPayload.ScriptFunction) {
                     TransactionPayload.ScriptFunction scriptFunctionPayload = ((TransactionPayload.ScriptFunction) transactionPayload);
                     String function = scriptFunctionPayload.value.function.toString();
-                    if (function.equals("swap_exact_token_for_token") || function.equals("swap_token_for_exact_token")) {
+                    if (SwapType.isSwapType(function)) {
                         //todo add farm swap function
                         if (scriptFunctionPayload.value.ty_args.size() > 1 && scriptFunctionPayload.value.args.size() > 1) {
                             //parse token and amount

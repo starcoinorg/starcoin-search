@@ -3,6 +3,7 @@ package org.starcoin.search.utils;
 import com.alibaba.fastjson.JSON;
 import okhttp3.*;
 import org.starcoin.bean.OracleTokenPair;
+import org.starcoin.search.bean.LiquidityPoolInfo;
 
 import java.io.IOException;
 import java.util.List;
@@ -57,4 +58,24 @@ public class OracleClient {
         }
     }
 
+    public List<LiquidityPoolInfo> getPoolInfo(String network) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl httpUrl = new HttpUrl.Builder()
+                .scheme(scheme)
+                .host(host)
+                .addPathSegment(network)
+                .addPathSegment("v1")
+                .addPathSegment("liquidityPools")
+                .build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            String res = response.body().string();
+//            System.out.println(res);
+            return JSON.parseArray(res, LiquidityPoolInfo.class);
+        }
+
+    }
 }

@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.starcoin.api.*;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.RepairHandle;
-import org.starcoin.search.utils.OracleClient;
 import org.starcoin.search.utils.SwapApiClient;
 
 import java.io.BufferedReader;
@@ -23,9 +22,10 @@ import java.util.Map;
 @SpringBootApplication
 public class SearchApplication {
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
+    @Value("${starcoin.swap.api.url}")
+    private String swapApiUrl;
 
     public static void main(String[] args) {
-        logger.info("start search service: {}", args);
         Map<String, String> envMap = System.getenv();
         String progArgs = envMap.get("PROG_ARGS");
         logger.info("PROG_ARGS: {}", progArgs);
@@ -103,12 +103,6 @@ public class SearchApplication {
         return null;
     }
 
-    @Value("${starcoin.oracle.base.url}")
-    private String oracleUrl;
-
-    @Value("${starcoin.swap.api.url}")
-    private String swapApiUrl;
-
     @Bean
     TransactionRPCClient transactionRPCClient(URL baseUrl) {
         return new TransactionRPCClient(baseUrl);
@@ -130,17 +124,8 @@ public class SearchApplication {
     }
 
     @Bean
-    ContractRPCClient contractRPCClient(URL baseUrl) {return new ContractRPCClient(baseUrl);}
-
-    @Bean
-    OracleClient oracleClient() {
-        try {
-            URL oracleBaseUrl = new URL(oracleUrl);
-            return new OracleClient(oracleBaseUrl.getProtocol(), oracleBaseUrl.getHost());
-        } catch (MalformedURLException e) {
-            logger.error("get oracle base url error:", e);
-        }
-        return null;
+    ContractRPCClient contractRPCClient(URL baseUrl) {
+        return new ContractRPCClient(baseUrl);
     }
 
     @Bean

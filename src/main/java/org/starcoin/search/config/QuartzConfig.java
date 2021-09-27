@@ -131,7 +131,7 @@ public class QuartzConfig {
         scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
         scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
         scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
-        scheduler.scheduleJob(handleSwapStats(),startSwapStats());
+        scheduler.scheduleJob(handleSwapStats(), startSwapStats());
         if (autoStart) {
             scheduler.start();
         }

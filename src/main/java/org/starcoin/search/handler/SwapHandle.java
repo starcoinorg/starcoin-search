@@ -1,8 +1,5 @@
 package org.starcoin.search.handler;
 
-import com.novi.bcs.BcsDeserializer;
-import com.novi.serde.Bytes;
-import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -25,17 +22,17 @@ import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.Tvl;
 import org.starcoin.search.bean.*;
 import org.starcoin.search.constant.Constant;
+import org.starcoin.search.service.SwapPoolStatService;
 import org.starcoin.search.service.SwapTxnService;
+import org.starcoin.search.service.TokenStatService;
 import org.starcoin.search.utils.StructTagUtil;
 import org.starcoin.search.utils.SwapApiClient;
-import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.TypeTag;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -49,154 +46,76 @@ public class SwapHandle {
 
     @Value("${starcoin.network}")
     private String network;
-
-    @Autowired
-    private StateRPCClient stateRPCClient;
-
     @Value("${swap.contract.address}")
     private String contractAddress;
-
     @Autowired
-   private TvlService tvlService;
-
+    private StateRPCClient stateRPCClient;
     @Autowired
-    private OracleTokenPriceService oracleTokenPriceService;
-
-    @Autowired
-    private SwapStatService swapStatService;
-
+    private TvlService tvlService;
     @Autowired
     private SwapTxnService swapTxnService;
-
+    @Autowired
+    private TokenStatService tokenStatService;
+    @Autowired
+    private SwapPoolStatService swapPoolStatService;
     @Autowired
     private SwapApiClient swapApiClient;
 
     public void volumeStats(long startTime, long endTime) {
         Set<String> handledTxn = new HashSet<>();
-        Map<String, TokenStat> statHashMap = new HashMap<>();
+        List<TokenStat> tokenStatList = new ArrayList<>();
         Map<String, TokenPoolStat> poolMap = new HashMap<>();
         long localStartTime = startTime;
 
         try {
-           List<SwapPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
-           List<SwapToken> tokenList = swapApiClient.getTokens(network);
-           if(tokenList.isEmpty()) {
-               logger.warn("get token null: {}", network);
-               return;
-           }
-           Map<String, String> tokenMapping = new HashMap<>();
-
-            for(SwapToken token: tokenList) {
+            List<LiquidityPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
+            List<SwapToken> tokenList = swapApiClient.getTokens(network);
+            if (tokenList.isEmpty()) {
+                logger.warn("get token null: {}", network);
+                return;
+            }
+            Map<String, String> tokenMapping = new HashMap<>();
+            Map<String, TokenTvl> tokenTvlMapping = new HashMap<>();
+            List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl(network);
+            for (TokenTvl tvl : tokenTvls) {
+                tokenTvlMapping.put(tvl.getTokenName(), tvl);
+            }
+            for (SwapToken token : tokenList) {
                 String tagStr = token.getStructTag().toString();
                 tokenMapping.put(token.getTokenId(), tagStr);
-              //get token volume
+                //get token volume
                 TokenStat tokenStat = swapTxnService.getTokenVolume(tagStr, startTime, endTime);
-//                statHashMap.put(tagStr,);
-              //todo get token tvl
-
+                TokenTvl tvl = tokenTvlMapping.get(token.getTokenId());
+                if (tvl != null) {
+                    tokenStat.setTvl(tvl.getTvl());
+                    tokenStat.setTvlAmount(tvl.getTvlAmount());
+                    tokenStatList.add(tokenStat);
+                } else {
+                    logger.warn("tvl is null: {}", token);
+                }
             }
 
-            //persist token stat
-
-            //
-
+            tokenStatService.saveAll(tokenStatList);
+            //get pool volume
+            List<SwapPoolStat> poolStatList = new ArrayList<>();
+            for (LiquidityPoolInfo poolInfo : poolInfoList) {
+                LiquidityTokenId liquidityTokenId = poolInfo.getLiquidityPoolId().getLiquidityTokenId();
+                String tokenA = tokenMapping.get(liquidityTokenId.getTokenXId());
+                String tokenB = tokenMapping.get(liquidityTokenId.getTokenYId());
+                SwapPoolStat poolStat = swapTxnService.getPoolVolume(tokenA, tokenB, startTime, endTime);
+                // get pool tvl
+                poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
+                poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());
+                poolStat.setTvlAAmount(poolInfo.getTokenXReserve());
+                poolStat.setTvlAAmount(poolInfo.getTokenYReserve());
+                poolStatList.add(poolStat);
+            }
+            swapPoolStatService.saveAll(poolStatList);
+            //todo total swap stat
 
 
         } catch (IOException e) {
-           logger.error("get pool info error:", e);
-        }
-
-        // sum volume and volume amount in txn
-        while (true) {
-            Result<TransactionPayloadInfo> payloadInfoResult = volumeStatsByTimeRange(localStartTime, endTime);
-            logger.info("fetch " + payloadInfoResult.getContents().size() + " from " + localStartTime + " to " + endTime);
-
-            if (payloadInfoResult.getContents().size() == 0) {
-                break;
-            }
-
-            long localEndTime = 0;
-            for (TransactionPayloadInfo payloadInfo : payloadInfoResult.getContents()) {
-                if (payloadInfo.getTimestamp() > localEndTime) {
-                    localEndTime = payloadInfo.getTimestamp();
-                }
-            }
-
-            OracleTokenPrice oracleTokenPrice = oracleTokenPriceService.getPriceByTimeRange(localStartTime, localEndTime);
-
-            for (TransactionPayloadInfo payloadInfo : payloadInfoResult.getContents()) {
-                if (handledTxn.contains(payloadInfo.getTransactionHash())) {
-                    continue;
-                }
-                TransactionPayload payload = payloadInfo.getPayload();
-                if (payload instanceof TransactionPayload.ScriptFunction) {
-                    TransactionPayload.ScriptFunction scriptFunctionPayload = ((TransactionPayload.ScriptFunction) payload);
-                    if (scriptFunctionPayload.value.ty_args.size() < 2) {
-                        continue;
-                    }
-                    if (!(scriptFunctionPayload.value.ty_args.get(0) instanceof TypeTag.Struct)) {
-                        continue;
-                    }
-                    if (!(scriptFunctionPayload.value.ty_args.get(1) instanceof TypeTag.Struct)) {
-                        continue;
-                    }
-
-                    if (scriptFunctionPayload.value.args.size() < 2) {
-                        continue;
-                    }
-                    TypeTag.Struct typeTagFirst = (TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(0);
-                    TypeTag.Struct typeTagSecond = (TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(1);
-
-                    BigInteger argFirst = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(0));
-                    BigInteger argSecond = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(1));
-
-                    try {
-                        sum(statHashMap, typeTagFirst, argFirst, oracleTokenPrice, payloadInfo.getTimestamp());
-                        sum(statHashMap, typeTagSecond, argSecond, oracleTokenPrice, payloadInfo.getTimestamp());
-
-                        poolSum(poolMap, typeTagFirst, typeTagSecond, argFirst, oracleTokenPrice, payloadInfo.getTimestamp());
-
-                    } catch (NoTokenPriceException e) {
-                        logger.error("no price in oracle,skip it .");
-                    }
-
-                    handledTxn.add(payloadInfo.getTransactionHash());
-                    if (localStartTime < payloadInfo.getTimestamp()) {
-                        localStartTime = payloadInfo.getTimestamp();
-                    }
-                }
-            }
-        }
-
-        // get tvl from contract
-        try {
-            TotalTvl totalTvl = getTvls();
-
-            statHashMap.forEach((k, v) -> {
-                v.setToken(k);
-                v.setTvlAmount(this.moveScalingFactor(k,BigInteger.valueOf(totalTvl.getTokenTvlMap().get(k).getValue())));
-
-                BigDecimal price = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,k);
-                v.setTvl(v.getTvlAmount().multiply(price));
-
-                swapStatService.persistTokenStatInfo(v);
-            });
-
-            poolMap.forEach((k, v) -> {
-                v.getxStats().setTvlAmount(this.moveScalingFactor(v.getxStats().getToken(),v.getxStats().getTvlAmount().toBigInteger()));
-                v.getyStats().setTvlAmount(this.moveScalingFactor(v.getyStats().getToken(),v.getyStats().getTvlAmount().toBigInteger()));
-
-                BigDecimal priceX = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,v.getxStats().getToken());
-                BigDecimal priceY = oracleTokenPriceService.getPriceByTimeRangeAndToken(startTime,endTime,v.getyStats().getToken());
-
-                v.getxStats().setTvl(priceX.multiply(v.getxStats().getTvlAmount()));
-                v.getyStats().setTvl(priceY.multiply(v.getyStats().getTvlAmount()));
-
-                swapStatService.persistTokenPoolStatInfo(v);
-            });
-
-        } catch (JSONRPC2SessionException | MalformedURLException e) {
-            logger.error("get tvl failed ",e);
+            logger.error("get pool info error:", e);
         }
 
     }
@@ -219,14 +138,14 @@ public class SwapHandle {
                     if (tokens.length != 2) {
                         continue;
                     }
-                    TokenPairTvl tokenPairTvl = tvlService.getTokenPairTvl(tokens[0],tokens[1]);
-                    tokenPairTvlMap.put(tokenPair.trim(),tokenPairTvl);
+                    TokenPairTvl tokenPairTvl = tvlService.getTokenPairTvl(tokens[0], tokens[1]);
+                    tokenPairTvlMap.put(tokenPair.trim(), tokenPairTvl);
                 } else {
                     tokenMap.put(token, new Tvl(token, value));
                 }
             }
         }
-        return new TotalTvl(tokenMap,tokenPairTvlMap);
+        return new TotalTvl(tokenMap, tokenPairTvlMap);
     }
 
     void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
@@ -242,20 +161,20 @@ public class SwapHandle {
     }
 
     private TokenStat getValue(TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) {
-        BigDecimal actualValue = moveScalingFactor(StructTagUtil.structTagToString(typeTag.value), amount);
+        BigInteger actualValue = moveScalingFactor(StructTagUtil.structTagToString(typeTag.value), amount);
 
         BigDecimal price = oracleTokenPrice.getPrice(StructTagUtil.structTagToSwapUsdtPair(typeTag.value), ts);
         if (price == null) {
             price = BigDecimal.ZERO;
         }
-        return new TokenStat(null, actualValue.multiply(price), actualValue, null,null);
+        return new TokenStat(price.multiply(new BigDecimal(actualValue)), actualValue, null, null);
     }
 
-    private BigDecimal moveScalingFactor(String key, BigInteger amount) {
+    private BigInteger moveScalingFactor(String key, BigInteger amount) {
         TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
-        BigDecimal actualValue = new BigDecimal(amount);
+        BigInteger actualValue = amount;
         if (tokenInfo != null) {
-            actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
+            actualValue.divide(BigInteger.valueOf(tokenInfo.getScalingFactor()));
         } else {
             logger.warn("token info not exist:{}", key);
         }
@@ -269,7 +188,7 @@ public class SwapHandle {
         TokenStat xActualValue = getValue(typeTagFirst, amount, oracleTokenPrice, ts);
         TokenStat yActualValue = getValue(typeTagSecond, amount, oracleTokenPrice, ts);
 
-        TokenPoolStat poolStat = new TokenPoolStat(xActualValue,yActualValue);
+        TokenPoolStat poolStat = new TokenPoolStat(xActualValue, yActualValue);
 
         if (sum == null) {
             result.put(key, poolStat);

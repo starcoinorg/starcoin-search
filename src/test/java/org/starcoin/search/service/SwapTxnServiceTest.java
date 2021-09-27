@@ -9,7 +9,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.starcoin.search.SearchApplication;
 import org.starcoin.search.bean.TokenStat;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(
         classes = SearchApplication.class)
@@ -19,6 +19,7 @@ class SwapTxnServiceTest {
 
     @Autowired
     private SwapTxnService swapTxnService;
+
     @BeforeEach
     void setUp() {
 

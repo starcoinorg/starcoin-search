@@ -1,17 +1,16 @@
 package org.starcoin.search.utils;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.starcoin.search.bean.SwapPoolInfo;
+import org.starcoin.bean.OracleTokenPair;
+import org.starcoin.search.bean.LiquidityPoolInfo;
 import org.starcoin.search.bean.SwapToken;
+import org.starcoin.search.bean.TokenTvl;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class SwapApiClient {
@@ -42,9 +41,8 @@ public class SwapApiClient {
         }
     }
 
-    public List<SwapPoolInfo> getPoolInfo(String network) throws IOException {
+    public List<LiquidityPoolInfo> getPoolInfo(String network) throws IOException {
         OkHttpClient client = new OkHttpClient();
-        List<SwapPoolInfo> result = new ArrayList<>();
         HttpUrl httpUrl = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -58,13 +56,48 @@ public class SwapApiClient {
 
         try (Response response = client.newCall(request).execute()) {
             String res = response.body().string();
-            JSONArray jsonArray = JSON.parseArray(res);
-            for(int i =0; i < jsonArray.size(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                SwapPoolInfo poolInfo = jsonObject.getJSONObject("liquidityPoolId").getObject("liquidityTokenId", SwapPoolInfo.class);
-                result.add(poolInfo);
-            }
+            return JSON.parseArray(res, LiquidityPoolInfo.class);
         }
-        return result;
     }
+
+    public OracleTokenPair getProximatePriceRound(String network, String token, String timestamp) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl httpUrl = new HttpUrl.Builder()
+                .scheme(scheme)
+                .host(host)
+                .addPathSegment(network)
+                .addPathSegment("v1")
+                .addPathSegment("getProximateToUsdPriceRound")
+                .addQueryParameter("token", token)
+                .addQueryParameter("timestamp", timestamp)
+                .build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            String res = response.body().string();
+            return JSON.parseObject(res, OracleTokenPair.class);
+        }
+    }
+
+    public List<TokenTvl> getTokenTvl(String network) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl httpUrl = new HttpUrl.Builder()
+                .scheme(scheme)
+                .host(host)
+                .addPathSegment(network)
+                .addPathSegment("v1")
+                .addPathSegment("sumReservesGroupByToken")
+                .build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            String res = response.body().string();
+            return JSON.parseArray(res, TokenTvl.class);
+        }
+    }
+
 }

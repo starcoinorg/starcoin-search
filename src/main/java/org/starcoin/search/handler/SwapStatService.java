@@ -19,7 +19,7 @@ public class SwapStatService {
     private String network;
 
     public void persistTokenStatInfo(TokenStat tokenStat) {
-        jdbcTemplate.update(String.format("insert into %s.token_swap_stat values(?,?,?,?,?)",network), new Object[]{tokenStat.getToken(),
+        jdbcTemplate.update(String.format("insert into %s.token_swap_stat values(?,?,?,?,?)", network), new Object[]{tokenStat.getToken(),
                 tokenStat.getVolumeAmount(),
                 tokenStat.getVolume(),
                 tokenStat.getTvlAmount(),
@@ -28,7 +28,7 @@ public class SwapStatService {
     }
 
     public void persistTokenPoolStatInfo(TokenPoolStat tokenPoolStat) {
-        jdbcTemplate.update(String.format("insert into %s.token_pool_swap_stat values(?,?,?,?,?,?,?,?,?,?)",network), new Object[]{tokenPoolStat.getxStats().getToken(),
+        jdbcTemplate.update(String.format("insert into %s.token_pool_swap_stat values(?,?,?,?,?,?,?,?,?,?)", network), new Object[]{tokenPoolStat.getxStats().getToken(),
                 tokenPoolStat.getyStats().getToken(),
                 tokenPoolStat.getxStats().getVolumeAmount(),
                 tokenPoolStat.getxStats().getVolume(),

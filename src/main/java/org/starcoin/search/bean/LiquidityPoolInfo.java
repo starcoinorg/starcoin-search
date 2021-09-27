@@ -1,6 +1,7 @@
 package org.starcoin.search.bean;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 public class LiquidityPoolInfo {
 
@@ -8,8 +9,8 @@ public class LiquidityPoolInfo {
     private String description;
     private int sequenceNumber;
     private long totalLiquidity;
-    private long tokenXReserve;
-    private long tokenYReserve;
+    private BigInteger tokenXReserve;
+    private BigInteger tokenYReserve;
     private BigDecimal tokenXReserveInUsd;
     private BigDecimal tokenYReserveInUsd;
     private boolean deactived;
@@ -51,19 +52,19 @@ public class LiquidityPoolInfo {
         this.totalLiquidity = totalLiquidity;
     }
 
-    public long getTokenXReserve() {
+    public BigInteger getTokenXReserve() {
         return tokenXReserve;
     }
 
-    public void setTokenXReserve(long tokenXReserve) {
+    public void setTokenXReserve(BigInteger tokenXReserve) {
         this.tokenXReserve = tokenXReserve;
     }
 
-    public long getTokenYReserve() {
+    public BigInteger getTokenYReserve() {
         return tokenYReserve;
     }
 
-    public void setTokenYReserve(long tokenYReserve) {
+    public void setTokenYReserve(BigInteger tokenYReserve) {
         this.tokenYReserve = tokenYReserve;
     }
 

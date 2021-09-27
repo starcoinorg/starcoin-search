@@ -10,21 +10,18 @@ import org.starcoin.bean.ContractCall;
 import org.starcoin.search.bean.TokenPairTvl;
 import org.starcoin.search.bean.TokenTvlAmount;
 
-import java.math.BigDecimal;
-import java.net.URL;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class TvlService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TvlService.class);
     @Autowired
     private ContractRPCClient contractRPCClient;
 
-    private static final Logger logger = LoggerFactory.getLogger(TvlService.class);
-
-
-    public TokenPairTvl getTokenPairTvl(String tokenX, String tokenY){
+    public TokenPairTvl getTokenPairTvl(String tokenX, String tokenY) {
         try {
             ContractCall call = new ContractCall();
 
@@ -42,10 +39,10 @@ public class TvlService {
                 long x = (Long) result.get(0);
                 long y = (Long) result.get(1);
 
-                return new TokenPairTvl(new TokenTvlAmount(tokenX,BigDecimal.valueOf(x)),new TokenTvlAmount(tokenY,BigDecimal.valueOf(y)));
+                return new TokenPairTvl(new TokenTvlAmount(tokenX, BigInteger.valueOf(x)), new TokenTvlAmount(tokenY, BigInteger.valueOf(y)));
             }
-        }catch (JSONRPC2SessionException  e) {
-            logger.warn("call contract function failed",e);
+        } catch (JSONRPC2SessionException e) {
+            logger.warn("call contract function failed", e);
         }
         return null;
     }

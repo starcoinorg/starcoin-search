@@ -2,7 +2,7 @@ package org.starcoin.search.bean;
 
 import com.alibaba.fastjson.annotation.JSONField;
 
-import java.math.BigDecimal;
+import java.math.BigInteger;
 
 public class TokenTvlAmount {
 
@@ -10,9 +10,9 @@ public class TokenTvlAmount {
     private String tokenName;
 
     @JSONField(name = "total_reserve")
-    private BigDecimal tvlAmount;
+    private BigInteger tvlAmount;
 
-    public TokenTvlAmount(String tokenName, BigDecimal tvl) {
+    public TokenTvlAmount(String tokenName, BigInteger tvl) {
         this.tokenName = tokenName;
         this.tvlAmount = tvl;
     }
@@ -25,11 +25,11 @@ public class TokenTvlAmount {
         this.tokenName = tokenName;
     }
 
-    public BigDecimal getTvlAmount() {
+    public BigInteger getTvlAmount() {
         return tvlAmount;
     }
 
-    public void setTvlAmount(BigDecimal tvlAmount) {
+    public void setTvlAmount(BigInteger tvlAmount) {
         this.tvlAmount = tvlAmount;
     }
 

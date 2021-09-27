@@ -1,90 +1,139 @@
 package org.starcoin.search.bean;
 
+import javax.persistence.*;
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Date;
 
+@Entity
+@Table(name = "token_swap_day_stat")
 public class TokenStat {
 
-    private String token;
-
-    private BigDecimal volumeAmount;
-
+    @EmbeddedId
+    TokenStatId tokenStatId;
+    @Column(name = "volume_amount")
+    private BigInteger volumeAmount;
+    @Column(name = "volume")
     private BigDecimal volume;
-
+    @Column(name = "tvl")
     private BigDecimal tvl;
+    @Column(name = "tvl_amount")
+    private BigInteger tvlAmount;
 
-    private BigDecimal tvlAmount;
+    public TokenStat() {
+    }
 
-    public TokenStat() {}
+    public TokenStat(String token, long timestamp) {
+        TokenStatId tokenStatId = new TokenStatId();
+        tokenStatId.setToken(token);
+        tokenStatId.setTimestamp(new Date(timestamp));
+        this.tokenStatId = tokenStatId;
+    }
 
-    public TokenStat(String token, BigDecimal volume,BigDecimal volumeAmount, BigDecimal tvl,BigDecimal tvlAmount) {
-        this.token = token;
+    public TokenStat(BigDecimal volume, BigInteger volumeAmount, BigDecimal tvl, BigInteger tvlAmount) {
         this.volume = volume;
         this.volumeAmount = volumeAmount;
         this.tvl = tvl;
         this.tvlAmount = tvlAmount;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public void setVolumeAmount(BigDecimal volumeAmount) {
-        this.volumeAmount = volumeAmount;
-    }
-
-    public void setVolume(BigDecimal volume) {
-        this.volume = volume;
-    }
-
-    public void setTvl(BigDecimal tvl) {
-        this.tvl = tvl;
-    }
-
-    public String getToken() {
-        return token;
     }
 
     public BigDecimal getVolume() {
         return volume;
     }
 
+    public void setVolume(BigDecimal volume) {
+        this.volume = volume;
+    }
+
     public BigDecimal getTvl() {
         return tvl;
     }
 
-    public BigDecimal getVolumeAmount() {
+    public void setTvl(BigDecimal tvl) {
+        this.tvl = tvl;
+    }
+
+    public BigInteger getVolumeAmount() {
         return volumeAmount;
     }
 
-    public BigDecimal getTvlAmount() {
+    public void setVolumeAmount(BigInteger volumeAmount) {
+        this.volumeAmount = volumeAmount;
+    }
+
+    public BigInteger getTvlAmount() {
         return tvlAmount;
     }
 
-    public void setTvlAmount(BigDecimal tvlAmount) {
+    public void setTvlAmount(BigInteger tvlAmount) {
         this.tvlAmount = tvlAmount;
     }
 
-    public void addVolumeAmount(BigDecimal bigDecimal){
+    public void addVolumeAmount(BigInteger bigDecimal) {
         volumeAmount.add(bigDecimal);
     }
 
-    public void addVolume(BigDecimal bigDecimal){
+    public void addVolume(BigDecimal bigDecimal) {
         volume.add(bigDecimal);
     }
 
-    public void add(TokenStat tokenStat){
+    public void add(TokenStat tokenStat) {
         volume.add(tokenStat.getVolume());
         volumeAmount.add(tokenStat.getVolumeAmount());
+    }
+
+    public TokenStatId getTokenStatId() {
+        return tokenStatId;
+    }
+
+    public void setTokenStatId(TokenStatId tokenStatId) {
+        this.tokenStatId = tokenStatId;
+    }
+
+    public String getToken() {
+        return tokenStatId.getToken();
     }
 
     @Override
     public String toString() {
         return "TokenStat{" +
-                "token='" + token + '\'' +
                 ", volumeAmount=" + volumeAmount +
                 ", volume=" + volume +
                 ", tvl=" + tvl +
                 ", tvlAmount=" + tvlAmount +
                 '}';
+    }
+}
+
+@Embeddable
+class TokenStatId implements Serializable {
+    @Column(name = "token_name")
+    private String token;
+    @Column(name = "ts")
+    private Date timestamp;
+
+    public TokenStatId(String token, Date timestamp) {
+        this.token = token;
+        this.timestamp = timestamp;
+    }
+
+    public TokenStatId() {
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
     }
 }

@@ -51,8 +51,8 @@ import org.starcoin.search.bean.TransactionPayloadInfo;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.search.service.SwapTxnService;
 import org.starcoin.search.service.TransactionPayloadService;
-import org.starcoin.search.utils.OracleClient;
 import org.starcoin.search.utils.StructTagUtil;
+import org.starcoin.search.utils.SwapApiClient;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TokenCode;
@@ -83,7 +83,7 @@ public class ElasticSearchHandler {
     @Autowired
     private TransactionPayloadService transactionPayloadService;
     @Autowired
-    private OracleClient oracleClient;
+    private SwapApiClient swapApiClient;
 
     @Value("${starcoin.network}")
     private String network;
@@ -653,16 +653,16 @@ public class ElasticSearchHandler {
             for (SwapTransaction swapTransaction : swapTransactionList) {
                 pair = swapTransaction.getTokenA() + "_" + swapTransaction.getTokenB();
                 BigInteger price = tokenPairPrice.get(pair);
-                if(price == null) {
-                    OracleTokenPair oracleTokenPair= oracleClient.getProximatePriceRound(network, pair, String.valueOf(swapTransaction.getTimestamp()));
-                    if( oracleTokenPair != null) {
+                if (price == null) {
+                    OracleTokenPair oracleTokenPair = swapApiClient.getProximatePriceRound(network, pair, String.valueOf(swapTransaction.getTimestamp()));
+                    if (oracleTokenPair != null) {
                         price = oracleTokenPair.getLatestPrice();
                         swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
                         tokenPairPrice.put(pair, price);
-                    }else {
+                    } else {
                         logger.warn("get oracle null: {}", pair);
                     }
-                }else {
+                } else {
                     swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
                 }
             }

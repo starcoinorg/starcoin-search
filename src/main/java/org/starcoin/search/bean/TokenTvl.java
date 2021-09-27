@@ -3,14 +3,15 @@ package org.starcoin.search.bean;
 import com.alibaba.fastjson.annotation.JSONField;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
-public class TokenTvl extends TokenTvlAmount{
+public class TokenTvl extends TokenTvlAmount {
 
-    @JSONField(name="total_reserve_in_usd")
+    @JSONField(name = "total_reserve_in_usd")
     private BigDecimal tvl;
 
-    public TokenTvl(String tokenName, BigDecimal tvlAmount,BigDecimal tvl) {
-        super(tokenName,tvlAmount);
+    public TokenTvl(String tokenName, BigInteger tvlAmount, BigDecimal tvl) {
+        super(tokenName, tvlAmount);
         this.tvl = tvl;
     }
 

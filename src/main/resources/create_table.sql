@@ -94,8 +94,10 @@ CREATE TABLE IF NOT EXISTS pool_swap_day_stat
 ),
     volume_amount numeric NOT NULL,
     volume numeric,
-    tvl_amount numeric NOT NULL,
-    tvl numeric,
+    tvl_a_amount numeric NOT NULL,
+    tvl_a numeric,
+    tvl_b_amount numeric NOT NULL,
+    tvl_b numeric,
     CONSTRAINT pool_swap_day_stat_pkey PRIMARY KEY
 (
     first_token_name,

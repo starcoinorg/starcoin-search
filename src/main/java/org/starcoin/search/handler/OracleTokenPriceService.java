@@ -76,12 +76,12 @@ public class OracleTokenPriceService {
         return new OracleTokenPrice(oracleTokenPairList);
     }
 
-    public BigDecimal getPriceByTimeRangeAndToken(long startTimeStamp, long endTimeStamp,String tokenPairName){
+    public BigDecimal getPriceByTimeRangeAndToken(long startTimeStamp, long endTimeStamp, String tokenPairName) {
         LocalDateTime startTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTimeStamp), ZoneId.systemDefault());
         LocalDateTime endTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTimeStamp), ZoneId.systemDefault());
 
-        BigDecimal price = jdbcTemplate.queryForObject(String.format("select avg(price) from %s.oracle_token_price where ts > ? and ts< ? and token_pair_name = ?",network),
-                BigDecimal.class,new Object[]{startTs,endTs,tokenPairName});
+        BigDecimal price = jdbcTemplate.queryForObject(String.format("select avg(price) from %s.oracle_token_price where ts > ? and ts< ? and token_pair_name = ?", network),
+                BigDecimal.class, new Object[]{startTs, endTs, tokenPairName});
         return price;
     }
 

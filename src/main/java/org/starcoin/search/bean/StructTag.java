@@ -31,6 +31,6 @@ public class StructTag {
 
     @Override
     public String toString() {
-        return  address + "::" +  module + "::"  + name ;
+        return address + "::" + module + "::" + name;
     }
 }

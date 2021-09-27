@@ -22,7 +22,7 @@ public class SwapPoolStat {
     private BigInteger tvlAAmount;
     @Column(name = "tvl_b")
     private BigDecimal tvlB;
-    @Column(name = "volume_amount")
+    @Column(name = "tvl_b_amount")
     private BigInteger tvlBAmount;
 
     public SwapPoolStat(String tokenA, String tokenB, long timestamp) {

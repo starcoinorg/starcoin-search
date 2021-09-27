@@ -7,6 +7,7 @@ import org.starcoin.search.bean.SwapTransaction;
 import org.starcoin.search.bean.TokenStat;
 import org.starcoin.search.repository.SwapTransactionRepository;
 import org.starcoin.search.repository.TokenVolumeDTO;
+import org.starcoin.search.utils.NumberUtils;
 
 import java.util.List;
 
@@ -31,8 +32,8 @@ public class SwapTxnService {
         TokenStat tokenStat = new TokenStat(token, startTime);
         TokenVolumeDTO tokenA = swapTransactionRepository.getVolumeByTokenA(token, startTime, endTime);
         TokenVolumeDTO tokenB = swapTransactionRepository.getVolumeByTokenA(token, startTime, endTime);
-        tokenStat.setVolume(tokenA.getVolume().add(tokenB.getVolume()));
-        tokenStat.setVolumeAmount(tokenA.getVolumeAmount().add(tokenB.getVolumeAmount()));
+        tokenStat.setVolume(NumberUtils.getBigDecimal(tokenA.getVolume(), tokenB.getVolume()));
+        tokenStat.setVolumeAmount(NumberUtils.getBigInteger(tokenA.getVolumeAmount(), tokenB.getVolumeAmount()));
         return tokenStat;
     }
 
@@ -40,8 +41,8 @@ public class SwapTxnService {
         SwapPoolStat poolStat = new SwapPoolStat(tokenA, tokenB, startTime);
         TokenVolumeDTO tokenADTO = swapTransactionRepository.getPoolVolumeA(tokenA, tokenB, startTime, endTime);
         TokenVolumeDTO tokenBDTO = swapTransactionRepository.getPoolVolumeB(tokenA, tokenB, startTime, endTime);
-        poolStat.setVolume(tokenADTO.getVolume().add(tokenBDTO.getVolume()));
-        poolStat.setVolumeAmount(tokenADTO.getVolumeAmount().add(tokenBDTO.getVolumeAmount()));
+        poolStat.setVolume(NumberUtils.getBigDecimal(tokenADTO.getVolume(), tokenBDTO.getVolume()));
+        poolStat.setVolumeAmount(NumberUtils.getBigInteger(tokenADTO.getVolumeAmount(), tokenBDTO.getVolumeAmount()));
         return poolStat;
     }
 }

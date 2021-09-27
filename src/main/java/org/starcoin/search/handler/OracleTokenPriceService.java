@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
 public class OracleTokenPriceService {
 
     private static final Logger logger = LoggerFactory.getLogger(OracleTokenPriceService.class);

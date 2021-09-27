@@ -23,8 +23,10 @@ import org.starcoin.bean.Tvl;
 import org.starcoin.search.bean.*;
 import org.starcoin.search.constant.Constant;
 import org.starcoin.search.service.SwapPoolStatService;
+import org.starcoin.search.service.SwapStatService;
 import org.starcoin.search.service.SwapTxnService;
 import org.starcoin.search.service.TokenStatService;
+import org.starcoin.search.utils.NumberUtils;
 import org.starcoin.search.utils.StructTagUtil;
 import org.starcoin.search.utils.SwapApiClient;
 import org.starcoin.types.TypeTag;
@@ -59,9 +61,11 @@ public class SwapHandle {
     @Autowired
     private SwapPoolStatService swapPoolStatService;
     @Autowired
+    private SwapStatService swapStatService;
+    @Autowired
     private SwapApiClient swapApiClient;
 
-    public void volumeStats(long startTime, long endTime) {
+    public void swapStat(long startTime, long endTime) {
         Set<String> handledTxn = new HashSet<>();
         List<TokenStat> tokenStatList = new ArrayList<>();
         Map<String, TokenPoolStat> poolMap = new HashMap<>();
@@ -98,6 +102,8 @@ public class SwapHandle {
             tokenStatService.saveAll(tokenStatList);
             //get pool volume
             List<SwapPoolStat> poolStatList = new ArrayList<>();
+            SwapStat swapStat = new SwapStat();
+            swapStat.setStatDate(new Date(startTime));
             for (LiquidityPoolInfo poolInfo : poolInfoList) {
                 LiquidityTokenId liquidityTokenId = poolInfo.getLiquidityPoolId().getLiquidityTokenId();
                 String tokenA = tokenMapping.get(liquidityTokenId.getTokenXId());
@@ -107,15 +113,23 @@ public class SwapHandle {
                 poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
                 poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());
                 poolStat.setTvlAAmount(poolInfo.getTokenXReserve());
-                poolStat.setTvlAAmount(poolInfo.getTokenYReserve());
+                poolStat.setTvlBAmount(poolInfo.getTokenYReserve());
                 poolStatList.add(poolStat);
+                //add for total
+                swapStat.setVolume(NumberUtils.getBigDecimal(swapStat.getVolume(), poolStat.getVolume()));
+                swapStat.setVolumeAmount(NumberUtils.getBigInteger(swapStat.getVolumeAmount(), poolStat.getVolumeAmount()));
+                BigDecimal tvl = NumberUtils.getBigDecimal(swapStat.getTvl(), poolInfo.getTokenXReserveInUsd());
+                swapStat.setTvl(NumberUtils.getBigDecimal(tvl, poolInfo.getTokenYReserveInUsd()));
+                //todo TVL is equal amount_a + amount_b?
+                BigInteger amount = NumberUtils.getBigInteger(swapStat.getTvlAmount(), poolInfo.getTokenXReserve());
+                swapStat.setTvlAmount(NumberUtils.getBigInteger(amount, poolInfo.getTokenYReserve()));
             }
             swapPoolStatService.saveAll(poolStatList);
-            //todo total swap stat
-
+            swapStatService.save(swapStat);
+            logger.info("handle swap stat ok: {} - {}", startTime, endTime);
 
         } catch (IOException e) {
-            logger.error("get pool info error:", e);
+            logger.error("handle swap error:", e);
         }
 
     }

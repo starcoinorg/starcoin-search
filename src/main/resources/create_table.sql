@@ -45,10 +45,7 @@ CREATE TABLE IF NOT EXISTS swap_transaction
 // swap天维度汇总统计
 CREATE TABLE IF NOT EXISTS swap_day_stat
 (
-    stat_date character varying
-(
-    32
-) COLLATE pg_catalog."default" NOT NULL,
+    stat_date time without time zone NOT NULL,
     volume_amount numeric NOT NULL,
     volume numeric,
     tvl_amount numeric NOT NULL,

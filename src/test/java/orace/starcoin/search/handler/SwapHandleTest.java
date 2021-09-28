@@ -43,7 +43,7 @@ public class SwapHandleTest {
         long endTs = getTimeStamp(0);
         long startTs = getTimeStamp(-1);
 
-        swapHandle.swapStat(1631605899615L, 1631606054361L);
+        swapHandle.swapStat(1632633811190L, 1632368803198L);
     }
 
     @Test

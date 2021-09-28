@@ -5,5 +5,5 @@ import java.math.BigInteger;
 
 public interface TokenVolumeDTO {
     public BigDecimal getVolume();
-    public BigInteger getVolumeAmount();
+    public BigDecimal getVolumeAmount();
 }

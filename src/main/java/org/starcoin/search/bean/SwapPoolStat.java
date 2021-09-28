@@ -13,7 +13,7 @@ public class SwapPoolStat {
     @EmbeddedId
     PoolStatId id;
     @Column(name = "volume_amount")
-    private BigInteger volumeAmount;
+    private BigDecimal volumeAmount;
     @Column(name = "volume")
     private BigDecimal volume;
     @Column(name = "tvl_a")
@@ -33,11 +33,11 @@ public class SwapPoolStat {
     public SwapPoolStat() {
     }
 
-    public BigInteger getVolumeAmount() {
+    public BigDecimal getVolumeAmount() {
         return volumeAmount;
     }
 
-    public void setVolumeAmount(BigInteger volumeAmount) {
+    public void setVolumeAmount(BigDecimal volumeAmount) {
         this.volumeAmount = volumeAmount;
     }
 

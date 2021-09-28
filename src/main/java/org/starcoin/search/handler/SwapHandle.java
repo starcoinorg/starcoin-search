@@ -66,11 +66,7 @@ public class SwapHandle {
     private SwapApiClient swapApiClient;
 
     public void swapStat(long startTime, long endTime) {
-        Set<String> handledTxn = new HashSet<>();
         List<TokenStat> tokenStatList = new ArrayList<>();
-        Map<String, TokenPoolStat> poolMap = new HashMap<>();
-        long localStartTime = startTime;
-
         try {
             List<LiquidityPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
             List<SwapToken> tokenList = swapApiClient.getTokens(network);
@@ -89,6 +85,7 @@ public class SwapHandle {
                 tokenMapping.put(token.getTokenId(), tagStr);
                 //get token volume
                 TokenStat tokenStat = swapTxnService.getTokenVolume(tagStr, startTime, endTime);
+                tokenStat.setVolumeAmount(divideScalingFactor(tagStr, tokenStat.getVolumeAmount()));
                 TokenTvl tvl = tokenTvlMapping.get(token.getTokenId());
                 if (tvl != null) {
                     tokenStat.setTvl(tvl.getTvl());
@@ -109,6 +106,7 @@ public class SwapHandle {
                 String tokenA = tokenMapping.get(liquidityTokenId.getTokenXId());
                 String tokenB = tokenMapping.get(liquidityTokenId.getTokenYId());
                 SwapPoolStat poolStat = swapTxnService.getPoolVolume(tokenA, tokenB, startTime, endTime);
+                poolStat.setVolumeAmount(divideScalingFactor(tokenA, poolStat.getVolumeAmount()));
                 // get pool tvl
                 poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
                 poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());
@@ -117,12 +115,8 @@ public class SwapHandle {
                 poolStatList.add(poolStat);
                 //add for total
                 swapStat.setVolume(NumberUtils.getBigDecimal(swapStat.getVolume(), poolStat.getVolume()));
-                swapStat.setVolumeAmount(NumberUtils.getBigInteger(swapStat.getVolumeAmount(), poolStat.getVolumeAmount()));
                 BigDecimal tvl = NumberUtils.getBigDecimal(swapStat.getTvl(), poolInfo.getTokenXReserveInUsd());
                 swapStat.setTvl(NumberUtils.getBigDecimal(tvl, poolInfo.getTokenYReserveInUsd()));
-                //todo TVL is equal amount_a + amount_b?
-                BigInteger amount = NumberUtils.getBigInteger(swapStat.getTvlAmount(), poolInfo.getTokenXReserve());
-                swapStat.setTvlAmount(NumberUtils.getBigInteger(amount, poolInfo.getTokenYReserve()));
             }
             swapPoolStatService.saveAll(poolStatList);
             swapStatService.save(swapStat);
@@ -162,7 +156,7 @@ public class SwapHandle {
         return new TotalTvl(tokenMap, tokenPairTvlMap);
     }
 
-    void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
+    void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
         String key = StructTagUtil.structTagToString(typeTag.value);
         TokenStat sum = result.get(key);
 
@@ -174,28 +168,28 @@ public class SwapHandle {
         }
     }
 
-    private TokenStat getValue(TypeTag.Struct typeTag, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) {
-        BigInteger actualValue = moveScalingFactor(StructTagUtil.structTagToString(typeTag.value), amount);
+    private TokenStat getValue(TypeTag.Struct typeTag, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) {
+        BigDecimal actualValue = divideScalingFactor(StructTagUtil.structTagToString(typeTag.value), amount);
 
         BigDecimal price = oracleTokenPrice.getPrice(StructTagUtil.structTagToSwapUsdtPair(typeTag.value), ts);
         if (price == null) {
             price = BigDecimal.ZERO;
         }
-        return new TokenStat(price.multiply(new BigDecimal(actualValue)), actualValue, null, null);
+        return new TokenStat(price.multiply(actualValue), actualValue, null, null);
     }
 
-    private BigInteger moveScalingFactor(String key, BigInteger amount) {
+    private BigDecimal divideScalingFactor(String key, BigDecimal amount) {
         TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
-        BigInteger actualValue = amount;
+        BigDecimal actualValue = amount;
         if (tokenInfo != null) {
-            actualValue.divide(BigInteger.valueOf(tokenInfo.getScalingFactor()));
+            actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
         } else {
             logger.warn("token info not exist:{}", key);
         }
         return actualValue;
     }
 
-    void poolSum(Map<String, TokenPoolStat> result, TypeTag.Struct typeTagFirst, TypeTag.Struct typeTagSecond, BigInteger amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
+    void poolSum(Map<String, TokenPoolStat> result, TypeTag.Struct typeTagFirst, TypeTag.Struct typeTagSecond, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
         String key = StructTagUtil.structTagsToTokenPair(typeTagFirst.value, typeTagSecond.value);
         TokenPoolStat sum = result.get(key);
 

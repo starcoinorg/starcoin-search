@@ -81,6 +81,31 @@ public class SwapApiClient {
         }
     }
 
+    public List<OracleTokenPair> getProximatePriceRounds(String network, List<String> tokenList, String timestamp) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl.Builder builder = new HttpUrl.Builder()
+                .scheme(scheme)
+                .host(host)
+                .addPathSegment(network)
+                .addPathSegment("v1")
+                .addPathSegment("price-api")
+                .addPathSegment("getProximateToUsdPriceRounds")
+                .addQueryParameter("timestamp", timestamp);
+        for(String token : tokenList) {
+            builder.addQueryParameter("t", token);
+        }
+        HttpUrl httpUrl = builder.build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .build();
+
+        System.out.println(request.toString());
+        try (Response response = client.newCall(request).execute()) {
+            String res = response.body().string();
+            return JSON.parseArray(res, OracleTokenPair.class);
+        }
+    }
+
     public List<TokenTvl> getTokenTvl(String network) throws IOException {
         OkHttpClient client = new OkHttpClient();
         HttpUrl httpUrl = new HttpUrl.Builder()

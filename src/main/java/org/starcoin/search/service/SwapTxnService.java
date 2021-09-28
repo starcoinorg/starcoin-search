@@ -33,7 +33,7 @@ public class SwapTxnService {
         TokenVolumeDTO tokenA = swapTransactionRepository.getVolumeByTokenA(token, startTime, endTime);
         TokenVolumeDTO tokenB = swapTransactionRepository.getVolumeByTokenA(token, startTime, endTime);
         tokenStat.setVolume(NumberUtils.getBigDecimal(tokenA.getVolume(), tokenB.getVolume()));
-        tokenStat.setVolumeAmount(NumberUtils.getBigInteger(tokenA.getVolumeAmount(), tokenB.getVolumeAmount()));
+        tokenStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenA.getVolumeAmount(), tokenB.getVolumeAmount()));
         return tokenStat;
     }
 
@@ -42,7 +42,7 @@ public class SwapTxnService {
         TokenVolumeDTO tokenADTO = swapTransactionRepository.getPoolVolumeA(tokenA, tokenB, startTime, endTime);
         TokenVolumeDTO tokenBDTO = swapTransactionRepository.getPoolVolumeB(tokenA, tokenB, startTime, endTime);
         poolStat.setVolume(NumberUtils.getBigDecimal(tokenADTO.getVolume(), tokenBDTO.getVolume()));
-        poolStat.setVolumeAmount(NumberUtils.getBigInteger(tokenADTO.getVolumeAmount(), tokenBDTO.getVolumeAmount()));
+        poolStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenADTO.getVolumeAmount(), tokenBDTO.getVolumeAmount()));
         return poolStat;
     }
 }

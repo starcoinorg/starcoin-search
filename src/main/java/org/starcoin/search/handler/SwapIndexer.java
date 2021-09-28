@@ -15,7 +15,9 @@ public class SwapIndexer extends QuartzJobBean {
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-
+        long endTs = getTimeStamp(0);
+        long startTs = getTimeStamp(-1);
+        swapHandle.swapStat(startTs, endTs);
     }
 
     static long getTimeStamp(int day) {

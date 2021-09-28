@@ -648,22 +648,39 @@ public class ElasticSearchHandler {
         //add es success and add swap txn
         if (!swapTransactionList.isEmpty()) {
             Set<String> tokenPair = new HashSet<>();
-            Map<String, BigInteger> tokenPairPrice = new HashMap<>();
-            String pair = null;
+            Map<String, BigDecimal> tokenPriceMap = new HashMap<>();
             for (SwapTransaction swapTransaction : swapTransactionList) {
-                pair = swapTransaction.getTokenA() + "_" + swapTransaction.getTokenB();
-                BigInteger price = tokenPairPrice.get(pair);
-                if (price == null) {
-                    OracleTokenPair oracleTokenPair = swapApiClient.getProximatePriceRound(network, pair, String.valueOf(swapTransaction.getTimestamp()));
-                    if (oracleTokenPair != null) {
-                        price = oracleTokenPair.getLatestPrice();
-                        swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
-                        tokenPairPrice.put(pair, price);
-                    } else {
-                        logger.warn("get oracle null: {}", pair);
+                List<String> tokenList = new ArrayList<>();
+                tokenList.add(swapTransaction.getTokenA());
+                tokenList.add(swapTransaction.getTokenB());
+                BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
+                        swapTransaction.getTokenB(), swapTransaction.getAmountB());
+                if(value != null) {
+                    swapTransaction.setTotalValue(value);
+                }else {
+                    //get oracle price
+                    List<OracleTokenPair> oracleTokenPairs =
+                            swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
+                    if (!oracleTokenPairs.isEmpty()) {
+                        OracleTokenPair oracleToken = oracleTokenPairs.get(0);
+                        if(oracleToken != null) {
+                            BigDecimal price = new BigDecimal(oracleToken.getPrice());
+                            price.movePointLeft(oracleToken.getDecimals());
+                            tokenPriceMap.put(swapTransaction.getTokenA(), price);
+                            swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountA())));
+                        }else {
+                            oracleToken = oracleTokenPairs.get(1);
+                            if(oracleToken != null) {
+                                BigDecimal price = new BigDecimal(oracleToken.getPrice());
+                                price.movePointLeft(oracleToken.getDecimals());
+                                tokenPriceMap.put(swapTransaction.getTokenB(), price);
+                                swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountB())));
+                            }else {
+                                logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                swapTransaction.setTotalValue(new BigDecimal(0));
+                            }
+                        }
                     }
-                } else {
-                    swapTransaction.setTotalValue(new BigDecimal(swapTransaction.getAmountA().multiply(price)));
                 }
             }
 
@@ -674,6 +691,18 @@ public class ElasticSearchHandler {
             transactionPayloadService.savePayload(transactionPayloadList);
             logger.info("save txn payload to pg ok: {}", transactionPayloadList.size());
         }
+    }
+
+    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigInteger amountA, String tokenB, BigInteger amountB) {
+        BigDecimal price = priceMap.get(tokenA);
+        if(price != null) {
+            return price.multiply(new BigDecimal(amountA));
+        }
+        price = priceMap.get(tokenB);
+        if(price != null) {
+            return price.multiply(new BigDecimal(amountB));
+        }
+        return null;
     }
 
     private void transferDifficulty(BlockHeader header) {

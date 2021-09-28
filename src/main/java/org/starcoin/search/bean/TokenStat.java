@@ -13,7 +13,7 @@ public class TokenStat {
     @EmbeddedId
     TokenStatId tokenStatId;
     @Column(name = "volume_amount")
-    private BigInteger volumeAmount;
+    private BigDecimal volumeAmount;
     @Column(name = "volume")
     private BigDecimal volume;
     @Column(name = "tvl")
@@ -31,7 +31,7 @@ public class TokenStat {
         this.tokenStatId = tokenStatId;
     }
 
-    public TokenStat(BigDecimal volume, BigInteger volumeAmount, BigDecimal tvl, BigInteger tvlAmount) {
+    public TokenStat(BigDecimal volume, BigDecimal volumeAmount, BigDecimal tvl, BigInteger tvlAmount) {
         this.volume = volume;
         this.volumeAmount = volumeAmount;
         this.tvl = tvl;
@@ -54,11 +54,11 @@ public class TokenStat {
         this.tvl = tvl;
     }
 
-    public BigInteger getVolumeAmount() {
+    public BigDecimal getVolumeAmount() {
         return volumeAmount;
     }
 
-    public void setVolumeAmount(BigInteger volumeAmount) {
+    public void setVolumeAmount(BigDecimal volumeAmount) {
         this.volumeAmount = volumeAmount;
     }
 
@@ -70,7 +70,7 @@ public class TokenStat {
         this.tvlAmount = tvlAmount;
     }
 
-    public void addVolumeAmount(BigInteger bigDecimal) {
+    public void addVolumeAmount(BigDecimal bigDecimal) {
         volumeAmount.add(bigDecimal);
     }
 

@@ -63,7 +63,6 @@ import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -79,11 +78,7 @@ public class ElasticSearchHandler {
     private final StateRPCClient stateRPCClient;
     private final TransactionRPCClient transactionRPCClient;
     @Autowired
-    private SwapTxnService swapTxnService;
-    @Autowired
     private TransactionPayloadService transactionPayloadService;
-    @Autowired
-    private SwapApiClient swapApiClient;
 
     @Value("${starcoin.network}")
     private String network;
@@ -597,9 +592,8 @@ public class ElasticSearchHandler {
         bulkRequest.add(updateRequest);
     }
 
-    public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper) throws IOException, DeserializationError {
+    public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper, List<SwapTransaction> swapTransactionList) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
-        List<SwapTransaction> swapTransactionList = new ArrayList<>();
         List<org.starcoin.search.bean.TransactionPayload> transactionPayloadList = new ArrayList<>();
         for (Transaction transaction : transactionList) {
             if (transaction.getUserTransaction() != null) {
@@ -645,64 +639,11 @@ public class ElasticSearchHandler {
         }
         BulkResponse response = client.bulk(bulkRequest, RequestOptions.DEFAULT);
         logger.info("bulk txn payload result: {}", response.buildFailureMessage());
-        //add es success and add swap txn
-        if (!swapTransactionList.isEmpty()) {
-            Set<String> tokenPair = new HashSet<>();
-            Map<String, BigDecimal> tokenPriceMap = new HashMap<>();
-            for (SwapTransaction swapTransaction : swapTransactionList) {
-                List<String> tokenList = new ArrayList<>();
-                tokenList.add(swapTransaction.getTokenA());
-                tokenList.add(swapTransaction.getTokenB());
-                BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
-                        swapTransaction.getTokenB(), swapTransaction.getAmountB());
-                if(value != null) {
-                    swapTransaction.setTotalValue(value);
-                }else {
-                    //get oracle price
-                    List<OracleTokenPair> oracleTokenPairs =
-                            swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
-                    if (!oracleTokenPairs.isEmpty()) {
-                        OracleTokenPair oracleToken = oracleTokenPairs.get(0);
-                        if(oracleToken != null) {
-                            BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                            price.movePointLeft(oracleToken.getDecimals());
-                            tokenPriceMap.put(swapTransaction.getTokenA(), price);
-                            swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountA())));
-                        }else {
-                            oracleToken = oracleTokenPairs.get(1);
-                            if(oracleToken != null) {
-                                BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                                price.movePointLeft(oracleToken.getDecimals());
-                                tokenPriceMap.put(swapTransaction.getTokenB(), price);
-                                swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountB())));
-                            }else {
-                                logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
-                                swapTransaction.setTotalValue(new BigDecimal(0));
-                            }
-                        }
-                    }
-                }
-            }
 
-            swapTxnService.saveList(swapTransactionList);
-            logger.info("save swap txn ok: {}", swapTransactionList.size());
-        }
         if (!transactionPayloadList.isEmpty()) {
             transactionPayloadService.savePayload(transactionPayloadList);
             logger.info("save txn payload to pg ok: {}", transactionPayloadList.size());
         }
-    }
-
-    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigInteger amountA, String tokenB, BigInteger amountB) {
-        BigDecimal price = priceMap.get(tokenA);
-        if(price != null) {
-            return price.multiply(new BigDecimal(amountA));
-        }
-        price = priceMap.get(tokenB);
-        if(price != null) {
-            return price.multiply(new BigDecimal(amountB));
-        }
-        return null;
     }
 
     private void transferDifficulty(BlockHeader header) {

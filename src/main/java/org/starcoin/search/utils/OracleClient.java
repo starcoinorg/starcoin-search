@@ -5,7 +5,7 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.starcoin.bean.OracleTokenPair;
+import org.starcoin.search.bean.OracleTokenPair;
 
 import java.io.IOException;
 import java.util.List;

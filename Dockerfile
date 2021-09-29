@@ -47,20 +47,20 @@ VOLUME /tmp
 USER starcoin
 ARG DEPENDENCY=/workspace/app/target
 COPY --from=build ${DEPENDENCY}/starscan-search-1.0-SNAPSHOT.jar /app/lib/app.jar
-ENTRYPOINT ["java","-noverify","-jar","app/lib/app.jar",
-            "PROG_ARGS=$PROG_ARGS",
-            "INDEXER_AUTO_START=$INDEXER_AUTO_START",
-            "HOSTS=$HOSTS",
-            "NETWORK=$NETWORK",
-            "BULK_SIZE=$BULK_SIZE",
-            "STARCOIN_ES_URL=$STARCOIN_ES_URL",
-            "STARCOIN_ES_PROTOCOL=$STARCOIN_ES_PROTOCOL",
-            "STARCOIN_ES_PORT=$STARCOIN_ES_PORT",
-            "STARCOIN_ES_USER=$STARCOIN_ES_USER",
-            "STARCOIN_ES_PWD=$STARCOIN_ES_PWD",
-            "SWAP_API_URL=$SWAP_API_URL",
-            "SWAP_CONTRACT_ADDR=$SWAP_CONTRACT_ADDR",
-            "DS_URL=$DS_URL",
-            "DB_USER_NAME=$DB_USER_NAME",
-            "DB_PWD=$DB_PWD"
+ENTRYPOINT ["java","-noverify","-jar","app/lib/app.jar", \
+            "PROG_ARGS=$PROG_ARGS", \
+            "INDEXER_AUTO_START=$INDEXER_AUTO_START", \
+            "HOSTS=$HOSTS", \
+            "NETWORK=$NETWORK", \
+            "BULK_SIZE=$BULK_SIZE", \
+            "STARCOIN_ES_URL=$STARCOIN_ES_URL", \
+            "STARCOIN_ES_PROTOCOL=$STARCOIN_ES_PROTOCOL", \
+            "STARCOIN_ES_PORT=$STARCOIN_ES_PORT", \
+            "STARCOIN_ES_USER=$STARCOIN_ES_USER", \
+            "STARCOIN_ES_PWD=$STARCOIN_ES_PWD", \
+            "SWAP_API_URL=$SWAP_API_URL", \
+            "SWAP_CONTRACT_ADDR=$SWAP_CONTRACT_ADDR", \
+            "DS_URL=$DS_URL", \
+            "DB_USER_NAME=$DB_USER_NAME", \
+            "DB_PWD=$DB_PWD" \
             ]

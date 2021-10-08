@@ -46,7 +46,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startQuartzTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(3)  //设置时间周期单位秒
+                .withIntervalInSeconds(10)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleIndexer())
                 .withIdentity("indexer")
@@ -57,7 +57,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startSecondTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(3)  //设置时间周期单位秒
+                .withIntervalInSeconds(10)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
                 .withIdentity("secondary")
@@ -79,7 +79,7 @@ public class QuartzConfig {
     @Bean
     public Trigger startTransactionPayload() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(2)
+                .withIntervalInSeconds(10)
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
                 .withIdentity("txn_payload")

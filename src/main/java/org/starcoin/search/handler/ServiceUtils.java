@@ -174,7 +174,7 @@ public class ServiceUtils {
 
     static TokenInfo getTokenInfo(StateRPCClient stateRPCClient, String tokenCode) {
         TokenInfo tokenInfo = tokenCache.get(tokenCode);
-        if (tokenInfo != null) {
+        if (tokenInfo == null) {
             try {
                 tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
                 if (tokenInfo != null) {
@@ -191,7 +191,7 @@ public class ServiceUtils {
         TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
         BigDecimal actualValue = amount;
         if (tokenInfo != null) {
-            actualValue = actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
+            actualValue = actualValue.movePointLeft((int) Math.log10(tokenInfo.getScalingFactor()));
         } else {
             logger.warn("token info not exist:{}", key);
         }

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.Transaction;
 import org.starcoin.search.bean.OracleTokenPair;
 import org.starcoin.search.bean.SwapTransaction;
@@ -35,10 +36,13 @@ public class TransactionPayloadHandle extends QuartzJobBean {
     private RestHighLevelClient client;
     private String index;
 
-    @Autowired
-    private ElasticSearchHandler elasticSearchHandler;
     @Value("${starcoin.network}")
     private String network;
+
+    @Autowired
+    private ElasticSearchHandler elasticSearchHandler;
+    @Autowired
+    private StateRPCClient stateRPCClient;
     @Autowired
     private SwapTxnService swapTxnService;
     @Autowired
@@ -96,6 +100,8 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                         List<String> tokenList = new ArrayList<>();
                         tokenList.add(swapTransaction.getTokenA());
                         tokenList.add(swapTransaction.getTokenB());
+                        swapTransaction.setAmountA(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenA(), swapTransaction.getAmountA()));
+                        swapTransaction.setAmountB(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenB(), swapTransaction.getAmountB()));
                         BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
                                 swapTransaction.getTokenB(), swapTransaction.getAmountB());
                         if(value != null) {
@@ -108,16 +114,16 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                 OracleTokenPair oracleToken = oracleTokenPairs.get(0);
                                 if(oracleToken != null) {
                                     BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                                    price.movePointLeft(oracleToken.getDecimals());
+                                    price = price.movePointLeft(oracleToken.getDecimals());
                                     tokenPriceMap.put(swapTransaction.getTokenA(), price);
-                                    swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountA())));
+                                    swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountA()));
                                 }else {
                                     oracleToken = oracleTokenPairs.get(1);
                                     if(oracleToken != null) {
                                         BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                                        price.movePointLeft(oracleToken.getDecimals());
+                                        price = price.movePointLeft(oracleToken.getDecimals());
                                         tokenPriceMap.put(swapTransaction.getTokenB(), price);
-                                        swapTransaction.setTotalValue(price.multiply(new BigDecimal(swapTransaction.getAmountB())));
+                                        swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountB()));
                                     }else {
                                         logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
                                         swapTransaction.setTotalValue(new BigDecimal(0));
@@ -145,14 +151,14 @@ public class TransactionPayloadHandle extends QuartzJobBean {
         }
     }
 
-    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigInteger amountA, String tokenB, BigInteger amountB) {
+    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigDecimal amountA, String tokenB, BigDecimal amountB) {
         BigDecimal price = priceMap.get(tokenA);
         if(price != null) {
-            return price.multiply(new BigDecimal(amountA));
+            return price.multiply(amountA);
         }
         price = priceMap.get(tokenB);
         if(price != null) {
-            return price.multiply(new BigDecimal(amountB));
+            return price.multiply(amountB);
         }
         return null;
     }

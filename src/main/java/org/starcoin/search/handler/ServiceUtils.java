@@ -31,6 +31,7 @@ import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -184,6 +185,17 @@ public class ServiceUtils {
             }
         }
         return tokenInfo;
+    }
+
+    public static BigDecimal divideScalingFactor(StateRPCClient stateRPCClient, String key, BigDecimal amount) {
+        TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
+        BigDecimal actualValue = amount;
+        if (tokenInfo != null) {
+            actualValue = actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
+        } else {
+            logger.warn("token info not exist:{}", key);
+        }
+        return actualValue;
     }
 
     static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {

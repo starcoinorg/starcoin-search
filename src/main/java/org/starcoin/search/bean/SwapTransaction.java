@@ -18,11 +18,11 @@ public class SwapTransaction {
     private String tokenA;
 
     @Column(name = "amount_a")
-    private BigInteger amountA;
+    private BigDecimal amountA;
     @Column(name = "token_b")
     private String tokenB;
     @Column(name = "amount_b")
-    private BigInteger amountB;
+    private BigDecimal amountB;
     @Column(name = "account")
     private String account;
     @Column(name = "ts")
@@ -57,19 +57,19 @@ public class SwapTransaction {
         this.tokenA = tokenA;
     }
 
-    public BigInteger getAmountA() {
+    public BigDecimal getAmountA() {
         return amountA;
     }
 
-    public void setAmountA(BigInteger amountA) {
+    public void setAmountA(BigDecimal amountA) {
         this.amountA = amountA;
     }
 
-    public BigInteger getAmountB() {
+    public BigDecimal getAmountB() {
         return amountB;
     }
 
-    public void setAmountB(BigInteger amountB) {
+    public void setAmountB(BigDecimal amountB) {
         this.amountB = amountB;
     }
 

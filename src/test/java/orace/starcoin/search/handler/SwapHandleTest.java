@@ -53,9 +53,9 @@ public class SwapHandleTest {
         swapTransaction.setSwapType(SwapType.SwapExactTokenForToken);
         swapTransaction.setAccount("0x161d3fd393ebf6becb9c78c9b41ad1b9");
         swapTransaction.setTokenA("0x00000000000000000000000000000001::STC::STC");
-        swapTransaction.setAmountA(new BigInteger("1000"));
+        swapTransaction.setAmountA(new BigDecimal("1000"));
         swapTransaction.setTokenB("0x9350502a3af6c617e9a42fa9e306a385::BX_USDT::BX_USDT");
-        swapTransaction.setAmountB(new BigInteger("20"));
+        swapTransaction.setAmountB(new BigDecimal("20"));
         swapTransaction.setTimestamp(1617194769000L);
         swapTransaction.setTotalValue(new BigDecimal(2000));
         swapTxnService.save(swapTransaction);

@@ -63,6 +63,7 @@ import org.starcoin.utils.Hex;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -619,8 +620,8 @@ public class ElasticSearchHandler {
                             swapTransaction.setAccount(rawTransaction.getSender());
                             swapTransaction.setTokenA(tokenA);
                             swapTransaction.setTokenB(tokenB);
-                            swapTransaction.setAmountA(argFirst);
-                            swapTransaction.setAmountB(argSecond);
+                            swapTransaction.setAmountA(new BigDecimal(argFirst));
+                            swapTransaction.setAmountB(new BigDecimal(argSecond));
                             swapTransaction.setSwapType(SwapType.fromValue(function));
                             swapTransactionList.add(swapTransaction);
                         } else {

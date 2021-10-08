@@ -19,8 +19,8 @@ public class SwapIndexer extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext)  {
 
-        long endTs = getTimeStamp(0);
-        long startTs = getTimeStamp(-1);
+        long endTs = getTimeStamp(-1);
+        long startTs = getTimeStamp(-2);
         swapHandle.swapStat(startTs, endTs);
         logger.info("swap index handle ok: {} , {}", startTs, endTs);
     }

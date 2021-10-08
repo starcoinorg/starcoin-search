@@ -179,58 +179,6 @@ public class SwapHandle {
     }
 
     private BigDecimal divideScalingFactor(String key, BigDecimal amount) {
-        TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
-        BigDecimal actualValue = amount;
-        if (tokenInfo != null) {
-            actualValue.movePointLeft((int) tokenInfo.getScalingFactor());
-        } else {
-            logger.warn("token info not exist:{}", key);
-        }
-        return actualValue;
+        return ServiceUtils.divideScalingFactor(stateRPCClient, key, amount);
     }
-
-    void poolSum(Map<String, TokenPoolStat> result, TypeTag.Struct typeTagFirst, TypeTag.Struct typeTagSecond, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
-        String key = StructTagUtil.structTagsToTokenPair(typeTagFirst.value, typeTagSecond.value);
-        TokenPoolStat sum = result.get(key);
-
-        TokenStat xActualValue = getValue(typeTagFirst, amount, oracleTokenPrice, ts);
-        TokenStat yActualValue = getValue(typeTagSecond, amount, oracleTokenPrice, ts);
-
-        TokenPoolStat poolStat = new TokenPoolStat(xActualValue, yActualValue);
-
-        if (sum == null) {
-            result.put(key, poolStat);
-        } else {
-            sum.add(poolStat);
-        }
-    }
-
-
-    Result<TransactionPayloadInfo> volumeStatsByTimeRange(long startTime, long endTime) {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.size(100);
-
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        queryBuilder.must(QueryBuilders.rangeQuery("timestamp").gt(startTime).lt(endTime));
-        queryBuilder.should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_exact_token_for_token"))
-                .should(QueryBuilders.termQuery("payload.value.function.keyword", "swap_token_for_exact_token"));
-        searchSourceBuilder.query(queryBuilder);
-
-        searchSourceBuilder.from(0);
-        searchSourceBuilder.trackTotalHits(true);
-        searchRequest.source(searchSourceBuilder);
-        searchSourceBuilder.timeout(new TimeValue(20, TimeUnit.SECONDS));
-        searchSourceBuilder.sort("timestamp", SortOrder.ASC);
-
-        try {
-            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-            return ServiceUtils.getSearchResultJackson(searchResponse, TransactionPayloadInfo.class);
-        } catch (IOException e) {
-            logger.error("get transfer error:", e);
-            return Result.EmptyResult;
-        }
-    }
-
-
 }

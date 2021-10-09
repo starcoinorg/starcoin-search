@@ -2,7 +2,6 @@ package org.starcoin.search.utils;
 
 import com.alibaba.fastjson.JSON;
 import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.starcoin.search.bean.LiquidityPoolInfo;
@@ -23,7 +22,6 @@ public class SwapApiClient {
     }
 
     public List<SwapToken> getTokens(String network) throws IOException {
-        OkHttpClient client = new OkHttpClient();
         HttpUrl httpUrl = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -35,14 +33,13 @@ public class SwapApiClient {
                 .url(httpUrl)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             String res = response.body().string();
             return JSON.parseArray(res, SwapToken.class);
         }
     }
 
     public List<LiquidityPoolInfo> getPoolInfo(String network) throws IOException {
-        OkHttpClient client = new OkHttpClient();
         HttpUrl httpUrl = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -54,14 +51,13 @@ public class SwapApiClient {
                 .url(httpUrl)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             String res = response.body().string();
             return JSON.parseArray(res, LiquidityPoolInfo.class);
         }
     }
 
     public OracleTokenPair getProximatePriceRound(String network, String token, String timestamp) throws IOException {
-        OkHttpClient client = new OkHttpClient();
         HttpUrl httpUrl = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -75,14 +71,13 @@ public class SwapApiClient {
                 .url(httpUrl)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             String res = response.body().string();
             return JSON.parseObject(res, OracleTokenPair.class);
         }
     }
 
     public List<OracleTokenPair> getProximatePriceRounds(String network, List<String> tokenList, String timestamp) throws IOException {
-        OkHttpClient client = new OkHttpClient();
         HttpUrl.Builder builder = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -100,14 +95,13 @@ public class SwapApiClient {
                 .build();
 
         System.out.println(request.toString());
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             String res = response.body().string();
             return JSON.parseArray(res, OracleTokenPair.class);
         }
     }
 
     public List<TokenTvl> getTokenTvl(String network) throws IOException {
-        OkHttpClient client = new OkHttpClient();
         HttpUrl httpUrl = new HttpUrl.Builder()
                 .scheme(scheme)
                 .host(host)
@@ -119,7 +113,7 @@ public class SwapApiClient {
                 .url(httpUrl)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             String res = response.body().string();
             return JSON.parseArray(res, TokenTvl.class);
         }

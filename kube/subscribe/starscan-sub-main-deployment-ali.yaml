@@ -41,15 +41,18 @@ spec:
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
-              value: ""
+              value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: ""
+              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
             - name: DB_USER_NAME
-              value: ""
+              value: "starcoin"
             - name: DB_PWD
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-pw-starcoin
+                  key: password
             - name: PROGRAM_ARGS
               value: "subscribe"
 

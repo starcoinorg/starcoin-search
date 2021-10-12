@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starscan-sub
-          image: starcoin/starcoin_search:sha-0af24fa
+          image: starcoin/starcoin_search:sha-31a2f6f
           ports:
             - containerPort: 8600
           env:
@@ -28,10 +28,10 @@ spec:
             - name: BG_TASK_JOBS
               value: "clean_pending_txn"
             - name: STARCOIN_ES_PWD
-                valueFrom:
-                  secretKeyRef:
-                    name: elasticsearch-pw-elastic
-                    key: password
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: STARCOIN_ES_PROTOCOL
@@ -46,14 +46,17 @@ spec:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: SWAP_API_URL
-              value: ""
+              value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: ""
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
-              value: ""
+              value: "starcoin"
             - name: DB_PWD
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-starcoin-yu
+                  key: password
             - name: PROGRAM_ARGS
               value: "subscribe"

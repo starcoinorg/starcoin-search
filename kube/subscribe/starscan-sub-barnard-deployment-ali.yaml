@@ -17,21 +17,21 @@ spec:
     spec:
       containers:
         - name: starscan-sub
-          image: starcoin/starcoin_search:sha-0af24fa
+          image: starcoin/starcoin_search:sha-31a2f6f
           ports:
             - containerPort: 8600
           env:
             - name: HOSTS
-              value: "barnard1.seed.starcoin.org,barnard2.seed.starcoin.org"
+              value: "barnard1.seed.starcoin.org,barnard2.seed.starcoin.org,barnard3.seed.starcoin.org"
             - name: NETWORK
               value: "barnard"
             - name: BG_TASK_JOBS
               value: "clean_pending_txn"
             - name: STARCOIN_ES_PWD
-                valueFrom:
-                  secretKeyRef:
-                    name: elasticsearch-pw-elastic
-                    key: password
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password
             - name: STARCOIN_ES_URL
               value: "123.57.40.36"
             - name: STARCOIN_ES_PROTOCOL
@@ -41,14 +41,17 @@ spec:
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
-              value: ""
+              value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: ""
+              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
             - name: DB_USER_NAME
-              value: ""
+              value: "starcoin"
             - name: DB_PWD
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-pw-starcoin
+                  key: password
             - name: PROGRAM_ARGS
               value: "subscribe"

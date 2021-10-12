@@ -11,6 +11,7 @@ import org.starcoin.api.*;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.HolderHistoryHandle;
 import org.starcoin.search.handler.RepairHandle;
+import org.starcoin.search.handler.SubscribeHandler;
 import org.starcoin.search.utils.SwapApiClient;
 
 import java.io.BufferedReader;
@@ -24,79 +25,95 @@ import java.util.Map;
 public class SearchApplication {
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
     @Value("${starcoin.swap.api.url}")
-    private String swapApiUrl;
+    private String swapAPIUrl;
 
     public static void main(String[] args) {
         Map<String, String> envMap = System.getenv();
-        String progArgs = envMap.get("PROG_ARGS");
-        logger.info("PROG_ARGS: {}", progArgs);
-        if (progArgs != null && progArgs.length() > 0) {
+        String programArgs = envMap.get("PROGRAM_ARGS");
+        logger.info("PROGRAM_ARGS: {}", programArgs);
+        if (programArgs != null && programArgs.length() > 0) {
             //set env to args for docker environment
-            String[] progs = progArgs.split(" ");
+            String[] pros = programArgs.split(" ");
             int i = 0;
-            for (String prog : progs) {
-                args[i] = prog;
+            for (String arg : pros) {
+                args[i] = arg;
                 i++;
             }
         }
         ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
-        if (args != null && args.length >= 1) {
-            RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
-            ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
-            if (args[0].equals("repair")) {
-                long blockNumber = Long.parseLong(args[1]);
-                repairHandle.repair(blockNumber);
+        if (args == null || args.length < 1) {
+            logger.warn("arg is null.");
+            return;
+        }
+
+        ElasticSearchHandler elasticSearchHandler = (ElasticSearchHandler) context.getBean("elasticSearchHandler");
+        //start subscribe event handle
+        if (args[0].equals("subscribe")) {
+            String hosts = context.getEnvironment().getProperty("HOSTS");
+            if (hosts != null && hosts.length() > 0) {
+                String[] seeds = hosts.split(",");
+                for (String seed : seeds) {
+                    Thread handlerThread = new Thread(new SubscribeHandler(seed, elasticSearchHandler));
+                    handlerThread.start();
+                }
+                logger.info("subscribe event handle start ok.");
             }
-            if (args[0].equals("check")) {
-                long begin = Long.parseLong(args[1]);
-                long end = Long.parseLong(args[2]);
-                repairHandle.check(begin, end);
+        }
+        //add token info
+        if (args[0].equals("add_token")) {
+            elasticSearchHandler.insertToken(args[1]);
+        }
+        //update mapping for add deleted tag
+        if (args[0].equals("update_mapping")) {
+            elasticSearchHandler.updateMapping();
+        }
+        //holder history rebuild
+        if (args[0].equals("holder")) {
+            HolderHistoryHandle handle = (HolderHistoryHandle) context.getBean("holderHistoryHandle");
+            handle.handle();
+        }
+
+        //repair block data
+        RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
+        if (args[0].equals("repair")) {
+            long blockNumber = Long.parseLong(args[1]);
+            repairHandle.repair(blockNumber);
+        }
+        if (args[0].equals("check")) {
+            long begin = Long.parseLong(args[1]);
+            long end = Long.parseLong(args[2]);
+            repairHandle.check(begin, end);
+        }
+        if (args[0].equals("repair_file")) {
+            try {
+                BufferedReader in = new BufferedReader(new FileReader(args[1]));
+                String str;
+                long blockNumber;
+                while ((str = in.readLine()) != null) {
+                    blockNumber = Long.parseLong(str);
+                    if (blockNumber > 0) {
+                        repairHandle.repair(blockNumber);
+                        logger.info("repair ok :" + str);
+                    }
+                }
+                logger.info("repair done");
+            } catch (IOException e) {
+                logger.error("repair file error:", e);
             }
-            if (args[0].equals("repair_file")) {
+        }
+        if (args[0].equals("auto_repair")) {
+            int count = 20;
+            long startNumber = Long.parseLong(args[1]);
+            while (startNumber > 0) {
+                if (repairHandle.autoRepair(startNumber, count)) {
+                    startNumber += count;
+                }
                 try {
-                    BufferedReader in = new BufferedReader(new FileReader(args[1]));
-                    String str;
-                    long blockNumber = 0;
-                    while ((str = in.readLine()) != null) {
-                        blockNumber = Long.parseLong(str);
-                        if (blockNumber > 0) {
-                            repairHandle.repair(blockNumber);
-                            logger.info("repair ok :" + str);
-                        }
-                    }
-                    logger.info("repair done");
-                } catch (IOException e) {
-                    logger.error("repair file error:", e);
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    logger.error("auto repair error:", e);
                 }
             }
-            if (args[0].equals("auto_repair")) {
-                int count = 20;
-                long startNumber = Long.parseLong(args[1]);
-                while (startNumber > 0) {
-                    if (repairHandle.autoRepair(startNumber, count)) {
-                        startNumber += count;
-                    }
-                    try {
-                        Thread.currentThread().sleep(2000);
-                    } catch (InterruptedException e) {
-                        logger.error("auto repair error:", e);
-                    }
-                }
-            }
-            if (args[0].equals("add_token")) {
-                elasticSearchHandler.insertToken(args[1]);
-            }
-            //update mapping for add deleted tag
-            if (args[0].equals("update_mapping")) {
-                elasticSearchHandler.updateMapping();
-            }
-            //holder history rebuild
-            if (args[0].equals("holder")) {
-                HolderHistoryHandle handle = (HolderHistoryHandle) context.getBean("holderHistoryHandle");
-                handle.handle();
-            }
-        } else {
-            logger.warn("arg error: {}", args);
         }
     }
 
@@ -138,7 +155,7 @@ public class SearchApplication {
     @Bean
     SwapApiClient swapApiClient() {
         try {
-            URL swapUrl = new URL(swapApiUrl);
+            URL swapUrl = new URL(swapAPIUrl);
             return new SwapApiClient(swapUrl.getProtocol(), swapUrl.getHost());
         } catch (MalformedURLException e) {
             logger.error("get swap api url error:", e);

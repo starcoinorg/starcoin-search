@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starscan-sub-deployment
+  namespace: starcoin-main
+  labels:
+    app: starscan-sub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starscan-sub
+  template:
+    metadata:
+      labels:
+        app: starscan-sub
+    spec:
+      containers:
+        - name: starscan-sub
+          image: starcoin/starcoin_search:sha-31a2f6f
+          ports:
+            - containerPort: 8600
+          env:
+            - name: HOSTS
+              value: "main1.seed.starcoin.org,main2.seed.starcoin.org,main3.seed.starcoin.org,main4.seed.starcoin.org,main5.seed.starcoin.org,main6.seed.starcoin.org,main7.seed.starcoin.org,main8.seed.starcoin.org,main9.seed.starcoin.org"
+            - name: NETWORK
+              value: "main.0727"
+            - name: BG_TASK_JOBS
+              value: "clean_pending_txn"
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password
+            - name: STARCOIN_ES_URL
+              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "https"
+            - name: STARCOIN_ES_PORT
+              value: "443"
+            - name: STARCOIN_ES_USER
+              value: elastic
+            - name: SWAP_API_URL
+              value: "https://swap-api.starcoin.org"
+            - name: SWAP_CONTRACT_ADDR
+              value: ""
+            - name: DS_URL
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+            - name: DB_USER_NAME
+              value: "starcoin"
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-starcoin-yu
+                  key: password
+            - name: PROGRAM_ARGS
+              value: "subscribe"
+

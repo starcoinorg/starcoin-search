@@ -5,12 +5,10 @@ import org.starcoin.types.TransactionPayload;
 
 public class TransactionPayloadInfo {
 
-    private TransactionPayload payload;
-
-    private long timestamp;
-
     @JsonProperty("transaction_hash")
     String transactionHash;
+    private TransactionPayload payload;
+    private long timestamp;
 
     public TransactionPayloadInfo() {
     }

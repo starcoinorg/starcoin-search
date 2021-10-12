@@ -33,8 +33,8 @@ public class SwapTxnService {
 
     public TokenStat getTokenVolume(String token, long startTime, long endTime) {
         TokenStat tokenStat = new TokenStat(token, startTime);
-        TokenVolumeDTO tokenA = swapTransactionRepository.getVolumeByTokenA( token, startTime, endTime);
-        TokenVolumeDTO tokenB = swapTransactionRepository.getVolumeByTokenB( token, startTime, endTime);
+        TokenVolumeDTO tokenA = swapTransactionRepository.getVolumeByTokenA(token, startTime, endTime);
+        TokenVolumeDTO tokenB = swapTransactionRepository.getVolumeByTokenB(token, startTime, endTime);
         tokenStat.setVolume(NumberUtils.getBigDecimal(tokenA.getVolume(), tokenB.getVolume()));
         tokenStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenA.getVolumeAmount(), tokenB.getVolumeAmount()));
         return tokenStat;
@@ -42,8 +42,8 @@ public class SwapTxnService {
 
     public SwapPoolStat getPoolVolume(String tokenA, String tokenB, long startTime, long endTime) {
         SwapPoolStat poolStat = new SwapPoolStat(tokenA, tokenB, startTime);
-        TokenVolumeDTO tokenADTO = swapTransactionRepository.getPoolVolumeA( tokenA, tokenB, startTime, endTime);
-        TokenVolumeDTO tokenBDTO = swapTransactionRepository.getPoolVolumeB( tokenA, tokenB, startTime, endTime);
+        TokenVolumeDTO tokenADTO = swapTransactionRepository.getPoolVolumeA(tokenA, tokenB, startTime, endTime);
+        TokenVolumeDTO tokenBDTO = swapTransactionRepository.getPoolVolumeB(tokenA, tokenB, startTime, endTime);
         poolStat.setVolume(NumberUtils.getBigDecimal(tokenADTO.getVolume(), tokenBDTO.getVolume()));
         poolStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenADTO.getVolumeAmount(), tokenBDTO.getVolumeAmount()));
         return poolStat;

@@ -6,7 +6,6 @@ import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +25,11 @@ import org.starcoin.utils.*;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 
 public class TransactionPayloadHandle extends QuartzJobBean {
 
-    private static Logger logger = LoggerFactory.getLogger(TransactionPayloadHandle.class);
+    private static final Logger logger = LoggerFactory.getLogger(TransactionPayloadHandle.class);
     private ObjectMapper objectMapper;
     private RestHighLevelClient client;
     private String index;
@@ -87,14 +85,13 @@ public class TransactionPayloadHandle extends QuartzJobBean {
             logger.info("offset not init, init ok!");
         }
         try {
-            List<Transaction> transactionList = elasticSearchHandler.getTransactionByTimestamp(network, transactionPayloadRemoteOffset.getTimestamp());
+            List<Transaction> transactionList = elasticSearchHandler.getTransactionByTimestamp(transactionPayloadRemoteOffset.getTimestamp());
             if (!transactionList.isEmpty()) {
                 List<SwapTransaction> swapTransactionList = new ArrayList<>();
                 elasticSearchHandler.addUserTransactionToList(transactionList);
                 elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper, swapTransactionList);
                 //add es success and add swap txn
                 if (!swapTransactionList.isEmpty()) {
-                    Set<String> tokenPair = new HashSet<>();
                     Map<String, BigDecimal> tokenPriceMap = new HashMap<>();
                     for (SwapTransaction swapTransaction : swapTransactionList) {
                         List<String> tokenList = new ArrayList<>();
@@ -104,27 +101,27 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                         swapTransaction.setAmountB(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenB(), swapTransaction.getAmountB()));
                         BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
                                 swapTransaction.getTokenB(), swapTransaction.getAmountB());
-                        if(value != null) {
+                        if (value != null) {
                             swapTransaction.setTotalValue(value);
-                        }else {
+                        } else {
                             //get oracle price
                             List<org.starcoin.search.bean.OracleTokenPair> oracleTokenPairs =
                                     swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
                             if (!oracleTokenPairs.isEmpty()) {
                                 OracleTokenPair oracleToken = oracleTokenPairs.get(0);
-                                if(oracleToken != null) {
+                                if (oracleToken != null) {
                                     BigDecimal price = new BigDecimal(oracleToken.getPrice());
                                     price = price.movePointLeft(oracleToken.getDecimals());
                                     tokenPriceMap.put(swapTransaction.getTokenA(), price);
                                     swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountA()));
-                                }else {
+                                } else {
                                     oracleToken = oracleTokenPairs.get(1);
-                                    if(oracleToken != null) {
+                                    if (oracleToken != null) {
                                         BigDecimal price = new BigDecimal(oracleToken.getPrice());
                                         price = price.movePointLeft(oracleToken.getDecimals());
                                         tokenPriceMap.put(swapTransaction.getTokenB(), price);
                                         swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountB()));
-                                    }else {
+                                    } else {
                                         logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
                                         swapTransaction.setTotalValue(new BigDecimal(0));
                                     }
@@ -153,11 +150,11 @@ public class TransactionPayloadHandle extends QuartzJobBean {
 
     private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigDecimal amountA, String tokenB, BigDecimal amountB) {
         BigDecimal price = priceMap.get(tokenA);
-        if(price != null) {
+        if (price != null) {
             return price.multiply(amountA);
         }
         price = priceMap.get(tokenB);
-        if(price != null) {
+        if (price != null) {
             return price.multiply(amountB);
         }
         return null;

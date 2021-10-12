@@ -27,7 +27,7 @@ public class TokenPoolStat {
         this.yStats = yStats;
     }
 
-    public void add(TokenPoolStat tokenPoolStat){
+    public void add(TokenPoolStat tokenPoolStat) {
         xStats.add(tokenPoolStat.xStats);
         yStats.add(tokenPoolStat.yStats);
     }

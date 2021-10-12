@@ -13,7 +13,7 @@ import java.util.List;
 public class TvlTest {
 
     @Test
-    public void  testTvl(){
+    public void testTvl() {
         try {
             ContractRPCClient client = new ContractRPCClient(new URL("http://barnard1.seed.starcoin.org:9850"));
 
@@ -28,17 +28,11 @@ public class TvlTest {
             call.setTypeArgs(typeTags);
             call.setArgs(new ArrayList<>());
 
-            List result = client.call(call);
+            List<Object> result = client.call(call);
             System.out.println(result);
 
         } catch (JSONRPC2SessionException | MalformedURLException e) {
             e.printStackTrace();
         }
     }
-
-    @Test
-    public void  testTvlService(){
-
-    }
-
 }

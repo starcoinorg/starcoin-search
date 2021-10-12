@@ -8,93 +8,111 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.starcoin.search.handler.*;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 @Configuration
 public class QuartzConfig {
-    @Value("${starcoin.indexer.auto_start}")
-    private boolean autoStart;
+    @Value("${starcoin.bg_task.jobs}")
+    private String[] jobs;
 
     @Autowired
     private SearchJobFactory searchJobFactory;
 
     @Bean
-    public JobDetail handleIndexer() {
+    public JobDetail indexerJob() {
         return JobBuilder.newJob(IndexerHandle.class).withIdentity("indexer").storeDurably().build();
     }
 
     @Bean
-    public JobDetail handleSecondIndexer() {
-        return JobBuilder.newJob(SecondaryIndexer.class).withIdentity("secondary").storeDurably().build();
-    }
-
-    @Bean
-    public JobDetail handleMarketCapIndexer() {
-        return JobBuilder.newJob(MarketCapIndexer.class).withIdentity("market").storeDurably().build();
-    }
-
-    @Bean
-    public JobDetail handleTransactionPayload() {
-        return JobBuilder.newJob(TransactionPayloadHandle.class).withIdentity("txn_payload").storeDurably().build();
-    }
-
-    @Bean
-    public JobDetail handleSwapStats() {
-        return JobBuilder.newJob(SwapIndexer.class).withIdentity("swap_stats").storeDurably().build();
-    }
-
-    @Bean
-    public Trigger startQuartzTrigger() {
+    public Trigger indexerTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(10)  //设置时间周期单位秒
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleIndexer())
+        return TriggerBuilder.newTrigger().forJob(indexerJob())
                 .withIdentity("indexer")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
 
     @Bean
-    public Trigger startSecondTrigger() {
+    public JobDetail secondaryJob() {
+        return JobBuilder.newJob(SecondaryIndexer.class).withIdentity("secondary").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger secondaryTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(10)  //设置时间周期单位秒
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleSecondIndexer())
+        return TriggerBuilder.newTrigger().forJob(secondaryJob())
                 .withIdentity("secondary")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
 
     @Bean
-    public Trigger startMarketCapTrigger() {
+    public JobDetail MarketCapJob() {
+        return JobBuilder.newJob(MarketCapIndexer.class).withIdentity("market_cap").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger marketCapTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInHours(24)
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleMarketCapIndexer())
-                .withIdentity("market")
+        return TriggerBuilder.newTrigger().forJob(MarketCapJob())
+                .withIdentity("market_cap")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
 
     @Bean
-    public Trigger startTransactionPayload() {
+    public JobDetail transactionPayloadJob() {
+        return JobBuilder.newJob(TransactionPayloadHandle.class).withIdentity("txn_payload").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger transactionPayloadTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInSeconds(10)
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleTransactionPayload())
+        return TriggerBuilder.newTrigger().forJob(transactionPayloadJob())
                 .withIdentity("txn_payload")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
 
+    @Bean
+    public JobDetail swapStatsJob() {
+        return JobBuilder.newJob(SwapIndexer.class).withIdentity("swap_stats").storeDurably().build();
+    }
 
     @Bean
-    public Trigger startSwapStats() {
+    public Trigger swapStatsTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInHours(24)
                 .repeatForever();
-        return TriggerBuilder.newTrigger().forJob(handleSwapStats())
+        return TriggerBuilder.newTrigger().forJob(swapStatsJob())
                 .withIdentity("swap_stats")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
+    public JobDetail cleanPendingTxnJob() {
+        return JobBuilder.newJob(PendingTxnCleanHandle.class).withIdentity("clean_pending_txn").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger cleanPendingTxnTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(20)  //设置时间周期单位秒
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(cleanPendingTxnJob())
+                .withIdentity("clean_pending_txn")
                 .withSchedule(scheduleBuilder)
                 .build();
     }
@@ -105,7 +123,7 @@ public class QuartzConfig {
         try {
             schedulerFactoryBean.setQuartzProperties(quartzProperties());
             schedulerFactoryBean.setJobFactory(searchJobFactory);
-            schedulerFactoryBean.setAutoStartup(autoStart);
+            schedulerFactoryBean.setAutoStartup(true);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -127,14 +145,43 @@ public class QuartzConfig {
     @Bean
     public Scheduler scheduler() throws SchedulerException {
         Scheduler scheduler = schedulerFactoryBean().getScheduler();
-        scheduler.scheduleJob(handleIndexer(), startQuartzTrigger());
-        scheduler.scheduleJob(handleSecondIndexer(), startSecondTrigger());
-        scheduler.scheduleJob(handleMarketCapIndexer(), startMarketCapTrigger());
-        scheduler.scheduleJob(handleTransactionPayload(), startTransactionPayload());
-        scheduler.scheduleJob(handleSwapStats(), startSwapStats());
-        if (autoStart) {
-            scheduler.start();
+        if (jobs == null || jobs.length < 1) {
+            return scheduler;
         }
+        Set<String> jobSet = new HashSet<>();
+        Collections.addAll(jobSet, jobs);
+
+        JobDetail job = indexerJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, indexerTrigger());
+        }
+
+        job = secondaryJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, secondaryTrigger());
+        }
+
+        job = MarketCapJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, marketCapTrigger());
+        }
+
+        job = transactionPayloadJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, transactionPayloadTrigger());
+        }
+
+        job = swapStatsJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, swapStatsTrigger());
+        }
+
+        job = cleanPendingTxnJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, cleanPendingTxnTrigger());
+        }
+
+        scheduler.start();
         return scheduler;
     }
 }

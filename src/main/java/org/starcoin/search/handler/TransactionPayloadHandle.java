@@ -12,15 +12,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.Transaction;
+import org.starcoin.search.bean.OracleTokenPair;
+import org.starcoin.search.bean.SwapTransaction;
 import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.search.constant.Constant;
+import org.starcoin.search.service.SwapTxnService;
+import org.starcoin.search.utils.SwapApiClient;
 import org.starcoin.types.*;
 import org.starcoin.utils.*;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.List;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
 
 public class TransactionPayloadHandle extends QuartzJobBean {
 
@@ -29,10 +36,17 @@ public class TransactionPayloadHandle extends QuartzJobBean {
     private RestHighLevelClient client;
     private String index;
 
-    @Autowired
-    private ElasticSearchHandler elasticSearchHandler;
     @Value("${starcoin.network}")
     private String network;
+
+    @Autowired
+    private ElasticSearchHandler elasticSearchHandler;
+    @Autowired
+    private StateRPCClient stateRPCClient;
+    @Autowired
+    private SwapTxnService swapTxnService;
+    @Autowired
+    private SwapApiClient swapApiClient;
 
     @PostConstruct
     public void init() {
@@ -59,7 +73,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
     }
 
     @Override
-    protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+    protected void executeInternal(JobExecutionContext jobExecutionContext) {
         if (client == null) {
             init();
         }
@@ -75,8 +89,54 @@ public class TransactionPayloadHandle extends QuartzJobBean {
         try {
             List<Transaction> transactionList = elasticSearchHandler.getTransactionByTimestamp(network, transactionPayloadRemoteOffset.getTimestamp());
             if (!transactionList.isEmpty()) {
+                List<SwapTransaction> swapTransactionList = new ArrayList<>();
                 elasticSearchHandler.addUserTransactionToList(transactionList);
-                elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper);
+                elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper, swapTransactionList);
+                //add es success and add swap txn
+                if (!swapTransactionList.isEmpty()) {
+                    Set<String> tokenPair = new HashSet<>();
+                    Map<String, BigDecimal> tokenPriceMap = new HashMap<>();
+                    for (SwapTransaction swapTransaction : swapTransactionList) {
+                        List<String> tokenList = new ArrayList<>();
+                        tokenList.add(swapTransaction.getTokenA());
+                        tokenList.add(swapTransaction.getTokenB());
+                        swapTransaction.setAmountA(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenA(), swapTransaction.getAmountA()));
+                        swapTransaction.setAmountB(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenB(), swapTransaction.getAmountB()));
+                        BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
+                                swapTransaction.getTokenB(), swapTransaction.getAmountB());
+                        if(value != null) {
+                            swapTransaction.setTotalValue(value);
+                        }else {
+                            //get oracle price
+                            List<org.starcoin.search.bean.OracleTokenPair> oracleTokenPairs =
+                                    swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
+                            if (!oracleTokenPairs.isEmpty()) {
+                                OracleTokenPair oracleToken = oracleTokenPairs.get(0);
+                                if(oracleToken != null) {
+                                    BigDecimal price = new BigDecimal(oracleToken.getPrice());
+                                    price = price.movePointLeft(oracleToken.getDecimals());
+                                    tokenPriceMap.put(swapTransaction.getTokenA(), price);
+                                    swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountA()));
+                                }else {
+                                    oracleToken = oracleTokenPairs.get(1);
+                                    if(oracleToken != null) {
+                                        BigDecimal price = new BigDecimal(oracleToken.getPrice());
+                                        price = price.movePointLeft(oracleToken.getDecimals());
+                                        tokenPriceMap.put(swapTransaction.getTokenB(), price);
+                                        swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountB()));
+                                    }else {
+                                        logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                        swapTransaction.setTotalValue(new BigDecimal(0));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    swapTxnService.saveList(swapTransactionList);
+                    logger.info("save swap txn ok: {}", swapTransactionList.size());
+                }
+                //update offset
                 Transaction last = transactionList.get(transactionList.size() - 1);
                 TransferOffset currentOffset = new TransferOffset();
                 currentOffset.setTimestamp(String.valueOf(last.getTimestamp()));
@@ -87,8 +147,19 @@ public class TransactionPayloadHandle extends QuartzJobBean {
             }
 
         } catch (IOException | DeserializationError | JSONRPC2SessionException e) {
-            logger.warn("query es failed .", e);
+            logger.warn("handle transaction payload error:", e);
         }
     }
 
+    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigDecimal amountA, String tokenB, BigDecimal amountB) {
+        BigDecimal price = priceMap.get(tokenA);
+        if(price != null) {
+            return price.multiply(amountA);
+        }
+        price = priceMap.get(tokenB);
+        if(price != null) {
+            return price.multiply(amountB);
+        }
+        return null;
+    }
 }

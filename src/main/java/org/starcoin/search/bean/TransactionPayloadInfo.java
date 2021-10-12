@@ -12,6 +12,9 @@ public class TransactionPayloadInfo {
     @JsonProperty("transaction_hash")
     String transactionHash;
 
+    public TransactionPayloadInfo() {
+    }
+
     public TransactionPayloadInfo(TransactionPayload payload, long timestamp, String transactionHash) {
         this.payload = payload;
         this.timestamp = timestamp;

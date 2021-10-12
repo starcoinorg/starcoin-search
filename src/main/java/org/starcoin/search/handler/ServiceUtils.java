@@ -1,6 +1,11 @@
 package org.starcoin.search.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.novi.bcs.BcsDeserializer;
+import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
@@ -14,14 +19,20 @@ import org.elasticsearch.search.SearchHit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starcoin.api.Result;
+import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.search.bean.TransferOffset;
 import org.starcoin.search.utils.ResultWithId;
+import org.starcoin.types.ModuleId;
+import org.starcoin.types.ScriptFunction;
+import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;
-import org.starcoin.utils.Hex;
+import org.starcoin.utils.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,9 +41,26 @@ import java.util.Map;
 public class ServiceUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
-
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     //缓存token info
     static Map<String, TokenInfo> tokenCache = new HashMap<>();
+
+    static {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(StructTag.class, new StructTagDeserializer());
+        module.addDeserializer(org.starcoin.types.TypeTag.class, new TypeTagDeserializer());
+        module.addDeserializer(ModuleId.class, new ModuleDeserializer());
+        module.addDeserializer(ScriptFunction.class, new ScriptFunctionDeserializer());
+        module.addDeserializer(TransactionPayload.class, new TransactionPayloadDeserializer());
+
+        module.addSerializer(TransactionPayload.class, new TransactionPayloadSerializer());
+        module.addSerializer(org.starcoin.types.TypeTag.class, new TypeTagSerializer());
+        module.addSerializer(StructTag.class, new StructTagSerializer());
+        module.addSerializer(ScriptFunction.class, new ScriptFunctionSerializer());
+        module.addSerializer(ModuleId.class, new ModuleIdSerializer());
+
+        objectMapper.registerModule(module);
+    }
 
     public static String getIndex(String network, String indexConstant) {
         return network + "." + indexConstant;
@@ -48,6 +76,23 @@ public class ServiceUtils {
         }
         result.setContents(blocks);
         return result;
+    }
+
+
+    public static <T> Result<T> getSearchResultJackson(SearchResponse searchResponse, Class<T> object) throws JsonProcessingException {
+        SearchHit[] searchHit = searchResponse.getHits().getHits();
+        Result<T> result = new Result<>();
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
+        List<T> blocks = new ArrayList<>();
+        for (SearchHit hit : searchHit) {
+            blocks.add(objectMapper.readValue(hit.getSourceAsString(), object));
+        }
+        result.setContents(blocks);
+        return result;
+    }
+
+    public static String getJsonString(Object object) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(object);
     }
 
     public static <T> ResultWithId<T> getSearchResultWithIds(SearchResponse searchResponse, Class<T> object) {
@@ -72,6 +117,16 @@ public class ServiceUtils {
             CreateIndexResponse response = client.indices().create(new CreateIndexRequest(currentIndex), RequestOptions.DEFAULT);
         }
         return currentIndex;
+    }
+
+    static BigInteger deserializeU128(Bytes data) {
+        BcsDeserializer bcsDeserializer = new BcsDeserializer(data.content());
+        try {
+            return bcsDeserializer.deserialize_u128();
+        } catch (DeserializationError e) {
+            logger.warn("parse to u128 failed", e);
+        }
+        return BigInteger.ZERO;
     }
 
     static TransferOffset getRemoteOffset(RestHighLevelClient client, String offsetIndex) {
@@ -115,6 +170,32 @@ public class ServiceUtils {
         } catch (Exception e) {
             logger.error("get transfer offset error:", e);
         }
+    }
+
+    static TokenInfo getTokenInfo(StateRPCClient stateRPCClient, String tokenCode) {
+        TokenInfo tokenInfo = tokenCache.get(tokenCode);
+        if (tokenInfo == null) {
+            try {
+                tokenInfo = stateRPCClient.getTokenInfo(tokenCode.substring(0, 34), tokenCode);
+                if (tokenInfo != null) {
+                    tokenCache.put(tokenCode, tokenInfo);
+                }
+            } catch (JSONRPC2SessionException e) {
+                logger.error("get token info error:", e);
+            }
+        }
+        return tokenInfo;
+    }
+
+    public static BigDecimal divideScalingFactor(StateRPCClient stateRPCClient, String key, BigDecimal amount) {
+        TokenInfo tokenInfo = ServiceUtils.getTokenInfo(stateRPCClient, key);
+        BigDecimal actualValue = amount;
+        if (tokenInfo != null) {
+            actualValue = actualValue.movePointLeft((int) Math.log10(tokenInfo.getScalingFactor()));
+        } else {
+            logger.warn("token info not exist:{}", key);
+        }
+        return actualValue;
     }
 
     static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {

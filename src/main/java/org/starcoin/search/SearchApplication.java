@@ -7,13 +7,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.starcoin.api.BlockRPCClient;
-import org.starcoin.api.StateRPCClient;
-import org.starcoin.api.TokenContractRPCClient;
-import org.starcoin.api.TransactionRPCClient;
+import org.starcoin.api.*;
 import org.starcoin.search.handler.ElasticSearchHandler;
 import org.starcoin.search.handler.HolderHistoryHandle;
 import org.starcoin.search.handler.RepairHandle;
+import org.starcoin.search.utils.SwapApiClient;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -25,9 +23,10 @@ import java.util.Map;
 @SpringBootApplication
 public class SearchApplication {
     private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
+    @Value("${starcoin.swap.api.url}")
+    private String swapApiUrl;
 
     public static void main(String[] args) {
-        logger.info("start search service: {}", args);
         Map<String, String> envMap = System.getenv();
         String progArgs = envMap.get("PROG_ARGS");
         logger.info("PROG_ARGS: {}", progArgs);
@@ -131,4 +130,19 @@ public class SearchApplication {
         return new TokenContractRPCClient(baseUrl);
     }
 
+    @Bean
+    ContractRPCClient contractRPCClient(URL baseUrl) {
+        return new ContractRPCClient(baseUrl);
+    }
+
+    @Bean
+    SwapApiClient swapApiClient() {
+        try {
+            URL swapUrl = new URL(swapApiUrl);
+            return new SwapApiClient(swapUrl.getProtocol(), swapUrl.getHost());
+        } catch (MalformedURLException e) {
+            logger.error("get swap api url error:", e);
+        }
+        return null;
+    }
 }

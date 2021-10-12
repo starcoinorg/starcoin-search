@@ -1023,6 +1023,19 @@ public class ElasticSearchHandler {
                     ", tokenCode='" + tokenCode + '\'' +
                     '}';
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            AddressHolder holder = (AddressHolder) o;
+            return address.equals(holder.address) && tokenCode.equals(holder.tokenCode);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(address, tokenCode);
+        }
     }
 
 }

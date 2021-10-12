@@ -7,12 +7,12 @@ import java.util.concurrent.TimeUnit;
 
 public class OKClientUtils {
     public static OkHttpClient getClient() {
-       return new OkHttpClient().newBuilder()
-               .connectionPool(pool())
-               .connectTimeout(10, TimeUnit.SECONDS)
-               .readTimeout(10, TimeUnit.SECONDS)
-               .writeTimeout(10, TimeUnit.SECONDS)
-               .build();
+        return new OkHttpClient().newBuilder()
+                .connectionPool(pool())
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
+                .build();
     }
 
     private static ConnectionPool pool() {

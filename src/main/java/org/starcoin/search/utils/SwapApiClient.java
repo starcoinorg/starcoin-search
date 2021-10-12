@@ -34,6 +34,7 @@ public class SwapApiClient {
                 .build();
 
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
+            assert response.body() != null;
             String res = response.body().string();
             return JSON.parseArray(res, SwapToken.class);
         }
@@ -52,6 +53,7 @@ public class SwapApiClient {
                 .build();
 
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
+            assert response.body() != null;
             String res = response.body().string();
             return JSON.parseArray(res, LiquidityPoolInfo.class);
         }
@@ -72,6 +74,7 @@ public class SwapApiClient {
                 .build();
 
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
+            assert response.body() != null;
             String res = response.body().string();
             return JSON.parseObject(res, OracleTokenPair.class);
         }
@@ -86,16 +89,15 @@ public class SwapApiClient {
                 .addPathSegment("price-api")
                 .addPathSegment("getProximateToUsdPriceRounds")
                 .addQueryParameter("timestamp", timestamp);
-        for(String token : tokenList) {
+        for (String token : tokenList) {
             builder.addQueryParameter("t", token);
         }
         HttpUrl httpUrl = builder.build();
         Request request = new Request.Builder()
                 .url(httpUrl)
                 .build();
-
-        System.out.println(request.toString());
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
+            assert response.body() != null;
             String res = response.body().string();
             return JSON.parseArray(res, OracleTokenPair.class);
         }
@@ -114,6 +116,7 @@ public class SwapApiClient {
                 .build();
 
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
+            assert response.body() != null;
             String res = response.body().string();
             return JSON.parseArray(res, TokenTvl.class);
         }

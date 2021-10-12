@@ -1,6 +1,6 @@
 package org.starcoin.search.bean;
 
-public class LiquidityTokenId{
+public class LiquidityTokenId {
 
     private String tokenXId;
 

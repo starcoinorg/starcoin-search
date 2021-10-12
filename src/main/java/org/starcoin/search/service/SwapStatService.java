@@ -9,6 +9,7 @@ import org.starcoin.search.repository.SwapStatRepository;
 public class SwapStatService {
     @Autowired
     private SwapStatRepository swapStatRepository;
+
     public void save(SwapStat swapStat) {
         swapStatRepository.save(swapStat);
     }

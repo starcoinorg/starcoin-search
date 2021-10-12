@@ -1,27 +1,16 @@
 package org.starcoin.search.handler;
 
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.ListResource;
-import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.Tvl;
 import org.starcoin.search.bean.*;
-import org.starcoin.search.constant.Constant;
 import org.starcoin.search.service.SwapPoolStatService;
 import org.starcoin.search.service.SwapStatService;
 import org.starcoin.search.service.SwapTxnService;
@@ -33,10 +22,8 @@ import org.starcoin.types.TypeTag;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class SwapHandle {
@@ -128,7 +115,7 @@ public class SwapHandle {
 
     }
 
-    TotalTvl getTvls() throws JSONRPC2SessionException, MalformedURLException {
+    TotalTvl getTvls() throws JSONRPC2SessionException {
         ListResource resources = stateRPCClient.getState(contractAddress);
 
         Map<String, Tvl> tokenMap = new HashMap<>();
@@ -156,7 +143,7 @@ public class SwapHandle {
         return new TotalTvl(tokenMap, tokenPairTvlMap);
     }
 
-    void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) throws NoTokenPriceException {
+    void sum(Map<String, TokenStat> result, TypeTag.Struct typeTag, BigDecimal amount, OracleTokenPrice oracleTokenPrice, long ts) {
         String key = StructTagUtil.structTagToString(typeTag.value);
         TokenStat sum = result.get(key);
 

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starscan-sub-deployment
+  namespace: starcoin-barnard
+  labels:
+    app: starscan-sub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starscan-sub
+  template:
+    metadata:
+      labels:
+        app: starscan-sub
+    spec:
+      containers:
+        - name: starscan-sub
+          image: starcoin/starcoin_search:sha-0af24fa
+          ports:
+            - containerPort: 8600
+          env:
+            - name: HOSTS
+              value: "barnard1.seed.starcoin.org,barnard2.seed.starcoin.org"
+            - name: NETWORK
+              value: "barnard"
+            - name: BG_TASK_JOBS
+              value: "clean_pending_txn"
+            - name: STARCOIN_ES_PWD
+                valueFrom:
+                  secretKeyRef:
+                    name: elasticsearch-pw-elastic
+                    key: password
+            - name: STARCOIN_ES_URL
+              value: "123.57.40.36"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "http"
+            - name: STARCOIN_ES_PORT
+              value: "9200"
+            - name: STARCOIN_ES_USER
+              value: elastic
+            - name: SWAP_API_URL
+              value: ""
+            - name: SWAP_CONTRACT_ADDR
+              value: ""
+            - name: DS_URL
+              value: ""
+            - name: DB_USER_NAME
+              value: ""
+            - name: DB_PWD
+              value: ""
+            - name: PROGRAM_ARGS
+              value: "subscribe"

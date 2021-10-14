@@ -44,7 +44,7 @@ jobs:
           servers: '[{ "id": "github", "username": "${{ github.actor }}", "password": "${{ secrets.GIT_PACKAGE_TOKEN }}" }]'
           output_file: settings.xml
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v2.7.0
         with:
           context: .
           file: starcoin-scan-api/deploy/Dockerfile

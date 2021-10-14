@@ -1,10 +1,10 @@
 FROM openjdk:8-jdk-alpine as build
 WORKDIR /workspace/app
 
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-COPY src src
+COPY ../../mvnw .
+COPY ../../.mvn .mvn
+COPY ../../pom.xml .
+COPY ../../src src
 COPY settings.xml .
 
 RUN --mount=type=cache,target=/root/.m2 ./mvnw --settings settings.xml install -DskipTests
@@ -49,8 +49,8 @@ RUN addgroup -S starcoin && adduser -S starcoin -G starcoin
 VOLUME /tmp
 USER starcoin
 ARG DEPENDENCY=/workspace/app/target
-COPY --from=build ${DEPENDENCY}/starscan-search-1.0-SNAPSHOT.jar /app/lib/app.jar
-ENTRYPOINT ["java","-noverify","-jar","app/lib/app.jar", \
+COPY --from=build ${DEPENDENCY}/starcoin-indexer-1.1.jar /app/lib/indexer.jar
+ENTRYPOINT ["java","-noverify","-jar","app/lib/indexer.jar", \
             "PROGRAM_ARGS=$PROGRAM_ARGS", \
             "HOSTS=$HOSTS", \
             "NETWORK=$NETWORK", \

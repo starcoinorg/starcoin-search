@@ -1,4 +1,4 @@
-name: Build Indexer Docker and deploy
+name: Build ScanAPI Docker and deploy
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-starcoin-docker:
-    name: build starcoin-indexer docker
+    name: build starcoin-scan-api docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,7 +20,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: starcoin/starcoin_indexer,ghcr.io/starcoinorg/starcoin_indexer
+          images: starcoin/starcoin_scan,ghcr.io/starcoinorg/starcoin_scan
           tag-sha: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -47,7 +47,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: starcoin-indexer/deploy/Dockerfile
+          file: starcoin-scan-api/deploy/Dockerfile
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}

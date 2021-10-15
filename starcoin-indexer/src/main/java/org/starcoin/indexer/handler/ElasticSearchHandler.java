@@ -642,7 +642,8 @@ public class ElasticSearchHandler {
                 TransactionPayload transactionPayload = TransactionPayload.bcsDeserialize(Hex.decode(payload));
                 TransactionPayloadInfo payloadInfo = new TransactionPayloadInfo(transactionPayload, transaction.getTimestamp(), transaction.getTransactionHash());
                 //swap txn filter
-                if (transactionPayload instanceof TransactionPayload.ScriptFunction scriptFunctionPayload) {
+                if (transactionPayload instanceof TransactionPayload.ScriptFunction) {
+                    TransactionPayload.ScriptFunction scriptFunctionPayload = (TransactionPayload.ScriptFunction) transactionPayload;
                     String function = scriptFunctionPayload.value.function.toString();
                     if (SwapType.isSwapType(function)) {
                         //todo add farm swap function

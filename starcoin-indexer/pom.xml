@@ -12,16 +12,16 @@
     <artifactId>starcoin-indexer</artifactId>
 
     <properties>
-        <maven.compiler.source>16</maven.compiler.source>
-        <maven.compiler.target>16</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
     <distributionManagement>
-<!--        <org.starcoin.indexer.repository>-->
-<!--            <id>github</id>-->
-<!--            <name>GitHub starcoin-search Apache Maven Packages</name>-->
-<!--            <url>https://maven.pkg.github.com/starcoinorg/starcoin-search</url>-->
-<!--        </org.starcoin.indexer.repository>-->
+        <repository>
+            <id>github</id>
+            <name>GitHub starcoin-search Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/starcoinorg/starcoin-indexer</url>
+        </repository>
     </distributionManagement>
     <dependencies>
         <dependency>

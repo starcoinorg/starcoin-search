@@ -7,10 +7,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.starcoin.indexer.SearchApplication;
+import org.starcoin.indexer.IndexerApplication;
 import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
-import org.starcoin.indexer.handler.SwapHandle;
 import org.starcoin.indexer.service.SwapTxnService;
 
 import java.math.BigDecimal;
@@ -19,7 +18,7 @@ import java.util.List;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(
-        classes = SearchApplication.class)
+        classes = IndexerApplication.class)
 @AutoConfigureMockMvc
 @TestPropertySource(
         locations = "classpath:application-integrationtest.properties")

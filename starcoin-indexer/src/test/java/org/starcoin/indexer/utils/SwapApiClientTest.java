@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import org.starcoin.indexer.SearchApplication;
+import org.starcoin.indexer.IndexerApplication;
 import org.starcoin.bean.LiquidityPoolInfo;
 import org.starcoin.bean.SwapToken;
 import org.starcoin.utils.SwapApiClient;
@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.List;
 
 @SpringBootTest(
-        classes = SearchApplication.class)
+        classes = IndexerApplication.class)
 @TestPropertySource(
         locations = "classpath:application-integrationtest.properties")
 class SwapApiClientTest {

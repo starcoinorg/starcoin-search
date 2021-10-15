@@ -22,8 +22,8 @@ import java.net.URL;
 import java.util.Map;
 
 @SpringBootApplication
-public class SearchApplication {
-    private static Logger logger = LoggerFactory.getLogger(SearchApplication.class);
+public class IndexerApplication {
+    private static Logger logger = LoggerFactory.getLogger(IndexerApplication.class);
     @Value("${starcoin.swap.api.url}")
     private String swapAPIUrl;
 
@@ -40,7 +40,7 @@ public class SearchApplication {
                 i++;
             }
         }
-        ConfigurableApplicationContext context = SpringApplication.run(SearchApplication.class, args);
+        ConfigurableApplicationContext context = SpringApplication.run(IndexerApplication.class, args);
         if (args == null || args.length < 1) {
             logger.warn("arg is null.");
             return;

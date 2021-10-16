@@ -22,7 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "org.starcoin")
 @EntityScan("org.starcoin.bean")
 public class IndexerApplication {
     private static Logger logger = LoggerFactory.getLogger(IndexerApplication.class);

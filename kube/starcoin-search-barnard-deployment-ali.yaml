@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-search
-          image: starcoin/starcoin_indexer:sha-364c483
+          image: starcoin/starcoin_indexer:sha-fc9d164
           ports:
             - containerPort: 8300
           env:
@@ -25,8 +25,15 @@ spec:
               value: "barnard2.seed.starcoin.org"
             - name: NETWORK
               value: "barnard"
+            - name: BG_TASK_JOBS
+              value: "indexer,secondary,market_cap,txn_payload,swap_stats"
             - name: BULK_SIZE
               value: "80"
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password
             - name: STARCOIN_ES_URL
               value: "123.57.40.36"
             - name: STARCOIN_ES_PROTOCOL
@@ -35,12 +42,8 @@ spec:
               value: "9200"
             - name: STARCOIN_ES_USER
               value: elastic
-            - name: PROG_ARGS
-              value: ""
-            - name: INDEXER_AUTO_START
-              value: "true"
             - name: SWAP_API_URL
-              value: "https://swap-api.starcoin.org/"
+              value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
@@ -52,8 +55,5 @@ spec:
                 secretKeyRef:
                   name: postgresql-pw-starcoin
                   key: password
-            - name: STARCOIN_ES_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-pw-elastic
-                  key: password
+            - name: PROGRAM_ARGS
+              value: ""

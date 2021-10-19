@@ -1,4 +1,5 @@
 -- # swap transaction
+CREATE SCHEMA barnard;
 
 CREATE TABLE IF NOT EXISTS barnard.transaction_payload
 (

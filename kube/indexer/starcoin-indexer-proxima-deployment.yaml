@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcoin-indexer-deployment
-  namespace: starcoin-halley
+  namespace: starcoin-proxima
   labels:
     app: starcoin-indexer
 spec:
@@ -22,9 +22,9 @@ spec:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "halley1.seed.starcoin.org"
+              value: "proxima.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.0727"
+              value: "proxima.0727"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats"
             - name: BULK_SIZE
@@ -56,6 +56,6 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "halley"
+              value: "proxima"
             - name: PROGRAM_ARGS
               value: ""

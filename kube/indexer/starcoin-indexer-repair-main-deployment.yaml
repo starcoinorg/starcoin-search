@@ -1,45 +1,45 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-search-deployment
-  namespace: starcoin-barnard
+  name: starcoin-indexer-repair-deployment
+  namespace: starcoin-main
   labels:
-    app: starcoin-search
+    app: starcoin-indexer-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-search
+      app: starcoin-indexer-repair
   template:
     metadata:
       labels:
-        app: starcoin-search
+        app: starcoin-indexer-repair
     spec:
       containers:
-        - name: starcoin-search
-          image: starcoin/starcoin_indexer:sha-fc9d164
+        - name: starcoin-indexer-repair
+          image: starcoin/starcoin_indexer:sha-31956df
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard2.seed.starcoin.org"
+              value: "main6.seed.starcoin.org"
             - name: NETWORK
-              value: "barnard"
+              value: "main.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap,txn_payload,swap_stats"
+              value: ""
             - name: BULK_SIZE
-              value: "80"
+              value: "100"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: STARCOIN_ES_URL
-              value: "123.57.40.36"
+              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: STARCOIN_ES_PROTOCOL
-              value: "http"
+              value: "https"
             - name: STARCOIN_ES_PORT
-              value: "9200"
+              value: "443"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
@@ -47,13 +47,15 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-pw-starcoin
+                  name: postgresql-starcoin-yu
                   key: password
+            - name: DB_SCHEMA
+              value: "main"
             - name: PROGRAM_ARGS
-              value: ""
+              value: "auto_repair"

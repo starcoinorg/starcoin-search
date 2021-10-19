@@ -1,32 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-deployment
-  namespace: starcoin-halley
+  name: starcoin-indexer-repair-deployment
+  namespace: starcoin-barnard
   labels:
-    app: starcoin-indexer
+    app: starcoin-indexer-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer
+      app: starcoin-indexer-repair
   template:
     metadata:
       labels:
-        app: starcoin-indexer
+        app: starcoin-indexer-repair
     spec:
       containers:
-        - name: starcoin-indexer
+        - name: starcoin-indexer-repair
           image: starcoin/starcoin_indexer:sha-31956df
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "halley1.seed.starcoin.org"
+              value: "barnard5.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.0727"
+              value: "barnard.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap,txn_payload,swap_stats"
+              value: ""
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_PWD
@@ -56,6 +56,6 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "halley"
+              value: "barnard"
             - name: PROGRAM_ARGS
-              value: ""
+              value: "auto_repair"

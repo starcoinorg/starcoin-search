@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcoin-indexer-deployment
-  namespace: starcoin-halley
+  namespace: starcoin-barnard
   labels:
     app: starcoin-indexer
 spec:
@@ -22,9 +22,9 @@ spec:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "halley1.seed.starcoin.org"
+              value: "barnard2.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.0727"
+              value: "barnard"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats"
             - name: BULK_SIZE
@@ -35,11 +35,11 @@ spec:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "123.57.40.36"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
+              value: "9200"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
@@ -47,15 +47,15 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql-pw-starcoin
                   key: password
             - name: DB_SCHEMA
-              value: "halley"
+              value: "barnard"
             - name: PROGRAM_ARGS
               value: ""

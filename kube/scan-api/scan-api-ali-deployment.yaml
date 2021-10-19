@@ -1,42 +1,46 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: explorer-new-api-deployment
+  name: scan-api-deployment
   labels:
-    app: explorer-new-api
+    app: scan-api
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      app: explorer-new-api
+      app: scan-api
   template:
     metadata:
       labels:
-        app: explorer-new-api
+        app: scan-api
     spec:
       containers:
-        - name: explorer-new-api
-          image: starcoin/starcoin_scan:sha-fc9d164
+        - name: scan-api
+          image: starcoin/starcoin_scan:sha-fe80d1b
           ports:
             - containerPort: 8500
           env:
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "123.57.40.36"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
+              value: "9200"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: STARCOIN_ES_INDEX_VERSION
-              value: ".0727"
+              value:
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
-
+              value: ""
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-pw-starcoin
+                  key: password

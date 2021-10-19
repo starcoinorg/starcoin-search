@@ -2,8 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: explorer-new-api
-  name: explorer-new-api
+    app: scan-api
+  name: scan-api
 spec:
   ports:
     - port: 8500
@@ -11,7 +11,7 @@ spec:
       protocol: TCP
       targetPort: 8500
   selector:
-    app: explorer-new-api
+    app: scan-api
   type: LoadBalancer
 status:
   loadBalancer: { }

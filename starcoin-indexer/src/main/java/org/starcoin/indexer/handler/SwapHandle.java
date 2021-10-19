@@ -51,7 +51,7 @@ public class SwapHandle {
         try {
             List<LiquidityPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
             List<SwapToken> tokenList = swapApiClient.getTokens(network);
-            if (tokenList.isEmpty()) {
+            if (tokenList == null || tokenList.isEmpty()) {
                 logger.warn("get token null: {}", network);
                 return;
             }

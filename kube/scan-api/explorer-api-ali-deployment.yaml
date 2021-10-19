@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: explorer-new-api
-          image: starcoin/starcoin_scan:sha-fc9d164
+          image: starcoin/starcoin_scan:sha-fe80d1b
           ports:
             - containerPort: 8500
           env:
@@ -38,4 +38,9 @@ spec:
             - name: DS_URL
               value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              value: ""
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-pw-starcoin
+                  key: password

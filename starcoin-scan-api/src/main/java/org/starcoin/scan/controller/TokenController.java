@@ -10,6 +10,7 @@ import org.starcoin.bean.TokenStatistic;
 import org.starcoin.scan.service.TokenService;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 @Api(tags = "token")
 @RestController
@@ -30,6 +31,13 @@ public class TokenController {
     public Result<TokenStatistic> tokenInfoAggregate(@PathVariable("network") String network, @PathVariable(value = "token", required = true) String token) {
         return tokenService.tokenInfoAggregate(network, token);
     }
+
+    @ApiOperation("get token market cap")
+    @GetMapping("/{network}/market_cap/{token}")
+    public BigDecimal tokenMarketCap(@PathVariable("network") String network, @PathVariable(value = "token", required = true) String token) {
+        return tokenService.getTokenMarketCap(network, token);
+    }
+
 
     @ApiOperation("get token holders list")
     @GetMapping("/{network}/holders/page/{page}")

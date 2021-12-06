@@ -29,6 +29,7 @@ import org.starcoin.bean.TokenStatistic;
 import org.starcoin.constant.Constant;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -102,6 +103,47 @@ public class TokenService extends BaseService {
             }
         }
         return volumeMap;
+    }
+
+    public BigDecimal getTokenMarketCap(String network, String token){
+        Result<TokenStatistic> result2 = new Result<>();
+
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.MARKET_CAP_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+        queryBuilder
+                .must(QueryBuilders.termsQuery("type_tag.keyword", token));
+        searchSourceBuilder.query(queryBuilder);
+        searchSourceBuilder.from(0);
+        searchSourceBuilder.trackTotalHits(true);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.timeout(new TimeValue(20, TimeUnit.SECONDS));
+
+        try {
+            result2 = ServiceUtils.getSearchResult(client.search(searchRequest, RequestOptions.DEFAULT), TokenStatistic.class);
+        } catch (IOException e) {
+            logger.error("get token market cap error:", e);
+        }
+        // get holder
+        TokenStatistic tokenStatistic3 = new TokenStatistic();
+        searchRequest = new SearchRequest(getIndex(network, Constant.ADDRESS_INDEX));
+        searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.termQuery("type_tag.keyword", token));
+        searchSourceBuilder.aggregation(AggregationBuilders.count("address_holders").field("address.keyword"));
+        searchSourceBuilder.timeout(new TimeValue(10, TimeUnit.SECONDS));
+        searchRequest.source(searchSourceBuilder);
+        try {
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            tokenStatistic3.setAddressHolder(searchResponse.getHits().getTotalHits().value);
+        } catch (IOException e) {
+            logger.error("get token holder error:", e);
+        }
+        if (!result2.getContents().isEmpty()) {
+            TokenStatistic tokenStatistic2 = result2.getContents().get(0);
+            return BigDecimal.valueOf(tokenStatistic2.getMarketCap());
+        }
+        return BigDecimal.ZERO;
     }
 
     public Result<TokenStatistic> tokenInfoAggregate(String network, String token) {

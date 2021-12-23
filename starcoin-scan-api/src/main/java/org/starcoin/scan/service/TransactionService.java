@@ -147,6 +147,46 @@ public class TransactionService extends BaseService {
         return ServiceUtils.getSearchResult(searchResponse, TransactionWithEvent.class);
     }
 
+    public Result<TransactionWithEvent> getNFTTxns(String network, long start_time, String address, int page, int count) throws IOException {
+        String queryAddress = address.toLowerCase();
+        Result<Event> events = getNFTEventByAddress(network, queryAddress, page, count);
+        if(events.getTotal() < 1) {
+            return Result.EmptyResult;
+        }
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        BoolQueryBuilder executeBoolQuery = QueryBuilders.boolQuery();
+        searchSourceBuilder.query(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        if (start_time > 0)
+        {
+            searchSourceBuilder.query(QueryBuilders.rangeQuery("timestamp").lt(start_time));
+        }
+        //page size
+        searchSourceBuilder.size(count);
+        //begin offset
+        int offset = 0;
+        if (page > 1) {
+            offset = (page - 1) * count;
+            if (offset >= ELASTICSEARCH_MAX_HITS) {
+                searchSourceBuilder.searchAfter(new Object[]{offset});
+            } else {
+                searchSourceBuilder.from(offset);
+            }
+        }
+        searchSourceBuilder.from(offset);
+        List<String> termHashes = new ArrayList<>();
+        for (Event event : events.getContents()) {
+            termHashes.add(event.getTransactionHash());
+        }
+        executeBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", termHashes));
+        searchSourceBuilder.query(executeBoolQuery);
+        searchSourceBuilder.sort("timestamp", SortOrder.DESC);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.trackTotalHits(true);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        return ServiceUtils.getSearchResult(searchResponse, TransactionWithEvent.class);
+    }
+
     public Result<PendingTransaction> getRangePendingTransaction(String network, int page, int count, int start_height) throws IOException {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.PENDING_TXN_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -319,6 +359,33 @@ public class TransactionService extends BaseService {
         return events;
     }
 
+    public Result<Event> getNFTEventByAddress(String network, String address, int page, int count)throws IOException {
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_EVENT_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(count);
+        //begin offset
+        int offset = 0;
+        if (page > 1) {
+            offset = (page - 1) * count;
+        }
+        searchSourceBuilder.from(offset);
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        if(address != null && address.length() > 0) {
+            boolQuery.must(QueryBuilders.termQuery("event_address", address));
+        }
+        boolQuery.must(QueryBuilders.matchQuery("type_tag","NFT").fuzziness("AUTO"));
+
+        searchSourceBuilder.query(boolQuery);
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.trackTotalHits(true);
+        searchSourceBuilder.sort("timestamp", SortOrder.DESC);
+
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        return getSearchUnescapeResult(searchResponse, Event.class);
+    }
+
     public Result<Event> getEventsByAddress(String network, String address, int page, int count) throws IOException {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_EVENT_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -357,7 +424,7 @@ public class TransactionService extends BaseService {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(count);
 
-        BoolQueryBuilder exersiceBoolQuery = QueryBuilders.boolQuery();
+        BoolQueryBuilder executeBoolQuery = QueryBuilders.boolQuery();
         List<String> termHashes = new ArrayList<>();
         for (Event event : events.getContents()) {
             termHashes.add(event.getTransactionHash());
@@ -365,9 +432,8 @@ public class TransactionService extends BaseService {
         for (Event event : proposalEvents.getContents()) {
             termHashes.add(event.getTransactionHash());
         }
-        exersiceBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", termHashes));
-
-        searchSourceBuilder.query(exersiceBoolQuery);
+        executeBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", termHashes));
+        searchSourceBuilder.query(executeBoolQuery);
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);

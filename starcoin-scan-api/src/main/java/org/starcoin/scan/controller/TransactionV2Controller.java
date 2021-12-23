@@ -79,6 +79,15 @@ public class TransactionV2Controller {
         return transactionService.getRangeByAddressAll(network, address, page, count);
     }
 
+    @ApiOperation("get nft transaction list of page range by address")
+    @GetMapping("/nft/{network}/page/{page}")
+    public Result<TransactionWithEvent> getNFTTxnsByAddress(@PathVariable("network") String network, @PathVariable(value = "page", required = false) int page,
+                                                            @RequestParam(value = "start_time", required = false, defaultValue = "0") long start_time,
+                                                            @RequestParam(value = "address", required = false, defaultValue = "") String address,
+                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
+        return transactionService.getNFTTxns(network, start_time, address, page, count);
+    }
+
     @ApiOperation("get transaction by block")
     @GetMapping("/{network}/byBlock/{block_hash}")
     public Result<TransactionWithEvent> getByBlockHash(@PathVariable("network") String network, @PathVariable("block_hash") String blockHash) throws IOException {

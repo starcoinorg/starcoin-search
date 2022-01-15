@@ -22,7 +22,7 @@ spec:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "halley1.seed.starcoin.org"
+              value: "halley.seed.starcoin.org"
             - name: NETWORK
               value: "halley.0727"
             - name: BG_TASK_JOBS

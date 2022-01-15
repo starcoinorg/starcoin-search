@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-31956df
+          image: starcoin/starcoin_indexer:sha-e7187a8
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "main6.seed.starcoin.org"
+              value: "main.seed.starcoin.org"
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
@@ -58,4 +58,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "auto_repair"
+              value: "auto_repair 1926940"

@@ -56,7 +56,7 @@ public class TokenService extends BaseService {
         Result<TokenStatistic> volumes = tokenVolumeList(network, page, count);
         Map<String, Long> volumeMap = getVolumeMap(network, volumes);
         //get market cap
-        Result<TokenStatistic> market = tokenMarketCap(network, page, count);
+        Result<TokenStatistic> market = tokenMarketCap(network, page, ELASTICSEARCH_MAX_HITS);
         Map<String, Double> marketMap = getMarketMap(market);
         for (TokenStatistic tokenStatistic : holderContents) {
             String typeTag = tokenStatistic.getTypeTag();

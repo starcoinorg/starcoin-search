@@ -110,7 +110,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                             //get oracle price
                             List<org.starcoin.bean.OracleTokenPair> oracleTokenPairs =
                                     swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
-                            if (!oracleTokenPairs.isEmpty()) {
+                            if (oracleTokenPairs != null && !oracleTokenPairs.isEmpty()) {
                                 OracleTokenPair oracleToken = oracleTokenPairs.get(0);
                                 if (oracleToken != null) {
                                     BigDecimal price = new BigDecimal(oracleToken.getPrice());
@@ -129,6 +129,8 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                         swapTransaction.setTotalValue(new BigDecimal(0));
                                     }
                                 }
+                            }else {
+                                logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
                             }
                         }
                     }

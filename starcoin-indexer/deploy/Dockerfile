@@ -51,6 +51,7 @@ ENV PROGRAM_ARGS=$PROGRAM_ARGS
 
 RUN addgroup -S starcoin && adduser -S starcoin -G starcoin
 VOLUME /tmp
+RUN mkdir logs && chown -R starcoin:starcoin logs
 USER starcoin
 ARG DEPENDENCY=/workspace/app/starcoin-indexer/target/
 COPY --from=build ${DEPENDENCY}/starcoin-indexer-1.1.jar /app/lib/indexer.jar

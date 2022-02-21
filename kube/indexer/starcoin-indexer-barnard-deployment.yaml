@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-31956df
+          image: starcoin/starcoin_indexer:sha-38510a3
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard4.seed.starcoin.org"
+              value: "barnard.seed.starcoin.org"
             - name: NETWORK
               value: "barnard.0727"
             - name: BG_TASK_JOBS

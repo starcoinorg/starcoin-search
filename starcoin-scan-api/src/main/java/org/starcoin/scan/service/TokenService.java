@@ -11,10 +11,10 @@ import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.BucketOrder;
-import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.ParsedSum;
+import org.elasticsearch.search.aggregations.metrics.ParsedValueCount;
 import org.elasticsearch.search.aggregations.pipeline.BucketSortPipelineAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -56,7 +56,7 @@ public class TokenService extends BaseService {
         Result<TokenStatistic> volumes = tokenVolumeList(network, page, count);
         Map<String, Long> volumeMap = getVolumeMap(network, volumes);
         //get market cap
-        Result<TokenStatistic> market = tokenMarketCap(network, page, count);
+        Result<TokenStatistic> market = tokenMarketCap(network, page, ELASTICSEARCH_MAX_HITS);
         Map<String, Double> marketMap = getMarketMap(market);
         for (TokenStatistic tokenStatistic : holderContents) {
             String typeTag = tokenStatistic.getTypeTag();
@@ -204,7 +204,10 @@ public class TokenService extends BaseService {
         searchRequest.source(searchSourceBuilder);
         try {
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-            tokenStatistic3.setAddressHolder(searchResponse.getHits().getTotalHits().value);
+           List<Aggregation> aggregationList = searchResponse.getAggregations().asList();
+            for (Aggregation agg : aggregationList) {
+                tokenStatistic3.setAddressHolder(((ParsedValueCount) agg).getValue());
+            }
         } catch (IOException e) {
             logger.error("get token holder error:", e);
         }
@@ -372,8 +375,8 @@ public class TokenService extends BaseService {
         Result<TokenStatistic> result = new Result<>();
         List<TokenStatistic> statistics = new ArrayList<>();
         for (Aggregation agg : aggregationList) {
-            List<? extends Terms.Bucket> backets = ((Terms) agg).getBuckets();
-            for (Terms.Bucket elasticBucket : backets) {
+            List<? extends Terms.Bucket> buckets = ((Terms) agg).getBuckets();
+            for (Terms.Bucket elasticBucket : buckets) {
                 TokenStatistic statistic = new TokenStatistic();
                 statistic.setTypeTag(elasticBucket.getKeyAsString());
                 if (statisticType == StatisticType.AddressHolder) {

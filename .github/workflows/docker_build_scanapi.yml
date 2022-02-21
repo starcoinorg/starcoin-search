@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
   release:
     types: [ published ]
-
+defaults:
+  run:
+    working-directory: starcoin-scan-api
 jobs:
 # JOB to run change detection
   changes:

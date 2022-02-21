@@ -6,6 +6,7 @@ COPY ../../.mvn .mvn
 COPY ../../pom.xml .
 COPY ../../starcoin-commons starcoin-commons
 COPY ../../starcoin-indexer starcoin-indexer
+COPY ../../starcoin-scan-api starcoin-scan-api
 COPY settings.xml .
 
 RUN --mount=type=cache,target=/root/.m2 ./mvnw --settings settings.xml install -DskipTests --quiet
@@ -50,8 +51,8 @@ ENV PROGRAM_ARGS=$PROGRAM_ARGS
 
 RUN addgroup -S starcoin && adduser -S starcoin -G starcoin
 VOLUME /tmp
+RUN mkdir logs && chown -R starcoin:starcoin logs
 USER starcoin
-RUN mkdir -p logs
 ARG DEPENDENCY=/workspace/app/starcoin-indexer/target/
 COPY --from=build ${DEPENDENCY}/starcoin-indexer-1.1.jar /app/lib/indexer.jar
 ENTRYPOINT ["java","-noverify","-jar","app/lib/indexer.jar", \

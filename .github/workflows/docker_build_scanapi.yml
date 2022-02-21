@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
   release:
     types: [ published ]
-
+defaults:
+  run:
+    working-directory: starcoin-scan-api
 jobs:
   build-starcoin-docker:
     name: build starcoin-scan-api docker

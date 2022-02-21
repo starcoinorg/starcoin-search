@@ -5,6 +5,7 @@ COPY ../../mvnw .
 COPY ../../.mvn .mvn
 COPY ../../pom.xml .
 COPY ../../starcoin-commons starcoin-commons
+COPY ../../starcoin-indexer starcoin-indexer
 COPY ../../starcoin-scan-api starcoin-scan-api
 COPY settings.xml .
 

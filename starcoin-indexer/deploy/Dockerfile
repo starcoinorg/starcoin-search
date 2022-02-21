@@ -6,6 +6,7 @@ COPY ../../.mvn .mvn
 COPY ../../pom.xml .
 COPY ../../starcoin-commons starcoin-commons
 COPY ../../starcoin-indexer starcoin-indexer
+COPY ../../starcoin-scan-api starcoin-scan-api
 COPY settings.xml .
 
 RUN --mount=type=cache,target=/root/.m2 ./mvnw --settings settings.xml install -DskipTests --quiet

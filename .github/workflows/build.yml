@@ -5,6 +5,9 @@ on:
       - main
   pull_request:
     types: [ opened, synchronize, reopened ]
+defaults:
+  run:
+    working-directory: .
 jobs:
   build:
     name: Build

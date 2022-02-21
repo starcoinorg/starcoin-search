@@ -11,6 +11,7 @@ jobs:
   build-starcoin-docker:
     name: build starcoin-scan-api docker
     runs-on: ubuntu-latest
+    working-directory: ./starcoin-indexer
     steps:
       - name: Checkout
         uses: actions/checkout@v1

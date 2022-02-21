@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
   release:
     types: [ published ]
-
+defaults:
+  run:
+    working-directory: starcoin-indexer
 jobs:
   build-starcoin-docker:
     name: build starcoin-indexer docker

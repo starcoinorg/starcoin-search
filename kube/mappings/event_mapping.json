@@ -1,5 +1,4 @@
 {
-  "template": {
     "mappings": {
       "properties": {
         "timestamp": {
@@ -94,5 +93,4 @@
         }
       }
     }
-  }
 }

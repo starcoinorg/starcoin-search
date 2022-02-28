@@ -1,5 +1,4 @@
 {
-  "template": {
     "mappings": {
       "properties": {
         "authenticator": {
@@ -91,5 +90,4 @@
         }
       }
     }
-  }
 }

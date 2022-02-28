@@ -1,5 +1,4 @@
 {
-  "template": {
     "mappings": {
       "properties": {
         "uncle_block_number": {
@@ -140,5 +139,4 @@
         }
       }
     }
-  }
 }

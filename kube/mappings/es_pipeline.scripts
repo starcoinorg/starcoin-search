@@ -161,15 +161,5 @@ PUT _component_template/block-mappings
     {
       "index_patterns": ["*.txn_payloads"],
       "priority": 500,
-      "composed_of": ["xn_payload-mappings"]
+      "composed_of": ["txn_payload-mappings"]
     }
-
-POST _reindex
-{
-  "source": {
-    "index": "main.transfer"
-  },
-  "dest": {
-    "index": "main.0802.transfer"
-  }
-}

@@ -127,25 +127,26 @@ public class IndexerHandle extends QuartzJobBean {
                         if (lastMasterBlock != null) {
                             long forkNumber = forkHeader.getHeight();
                             logger.info("fork number: {}", forkNumber);
+                            forkHeader = lastForkBlock.getHeader();
+                            //reset offset to handled fork block
+                            currentHandleHeader = forkHeader;
+                            localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
+                            localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
+                            elasticSearchHandler.setRemoteOffset(localBlockOffset);
                             if (lastMasterNumber == forkNumber && lastMasterBlock.getHeader().getBlockHash().equals(forkHeaderParentHash)) {
                                 //find fork point
                                 logger.info("find fork height: {}", lastMasterNumber);
                                 break;
                             }
                             //继续找下一个分叉
-                            forkHeader = lastForkBlock.getHeader();
                             lastMasterNumber--;
                             logger.info("continue last forked block: {}", lastMasterNumber);
                         } else {
-                            logger.warn("get last aster Block null: {}", lastMasterNumber);
+                            logger.warn("get last master Block null: {}", lastMasterNumber);
                         }
                     } while (true);
-                    //reset offset to forked point block
-                    currentHandleHeader = lastMasterBlock.getHeader();
-                    localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
-                    localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
-                    elasticSearchHandler.setRemoteOffset(localBlockOffset);
-                    logger.info("set forked point offset ok: {}", localBlockOffset);
+
+                    logger.info("rollback handle ok: {}", localBlockOffset);
                     return; //退出当前任务，重新添加从分叉点之后的block
                 }
                 //set event

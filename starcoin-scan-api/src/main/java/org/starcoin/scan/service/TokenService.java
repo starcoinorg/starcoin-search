@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
-import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.TokenHolderInfo;
+import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.TokenStatistic;
 import org.starcoin.constant.Constant;
 
@@ -41,7 +41,7 @@ public class TokenService extends BaseService {
     private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
     private static final String STC_TYPE_TAG = "0x00000000000000000000000000000001::STC::STC";
     //token cache
-    private static Map<String, Map<String, TokenInfo>> tokenCache = new HashMap<>();
+    private static final Map<String, Map<String, TokenInfo>> tokenCache = new HashMap<>();
     @Autowired
     private RestHighLevelClient client;
 
@@ -105,7 +105,7 @@ public class TokenService extends BaseService {
         return volumeMap;
     }
 
-    public BigDecimal getTokenMarketCap(String network, String token){
+    public BigDecimal getTokenMarketCap(String network, String token) {
         Result<TokenStatistic> result2 = new Result<>();
 
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.MARKET_CAP_INDEX));
@@ -204,7 +204,7 @@ public class TokenService extends BaseService {
         searchRequest.source(searchSourceBuilder);
         try {
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-           List<Aggregation> aggregationList = searchResponse.getAggregations().asList();
+            List<Aggregation> aggregationList = searchResponse.getAggregations().asList();
             for (Aggregation agg : aggregationList) {
                 tokenStatistic3.setAddressHolder(((ParsedValueCount) agg).getValue());
             }
@@ -214,7 +214,7 @@ public class TokenService extends BaseService {
         //aggregate result
         TokenStatistic tokenStatistic = new TokenStatistic();
         tokenStatistic.setTypeTag(token);
-        if(!result1.getContents().isEmpty()) {
+        if (!result1.getContents().isEmpty()) {
             tokenStatistic = result1.getContents().get(0);
             TokenInfo tokenInfo = getTokenInfo(network, token);
             if (tokenInfo != null) {
@@ -422,9 +422,9 @@ public class TokenService extends BaseService {
             TokenInfo tokenInfo = getTokenInfo(network, tokenStatistic.getTypeTag());
             for (TokenHolderInfo info : result.getContents()) {
                 info.setSupply(totalSupply);
-                if(tokenInfo != null) {
+                if (tokenInfo != null) {
                     info.setHoldAmount(info.getHoldAmount().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
-                }else {
+                } else {
                     logger.warn("token info not exist: {}", tokenStatistic.getTypeTag());
                 }
             }

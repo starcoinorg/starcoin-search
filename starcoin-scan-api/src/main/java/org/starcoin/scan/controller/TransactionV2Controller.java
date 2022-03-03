@@ -68,15 +68,17 @@ public class TransactionV2Controller {
     @ApiOperation("get transaction list by address")
     @GetMapping("{network}/byAddress/{address}")
     public Result<TransactionWithEvent> getRangeByAddressAlias(@PathVariable("network") String network, @PathVariable("address") String address,
-                                                               @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
-        return transactionService.getRangeByAddressAll(network, address, 1, count);
+                                                               @RequestParam(value = "count", required = false, defaultValue = "20") int count,
+                                                               @RequestParam(value = "txn_type", required = false, defaultValue = "0") int txnType) throws IOException {
+        return transactionService.getRangeByAddressAll(network, address, 1, count, txnType);
     }
 
     @ApiOperation("get transaction list of page range by address")
     @GetMapping("/address/{network}/{address}/page/{page}")
     public Result<TransactionWithEvent> getRangeByAddress(@PathVariable("network") String network, @PathVariable("address") String address, @PathVariable(value = "page", required = false) int page,
-                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
-        return transactionService.getRangeByAddressAll(network, address, page, count);
+                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count,
+                                                          @RequestParam(value = "txn_type", required = false, defaultValue = "0") int txnType) throws IOException {
+        return transactionService.getRangeByAddressAll(network, address, page, count, txnType);
     }
 
     @ApiOperation("get nft transaction list of page range by address")
@@ -84,7 +86,7 @@ public class TransactionV2Controller {
     public Result<TransactionWithEvent> getNFTTxnsByAddress(@PathVariable("network") String network, @PathVariable(value = "page", required = false) int page,
                                                             @RequestParam(value = "start_time", required = false, defaultValue = "0") long start_time,
                                                             @RequestParam(value = "address", required = false, defaultValue = "") String address,
-                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
+                                                            @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
         return transactionService.getNFTTxns(network, start_time, address, page, count);
     }
 

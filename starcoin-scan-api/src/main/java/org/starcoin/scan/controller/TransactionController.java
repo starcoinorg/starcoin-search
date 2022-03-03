@@ -48,14 +48,16 @@ public class TransactionController {
 
     @GetMapping("{network}/byAddress/{address}")
     public Result<TransactionWithEvent> getRangeByAddressAlias(@PathVariable("network") String network, @PathVariable("address") String address,
-                                                               @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
-        return transactionService.getRangeByAddressAll(network, address, 1, count);
+                                                               @RequestParam(value = "count", required = false, defaultValue = "20") int count,
+                                                               @RequestParam(value = "txn_type", required = false, defaultValue = "0") int txnType) throws IOException {
+        return transactionService.getRangeByAddressAll(network, address, 1, count, txnType);
     }
 
     @GetMapping("/address/{network}/{address}/page/{page}")
     public Result<TransactionWithEvent> getRangeByAddress(@PathVariable("network") String network, @PathVariable("address") String address, @PathVariable(value = "page", required = false) int page,
-                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count) throws IOException {
-        return transactionService.getRangeByAddressAll(network, address, page, count);
+                                                          @RequestParam(value = "count", required = false, defaultValue = "20") int count,
+                                                          @RequestParam(value = "txn_type", required = false, defaultValue = "0") int txnType) throws IOException {
+        return transactionService.getRangeByAddressAll(network, address, page, count, txnType);
     }
 
     @GetMapping("/{network}/byBlock/{block_hash}")

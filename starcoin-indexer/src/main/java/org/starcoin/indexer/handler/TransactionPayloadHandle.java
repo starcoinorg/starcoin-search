@@ -12,13 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.starcoin.api.StateRPCClient;
-import org.starcoin.bean.Transaction;
 import org.starcoin.bean.OracleTokenPair;
 import org.starcoin.bean.SwapTransaction;
+import org.starcoin.bean.Transaction;
 import org.starcoin.bean.TransferOffset;
 import org.starcoin.constant.Constant;
 import org.starcoin.indexer.service.SwapTxnService;
-import org.starcoin.utils.SwapApiClient;
 import org.starcoin.types.*;
 import org.starcoin.utils.*;
 
@@ -129,7 +128,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                         swapTransaction.setTotalValue(new BigDecimal(0));
                                     }
                                 }
-                            }else {
+                            } else {
                                 logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
                             }
                         }

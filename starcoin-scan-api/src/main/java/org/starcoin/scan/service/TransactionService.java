@@ -21,10 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
-import org.starcoin.bean.Event;
-import org.starcoin.bean.PendingTransaction;
-import org.starcoin.bean.Transfer;
-import org.starcoin.bean.TokenTransfer;
+import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.event.ProposalCreatedEvent;
@@ -150,15 +147,14 @@ public class TransactionService extends BaseService {
     public Result<TransactionWithEvent> getNFTTxns(String network, long start_time, String address, int page, int count) throws IOException {
         String queryAddress = address.toLowerCase();
         Result<Event> events = getNFTEventByAddress(network, queryAddress, page, count);
-        if(events.getTotal() < 1) {
+        if (events.getTotal() < 1) {
             return Result.EmptyResult;
         }
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder executeBoolQuery = QueryBuilders.boolQuery();
         searchSourceBuilder.query(QueryBuilders.rangeQuery("transaction_index").gt(0));
-        if (start_time > 0)
-        {
+        if (start_time > 0) {
             searchSourceBuilder.query(QueryBuilders.rangeQuery("timestamp").lt(start_time));
         }
         //page size
@@ -359,7 +355,7 @@ public class TransactionService extends BaseService {
         return events;
     }
 
-    public Result<Event> getNFTEventByAddress(String network, String address, int page, int count)throws IOException {
+    public Result<Event> getNFTEventByAddress(String network, String address, int page, int count) throws IOException {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_EVENT_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(count);
@@ -372,10 +368,10 @@ public class TransactionService extends BaseService {
 
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
         boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
-        if(address != null && address.length() > 0) {
+        if (address != null && address.length() > 0) {
             boolQuery.must(QueryBuilders.termQuery("event_address", address));
         }
-        boolQuery.must(QueryBuilders.matchQuery("type_tag","NFT").fuzziness("AUTO"));
+        boolQuery.must(QueryBuilders.matchQuery("type_tag", "NFT").fuzziness("AUTO"));
 
         searchSourceBuilder.query(boolQuery);
         searchRequest.source(searchSourceBuilder);
@@ -412,7 +408,7 @@ public class TransactionService extends BaseService {
         return getSearchUnescapeResult(searchResponse, Event.class);
     }
 
-    public Result getRangeByAddressAll(String network, String address, int page, int count) throws IOException {
+    public Result getRangeByAddressAll(String network, String address, int page, int count, int txnQueryType) throws IOException {
         String queryAddress = address.toLowerCase();
         Result<Event> events = getEventsByAddress(network, queryAddress, page, count);
         Result<Event> proposalEvents = getProposalEvents(network, queryAddress);
@@ -433,6 +429,11 @@ public class TransactionService extends BaseService {
             termHashes.add(event.getTransactionHash());
         }
         executeBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", termHashes));
+        if (txnQueryType > TransactionQueryType.ALL.getValue()) {
+            TransactionType types = TransactionQueryType.fromValue(txnQueryType).toTransactionType();
+            executeBoolQuery.must(QueryBuilders.termQuery("transaction_type.keyword", types.getName()));
+        }
+
         searchSourceBuilder.query(executeBoolQuery);
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);

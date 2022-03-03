@@ -19,7 +19,7 @@ import java.util.List;
 
 
 public class IndexerHandle extends QuartzJobBean {
-    private static Logger logger = LoggerFactory.getLogger(IndexerHandle.class);
+    private static final Logger logger = LoggerFactory.getLogger(IndexerHandle.class);
 
     private BlockOffset localBlockOffset;
     private BlockHeader currentHandleHeader;

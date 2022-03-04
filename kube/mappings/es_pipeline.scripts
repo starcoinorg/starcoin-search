@@ -88,12 +88,18 @@ PUT _component_template/block-mappings
     }
 
     PUT _component_template/txn_payload-mappings
-        {
-          "template": {
-            # copy txn_payload.mapping.json to here.
-          }
-        }
+    {
+      "template": {
+        # copy txn_payload.mapping.json to here.
+      }
+    }
 
+    PUT _component_template/token_info-mappings
+    {
+      "template": {
+        # copy token_info.mapping.json to here.
+      }
+    }
 4.
   PUT _index_template/blocks-template
   {
@@ -162,4 +168,11 @@ PUT _component_template/block-mappings
       "index_patterns": ["*.txn_payloads"],
       "priority": 500,
       "composed_of": ["txn_payload-mappings"]
+    }
+
+    PUT _index_template/token_info-template
+    {
+      "index_patterns": ["*.token_info"],
+      "priority": 500,
+      "composed_of": ["token_info-mappings"]
     }

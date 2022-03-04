@@ -434,7 +434,7 @@ public class ElasticSearchHandler {
         try {
             IndexResponse response = client.index(request, RequestOptions.DEFAULT);
             logger.info("add token info ok: {}", response.getResult());
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("add token info error:", e);
         }
     }

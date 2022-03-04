@@ -1,0 +1,28 @@
+{
+  "mappings": {
+    "properties" : {
+      "scaling_factor" : {
+        "type" : "long"
+      },
+      "token_code" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "total_value" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -823,9 +823,11 @@ public class ElasticSearchHandler {
             //batch handle
             Bytes addresses = function.args.get(0);
             byte[] addressBytes = addresses.content();
-            byte[] amountBytes = function.args.get(2).content();
+            byte[] amountBytes;
             if (functionName.equals("batch_peer_to_peer_v2")) {
                 amountBytes = function.args.get(1).content();
+            }else {
+                amountBytes = function.args.get(2).content();
             }
             int size = addressBytes.length / AccountAddress.LENGTH;
             for (int i = 0; i < size; i++) {

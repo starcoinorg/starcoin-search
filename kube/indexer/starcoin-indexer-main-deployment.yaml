@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-0722f41
+          image: starcoin/starcoin_indexer:sha-4432d0f
           ports:
             - containerPort: 8300
           env:
@@ -43,9 +43,9 @@ spec:
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
-              value: "https://swap-api.starcoin.org"
+              value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
-              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
+              value: "0x8c109349c6bd91411d6bc962e080c4a3"
             - name: DS_URL
               value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME

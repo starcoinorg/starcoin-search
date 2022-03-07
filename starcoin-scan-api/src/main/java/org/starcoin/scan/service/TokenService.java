@@ -403,6 +403,12 @@ public class TokenService extends BaseService {
         int offset = 0;
         if (page > 1) {
             offset = (page - 1) * count;
+            if (offset >= ELASTICSEARCH_MAX_HITS) {
+                searchSourceBuilder.searchAfter(new Object[]{offset});
+                searchSourceBuilder.from(0);
+            } else {
+                searchSourceBuilder.from(offset);
+            }
         }
         searchSourceBuilder.from(offset);
 

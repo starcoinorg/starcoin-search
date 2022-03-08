@@ -1,6 +1,7 @@
 package org.starcoin.scan.service;
 
 import com.alibaba.fastjson.JSON;
+import com.beust.jcommander.internal.Lists;
 import com.novi.serde.DeserializationError;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -408,7 +409,7 @@ public class TransactionService extends BaseService {
         return getSearchUnescapeResult(searchResponse, Event.class);
     }
 
-    public Result getRangeByAddressAll(String network, String address, int page, int count, int txnQueryType) throws IOException {
+    public Result getRangeByAddressAll(String network, String address, int page, int count, int txnQueryType, boolean withEvent) throws IOException {
         String queryAddress = address.toLowerCase();
         Result<Event> events = getEventsByAddress(network, queryAddress, page, count);
         Result<Event> proposalEvents = getProposalEvents(network, queryAddress);
@@ -421,13 +422,9 @@ public class TransactionService extends BaseService {
         searchSourceBuilder.size(count);
 
         BoolQueryBuilder executeBoolQuery = QueryBuilders.boolQuery();
-        List<String> termHashes = new ArrayList<>();
-        for (Event event : events.getContents()) {
-            termHashes.add(event.getTransactionHash());
-        }
-        for (Event event : proposalEvents.getContents()) {
-            termHashes.add(event.getTransactionHash());
-        }
+        HashSet<String> termHashes = new HashSet<>();
+        getTxnHashes(events, termHashes);
+        getTxnHashes(proposalEvents, termHashes);
         executeBoolQuery.should(QueryBuilders.termsQuery("transaction_hash", termHashes));
         if (txnQueryType > TransactionQueryType.ALL.getValue()) {
             TransactionType types = TransactionQueryType.fromValue(txnQueryType).toTransactionType();
@@ -441,8 +438,38 @@ public class TransactionService extends BaseService {
 
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         Result<TransactionWithEvent> result = ServiceUtils.getSearchResult(searchResponse, TransactionWithEvent.class);
+        List<TransactionWithEvent> tempTxnContent =  result.getContents();
+        if(withEvent && tempTxnContent.size() > 0) {
+            //get events of query txn
+            Result<Event> eventList = getEventsByTransaction(network, Lists.newArrayList(termHashes));
+            Map<String, List<Event>> tempTxnEvents = new HashMap<>();
+            for(Event event : eventList.getContents()) {
+                String hash = event.getTransactionHash();
+                List<Event> list = tempTxnEvents.get(hash);
+                if(list == null || list.size() == 0) {
+                    list = new ArrayList<>();
+                }
+                list.add(event);
+                tempTxnEvents.put(hash, list);
+            }
+           //set event to txn object
+           for(TransactionWithEvent txn : tempTxnContent) {
+               String hash = txn.getTransactionHash();
+               List<Event> list = tempTxnEvents.get(hash);
+               if(list != null && list.size() > 0) {
+                   txn.setEvents(list);
+               }
+           }
+        }
+
         result.setTotal(total);
         return result;
+    }
+
+    private void getTxnHashes(Result<Event> proposalEvents, HashSet<String> termHashes) {
+        for (Event event : proposalEvents.getContents()) {
+            termHashes.add(event.getTransactionHash());
+        }
     }
 
     public Result<TransactionWithEvent> getByBlockHash(String network, String blockHash) throws IOException {

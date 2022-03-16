@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.*;
 import org.starcoin.api.Result;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.UncleBlock;
+import org.starcoin.scan.entity.BlockInfo;
+import org.starcoin.scan.service.BlockInfoService;
 import org.starcoin.scan.service.BlockService;
 
 @Api(tags = "block")
@@ -15,6 +17,9 @@ import org.starcoin.scan.service.BlockService;
 public class BlockV2Controller {
     @Autowired
     private BlockService blockService;
+
+    @Autowired
+    private BlockInfoService blockInfoService;
 
     @ApiOperation("get block by ID")
     @GetMapping("/{network}/")
@@ -26,6 +31,12 @@ public class BlockV2Controller {
     @GetMapping("/{network}/hash/{hash}")
     public Block getBlockByHash(@PathVariable("network") String network, @PathVariable("hash") String hash) {
         return blockService.getBlockByHash(network, hash);
+    }
+
+    @ApiOperation("get block_info by hash")
+    @GetMapping("/info/{network}/hash/{hash}")
+    public BlockInfo getBlockInfoByHash(@PathVariable("network") String network, @PathVariable("hash") String hash) {
+        return blockInfoService.getBlockInfoByHash(network, hash);
     }
 
     @ApiOperation("get block by height")

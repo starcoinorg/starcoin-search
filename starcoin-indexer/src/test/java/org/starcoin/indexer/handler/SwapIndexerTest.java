@@ -10,6 +10,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.starcoin.bean.TokenTvl;
 import org.starcoin.bean.TotalTvl;
+import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.IndexerApplication;
 import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
@@ -71,9 +72,9 @@ class SwapHandleTest {
         }
     }
 
-    @Test
-    void getTvl() throws IOException {
-       List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl("main");
+    @org.junit.jupiter.api.Test
+    public void getTvl() throws IOException {
+       List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl(StarcoinNetwork.fromValue("main.0727").getValue());
         for (TokenTvl tvl : tokenTvls) {
             System.out.println(tvl);
         }

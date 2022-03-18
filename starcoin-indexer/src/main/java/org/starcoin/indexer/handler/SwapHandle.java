@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.*;
+import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.service.SwapPoolStatService;
 import org.starcoin.indexer.service.SwapStatService;
 import org.starcoin.indexer.service.SwapTxnService;
@@ -29,6 +30,7 @@ public class SwapHandle {
 
     @Value("${starcoin.network}")
     private String network;
+    private StarcoinNetwork localNetwork;
     @Value("${swap.contract.address}")
     private String contractAddress;
     @Autowired
@@ -47,17 +49,21 @@ public class SwapHandle {
     private SwapApiClient swapApiClient;
 
     public void swapStat(long startTime, long endTime) {
+        //init network
+        if (localNetwork == null) {
+            localNetwork = StarcoinNetwork.fromValue(network);
+        }
         List<TokenStat> tokenStatList = new ArrayList<>();
         try {
-            List<LiquidityPoolInfo> poolInfoList = swapApiClient.getPoolInfo(network);
-            List<SwapToken> tokenList = swapApiClient.getTokens(network);
+            List<LiquidityPoolInfo> poolInfoList = swapApiClient.getPoolInfo(localNetwork.getValue());
+            List<SwapToken> tokenList = swapApiClient.getTokens(localNetwork.getValue());
             if (tokenList == null || tokenList.isEmpty()) {
-                logger.warn("get token null: {}", network);
+                logger.warn("get token null: {}", localNetwork.getValue());
                 return;
             }
             Map<String, String> tokenMapping = new HashMap<>();
             Map<String, TokenTvl> tokenTvlMapping = new HashMap<>();
-            List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl(network);
+            List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl(localNetwork.getValue());
             for (TokenTvl tvl : tokenTvls) {
                 tokenTvlMapping.put(tvl.getTokenName(), tvl);
             }

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS barnard.swap_transaction
 --// swap天维度汇总统计
 CREATE TABLE IF NOT EXISTS barnard.swap_day_stat
 (
-    stat_date timestamp without time zone NOT NULL,
+    stat_date DATE NOT NULL,
     volume    numeric,
     tvl       numeric,
     CONSTRAINT swap_day_stat_pkey PRIMARY KEY (stat_date)
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS barnard.swap_day_stat
 CREATE TABLE IF NOT EXISTS barnard.token_swap_day_stat
 (
     token_name    character varying(256) COLLATE pg_catalog."default" NOT NULL,
-    ts            timestamp without time zone                         NOT NULL DEFAULT now(),
+    ts            DATE                                                NOT NULL DEFAULT now(),
     volume_amount numeric                                             NOT NULL,
     volume        numeric,
     tvl_amount    numeric                                             NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS barnard.pool_swap_day_stat
 (
     first_token_name  character varying(256) COLLATE pg_catalog."default" NOT NULL,
     second_token_name character varying(256) COLLATE pg_catalog."default" NOT NULL,
-    ts                timestamp without time zone                         NOT NULL DEFAULT now(),
+    ts                DATE                                                NOT NULL DEFAULT now(),
     volume_amount     numeric                                             NOT NULL,
     volume            numeric,
     tvl_a_amount      numeric                                             NOT NULL,

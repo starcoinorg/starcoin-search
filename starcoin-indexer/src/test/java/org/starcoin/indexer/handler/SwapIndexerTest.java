@@ -1,5 +1,6 @@
 package org.starcoin.indexer.handler;
 
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,14 +8,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.starcoin.bean.TokenTvl;
+import org.starcoin.bean.TotalTvl;
 import org.starcoin.indexer.IndexerApplication;
 import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
 import org.starcoin.indexer.service.SwapTxnService;
+import org.starcoin.utils.SwapApiClient;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.List;
+
+import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(
@@ -30,11 +37,8 @@ class SwapHandleTest {
     @Autowired
     private SwapTxnService swapTxnService;
 
-    static long getTimeStamp(int day) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH) + day, 0, 0, 0);
-        return calendar.getTimeInMillis();
-    }
+    @Autowired
+    private SwapApiClient swapApiClient;
 
     @Test
     public void testSwapStats() {
@@ -67,4 +71,17 @@ class SwapHandleTest {
         }
     }
 
+    @Test
+    void getTvl() throws IOException {
+       List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl("main");
+        for (TokenTvl tvl : tokenTvls) {
+            System.out.println(tvl);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void testSwapTVL() throws JSONRPC2SessionException {
+       TotalTvl totalTvl = swapHandle.getTvls();
+       System.out.println(totalTvl);
+    }
 }

@@ -94,7 +94,7 @@ public class QuartzConfig {
     @Bean
     public Trigger swapStatsTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInHours(24)
+                .withIntervalInHours(6)
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(swapStatsJob())
                 .withIdentity("swap_stats")

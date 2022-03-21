@@ -14,8 +14,12 @@ public enum StarcoinNetwork {
     }
 
     public static StarcoinNetwork fromValue(String value) {
+        String networkStr = value;
+        if(value != null && value.contains(".")) {
+            networkStr = value.substring(0, value.indexOf("."));
+        }
         for (StarcoinNetwork type : StarcoinNetwork.values()) {
-            if (type.getValue().equals(value)) {
+            if (type.getValue().equals(networkStr)) {
                 return type;
             }
         }

@@ -28,4 +28,12 @@ public class TotalTvl {
     public void setTokenPairTvlMap(Map<String, TokenPairTvl> tokenPairTvlMap) {
         this.tokenPairTvlMap = tokenPairTvlMap;
     }
+
+    @Override
+    public String toString() {
+        return "TotalTvl{" +
+                "tokenTvlMap=" + tokenTvlMap +
+                ", tokenPairTvlMap=" + tokenPairTvlMap +
+                '}';
+    }
 }

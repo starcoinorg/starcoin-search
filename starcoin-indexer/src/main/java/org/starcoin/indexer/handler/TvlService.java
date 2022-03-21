@@ -25,7 +25,7 @@ public class TvlService {
         try {
             ContractCall call = new ContractCall();
 
-            call.setFunctionId("0xbd7e8be8fae9f60f2f5136433e36a091::TokenSwap::get_reserves");
+            call.setFunctionId("0x8c109349c6bd91411d6bc962e080c4a3::TokenSwap::get_reserves");
 
             List<String> typeTags = new ArrayList<>();
             typeTags.add(tokenX);

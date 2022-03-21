@@ -9,10 +9,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.starcoin.api.*;
-import org.starcoin.indexer.handler.ElasticSearchHandler;
-import org.starcoin.indexer.handler.HolderHistoryHandle;
-import org.starcoin.indexer.handler.RepairHandle;
-import org.starcoin.indexer.handler.SubscribeHandler;
+import org.starcoin.indexer.handler.*;
 import org.starcoin.utils.SwapApiClient;
 
 import java.io.BufferedReader;
@@ -21,6 +18,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+
+import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @SpringBootApplication(scanBasePackages = "org.starcoin")
 @EntityScan("org.starcoin.bean")
@@ -115,6 +114,18 @@ public class IndexerApplication {
                 } catch (InterruptedException e) {
                     logger.error("auto repair error:", e);
                 }
+            }
+        }
+        //swap handle
+        if (args[0].equals("swap_handle")) {
+            SwapHandle swapHandle = (SwapHandle) context.getBean("swapHandle");
+            int beginDate = Integer.parseInt(args[1]);
+            int endDate = Integer.parseInt(args[2]);
+            for (int i = beginDate; i < endDate; i++) {
+                long startTs = getTimeStamp(i - 1);
+                long endTs = getTimeStamp(i);
+                swapHandle.swapStat(startTs, endTs);
+                logger.info("swap index repair ok: {} , {}", startTs, endTs);
             }
         }
     }

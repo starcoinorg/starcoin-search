@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-4432d0f
+          image: starcoin/starcoin_indexer:sha-b5ce02b
           ports:
             - containerPort: 8300
           env:
@@ -26,7 +26,7 @@ spec:
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
-              value: ""
+              value: "swap_stats"
             - name: BULK_SIZE
               value: "100"
             - name: STARCOIN_ES_PWD
@@ -43,9 +43,9 @@ spec:
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
-              value: "https://swap-api.starcoin.org"
+              value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
-              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
+              value: "0x8c109349c6bd91411d6bc962e080c4a3"
             - name: DS_URL
               value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
@@ -58,4 +58,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "auto_repair 1926940"
+              value: "auto_repair 4282440"

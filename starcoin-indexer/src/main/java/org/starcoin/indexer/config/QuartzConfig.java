@@ -118,6 +118,23 @@ public class QuartzConfig {
                 .build();
     }
 
+    //txn global index update
+    @Bean
+    public JobDetail txnGlobalIndexUpdateJob() {
+        return JobBuilder.newJob(TransactionInfoIndexer.class).withIdentity("txn_global_idx_update").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger txnGlobalIndexUpdateTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(5)  //设置时间周期单位秒
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(txnGlobalIndexUpdateJob())
+                .withIdentity("txn_global_idx_update")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
@@ -180,6 +197,11 @@ public class QuartzConfig {
         job = cleanPendingTxnJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, cleanPendingTxnTrigger());
+        }
+
+        job = txnGlobalIndexUpdateJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, txnGlobalIndexUpdateTrigger());
         }
 
         scheduler.start();

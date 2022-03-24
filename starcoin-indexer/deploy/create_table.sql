@@ -45,6 +45,15 @@ CREATE TABLE IF NOT EXISTS barnard.token_swap_day_stat
     CONSTRAINT token_swap_day_stat_pkey PRIMARY KEY (token_name, ts)
 );
 
+CREATE TABLE IF NOT EXISTS barnard.token_price
+(
+    token_name    character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    ts            DATE                                                NOT NULL DEFAULT now(),
+    price         numeric                                             NOT NULL,
+    rate          numeric,
+    CONSTRAINT token_price_pkey PRIMARY KEY (token_name, ts)
+);
+
 CREATE TABLE IF NOT EXISTS barnard.pool_swap_day_stat
 (
     first_token_name  character varying(256) COLLATE pg_catalog."default" NOT NULL,
@@ -58,3 +67,13 @@ CREATE TABLE IF NOT EXISTS barnard.pool_swap_day_stat
     tvl_b             numeric,
     CONSTRAINT pool_swap_day_stat_pkey PRIMARY KEY (first_token_name, second_token_name, ts)
 );
+
+CREATE TABLE IF NOT EXISTS barnard.pool_fee_day_stat
+(
+    first_token_name  character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    second_token_name character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    ts                DATE                                                NOT NULL DEFAULT now(),
+    fees_amount     numeric                                             NOT NULL,
+    fees            numeric,
+    CONSTRAINT pool_fees_day_stat_pkey PRIMARY KEY (first_token_name, second_token_name, ts)
+    );

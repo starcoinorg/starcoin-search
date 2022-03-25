@@ -127,7 +127,7 @@ public class QuartzConfig {
     @Bean
     public Trigger txnGlobalIndexUpdateTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(5)  //设置时间周期单位秒
+                .withIntervalInSeconds(2)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(txnGlobalIndexUpdateJob())
                 .withIdentity("txn_global_idx_update")

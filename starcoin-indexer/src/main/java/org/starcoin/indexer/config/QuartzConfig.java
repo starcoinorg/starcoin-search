@@ -135,6 +135,40 @@ public class QuartzConfig {
                 .build();
     }
 
+    // swap event handle
+    @Bean
+    public JobDetail swapEventHandleJob() {
+        return JobBuilder.newJob(SwapEventIndexer.class).withIdentity("swap_event_handle").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger swapEventHandleTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(5)  //设置时间周期单位秒
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(swapEventHandleJob())
+                .withIdentity("swap_event_handle")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    // swap pool fee stat handle
+    @Bean
+    public JobDetail swapPoolFeeStatJob() {
+        return JobBuilder.newJob(SwapPoolFeeStatIndexer.class).withIdentity("swap_pool_fee_stat").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger swapPoolFeeStatTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(12)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(swapPoolFeeStatJob())
+                .withIdentity("swap_pool_fee_stat")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
@@ -202,6 +236,15 @@ public class QuartzConfig {
         job = txnGlobalIndexUpdateJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, txnGlobalIndexUpdateTrigger());
+        }
+
+        job = swapEventHandleJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, swapEventHandleTrigger());
+        }
+        job = swapPoolFeeStatJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, swapPoolFeeStatTrigger());
         }
 
         scheduler.start();

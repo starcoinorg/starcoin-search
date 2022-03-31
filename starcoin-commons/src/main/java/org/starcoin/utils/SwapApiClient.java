@@ -65,6 +65,7 @@ public class SwapApiClient {
                 .host(host)
                 .addPathSegment(network)
                 .addPathSegment("v1")
+                .addPathSegment("price-api")
                 .addPathSegment("getProximateToUsdPriceRound")
                 .addQueryParameter("token", token)
                 .addQueryParameter("timestamp", timestamp)

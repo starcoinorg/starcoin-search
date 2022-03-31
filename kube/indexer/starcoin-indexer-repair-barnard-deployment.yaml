@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-4432d0f
+          image: starcoin/starcoin_indexer:sha-6eb4945
           ports:
             - containerPort: 8300
           env:
@@ -26,7 +26,9 @@ spec:
             - name: NETWORK
               value: "barnard.0727"
             - name: BG_TASK_JOBS
-              value: ""
+              value: "txn_global_idx_update"
+            - name: TXN_OFFSET
+              value: "5870774"
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_PWD
@@ -58,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "barnard"
             - name: PROGRAM_ARGS
-              value: "auto_repair 2869980"
+              value: "auto_repair 3811040"

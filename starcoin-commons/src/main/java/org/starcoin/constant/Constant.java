@@ -22,4 +22,7 @@ public class Constant {
     public static final String DEPOSIT_EVENT = "DepositEvent";
     public static final String WITHDRAW_EVENT = "WithdrawEvent";
     public static final String EVENT_TREASURY_MODULE = "Treasury";
+
+    //frequently used token
+    public static final String STC_TOKEN_OR_TAG = "0x00000000000000000000000000000001::STC::STC";
 }

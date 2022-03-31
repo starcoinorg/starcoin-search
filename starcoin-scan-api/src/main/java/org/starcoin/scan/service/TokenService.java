@@ -39,7 +39,6 @@ import static org.starcoin.scan.service.ServiceUtils.ELASTICSEARCH_MAX_HITS;
 @Service
 public class TokenService extends BaseService {
     private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
-    private static final String STC_TYPE_TAG = "0x00000000000000000000000000000001::STC::STC";
     //token cache
     private static final Map<String, Map<String, TokenInfo>> tokenCache = new HashMap<>();
     @Autowired

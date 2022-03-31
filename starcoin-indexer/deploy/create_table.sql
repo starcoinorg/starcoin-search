@@ -1,6 +1,27 @@
 -- # swap transaction
 CREATE SCHEMA barnard;
 
+CREATE TABLE IF NOT EXISTS barnard.handle_offset
+(
+    offset_id character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    ts               bigint  NOT NULL,
+    offset_value     bigint  NOT NULL,
+    CONSTRAINT handle_offset_pkey PRIMARY KEY (offset_id)
+);
+
+CREATE TABLE IF NOT EXISTS barnard.swap_fee_event
+(
+    event_id         BIGSERIAL NOT NULL,
+    token_first      character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    token_second     character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    swap_fee         bigint  NOT NULL,
+    fee_out          bigint  NOT NULL,
+    fee_addree       character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    signer           character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    ts               DATE    NOT NULL DEFAULT now(),
+    CONSTRAINT swap_fee_event_pkey PRIMARY KEY (event_id)
+);
+
 CREATE TABLE IF NOT EXISTS barnard.transaction_payload
 (
     transaction_hash character varying(66) COLLATE pg_catalog."default" NOT NULL,

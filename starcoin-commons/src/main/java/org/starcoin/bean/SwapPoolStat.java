@@ -105,6 +105,11 @@ class PoolStatId implements Serializable {
         this.tokenB = tokenB;
         this.timestamp = new Date(timestamp);
     }
+    public PoolStatId(String tokenA, String tokenB, Date date) {
+        this.tokenA = tokenA;
+        this.tokenB = tokenB;
+        this.timestamp = date;
+    }
 
     public PoolStatId() {
     }

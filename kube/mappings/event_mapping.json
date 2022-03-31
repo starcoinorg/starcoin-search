@@ -82,6 +82,9 @@
       "transaction_index": {
         "type": "long"
       },
+      "transaction_global_index": {
+        "type": "long"
+      },
       "type_tag": {
         "type": "text",
         "fields": {

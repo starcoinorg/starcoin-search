@@ -72,7 +72,7 @@ public class SwapHandle {
                 tokenMapping.put(token.getTokenId(), tagStr);
                 //get token volume
                 TokenStat tokenStat = swapTxnService.getTokenVolume(tagStr, startTime, endTime);
-                tokenStat.setVolumeAmount(divideScalingFactor(tagStr, tokenStat.getVolumeAmount()));
+//                tokenStat.setVolumeAmount(divideScalingFactor(tagStr, tokenStat.getVolumeAmount()));
                 TokenTvl tvl = tokenTvlMapping.get(token.getTokenId());
                 if (tvl != null) {
                     tokenStat.setTvl(tvl.getTvl());
@@ -93,7 +93,7 @@ public class SwapHandle {
                 String tokenA = tokenMapping.get(liquidityTokenId.getTokenXId());
                 String tokenB = tokenMapping.get(liquidityTokenId.getTokenYId());
                 SwapPoolStat poolStat = swapTxnService.getPoolVolume(tokenA, tokenB, startTime, endTime);
-                poolStat.setVolumeAmount(divideScalingFactor(tokenA, poolStat.getVolumeAmount()));
+//                poolStat.setVolumeAmount(divideScalingFactor(tokenA, poolStat.getVolumeAmount()));
                 // get pool tvl
                 poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
                 poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());

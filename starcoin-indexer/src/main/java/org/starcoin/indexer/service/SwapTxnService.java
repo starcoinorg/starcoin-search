@@ -1,5 +1,7 @@
 package org.starcoin.indexer.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Service
 public class SwapTxnService {
+    private static final Logger logger = LoggerFactory.getLogger(SwapTxnService.class);
+
     @Value("${starcoin.network}")
     private String network;
     @Autowired
@@ -37,6 +41,7 @@ public class SwapTxnService {
         TokenVolumeDTO tokenB = swapTransactionRepository.getVolumeByTokenB(token, startTime, endTime);
         tokenStat.setVolume(NumberUtils.getBigDecimal(tokenA.getVolume(), tokenB.getVolume()));
         tokenStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenA.getVolumeAmount(), tokenB.getVolumeAmount()));
+        logger.info("get token volume: {}, {}, {}", tokenA.getVolume(), tokenB.getVolume(), tokenStat);
         return tokenStat;
     }
 
@@ -46,6 +51,7 @@ public class SwapTxnService {
         TokenVolumeDTO tokenBDTO = swapTransactionRepository.getPoolVolumeB(tokenA, tokenB, startTime, endTime);
         poolStat.setVolume(NumberUtils.getBigDecimal(tokenADTO.getVolume(), tokenBDTO.getVolume()));
         poolStat.setVolumeAmount(NumberUtils.getBigDecimal(tokenADTO.getVolumeAmount(), tokenBDTO.getVolumeAmount()));
+        logger.info("get pool volume: {}, {}", tokenADTO.getVolume(), poolStat);
         return poolStat;
     }
 }

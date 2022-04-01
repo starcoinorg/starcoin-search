@@ -5,11 +5,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.starcoin.bean.HandleOffset;
-import org.starcoin.bean.OracleTokenPair;
-import org.starcoin.bean.PoolFeeStat;
-import org.starcoin.bean.SwapFeeEvent;
+import org.starcoin.bean.*;
 import org.starcoin.indexer.repository.HandleOffsetRepository;
+import org.starcoin.indexer.repository.SwapFeeDTO;
 import org.starcoin.indexer.repository.SwapFeeEventRepository;
 import org.starcoin.utils.SwapApiClient;
 
@@ -18,16 +16,17 @@ import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
 
 import static org.starcoin.constant.Constant.STC_TOKEN_OR_TAG;
+import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @Service
 public class SwapEventService {
     private static final Logger logger = LoggerFactory.getLogger(SwapEventService.class);
     private static final String SWAP_EVENT_HANDLE_OFFSET = "SWAP_EVENT_OFFSET";
-    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("YYYY-MM-dd");
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     @Autowired
     private HandleOffsetRepository handleOffsetRepository;
     @Autowired
@@ -73,26 +72,41 @@ public class SwapEventService {
         }
     }
 
-    public List<PoolFeeStat> getFeeStat(Date statDate) {
-        List<SwapFeeEvent> feeEvents = swapFeeEventRepository.sumPoolFeeList(statDate);
+    public List<PoolFeeStat> getFeeStat(Date fromDate, Date toDate) {
+        List<SwapFeeDTO> feeEvents = swapFeeEventRepository.sumPoolFeeList(fromDate, toDate);
         if(feeEvents != null && feeEvents.size() > 0) {
             List<PoolFeeStat> poolFeeStatList = new ArrayList<>();
+
             //get price
             OracleTokenPair oracleTokenPair = null;
-            try {
-                oracleTokenPair = swapApiClient.getProximatePriceRound(network, STC_TOKEN_OR_TAG, String.valueOf(statDate.getTime()));
-            } catch (IOException e) {
-                logger.error("get price error:", e);
+            int reTry = 3;
+            while (reTry > 0) {
+                try {
+                    long current = getTimeStamp(-1);
+                    oracleTokenPair = swapApiClient.getProximatePriceRound(network, STC_TOKEN_OR_TAG, String.valueOf(current));
+                    break;
+                } catch (IOException e) {
+                    logger.error("get price error and retry", e);
+                    reTry --;
+                }
             }
+
             BigDecimal price = new BigDecimal(0);
             if(oracleTokenPair != null) {
                 price = new BigDecimal(oracleTokenPair.getPrice());
                 price = price.movePointLeft(oracleTokenPair.getDecimals());
             }
-            for (SwapFeeEvent fee : feeEvents) {
-                PoolFeeStat poolFeeStat = fee.toPoolFeeStat();
+            for (SwapFeeDTO fee : feeEvents) {
+                HexTypeTag hexTypeTag = HexTypeTag.fromString(fee.getTokenFirst());
+                String firstToken = hexTypeTag.uniform();
+                hexTypeTag = HexTypeTag.fromString(fee.getTokenSecond());
+                String secondToken = hexTypeTag.uniform();
+                PoolFeeStat poolFeeStat = new PoolFeeStat(firstToken, secondToken, fee.getTs());
+                poolFeeStat.setFeesAmount(BigDecimal.valueOf(fee.getSwapFee()));
                 if(!price.equals(new BigDecimal(0))) {
                     poolFeeStat.setFees(price.multiply(poolFeeStat.getFeesAmount()));
+                }else {
+                    logger.warn("pool fee price null:" + poolFeeStat);
                 }
                 poolFeeStatList.add(poolFeeStat);
             }

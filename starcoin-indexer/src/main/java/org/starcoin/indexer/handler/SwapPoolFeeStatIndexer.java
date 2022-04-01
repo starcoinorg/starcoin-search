@@ -9,7 +9,7 @@ import org.starcoin.bean.PoolFeeStat;
 import org.starcoin.indexer.repository.PoolFeeStatRepository;
 import org.starcoin.indexer.service.SwapEventService;
 
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
 
 import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
@@ -23,13 +23,14 @@ public class SwapPoolFeeStatIndexer extends QuartzJobBean {
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
-        Date statDate = new Date(getTimeStamp(-1));
-        List<PoolFeeStat> feeList = swapEventService.getFeeStat(statDate);
+        Date fromDate = new Date(getTimeStamp(-2));
+        Date toDate = new Date(getTimeStamp(0));
+        List<PoolFeeStat> feeList = swapEventService.getFeeStat(fromDate, toDate);
         if(feeList != null && feeList.size() > 0) {
             poolFeeStatRepository.saveAll(feeList);
-            logger.info("swap pool fee stat handle ok: {} ", statDate);
+            logger.info("swap pool fee stat handle ok: {} to {} ", fromDate, toDate);
         }else {
-            logger.warn("swap pool fee stat resul is null: {}", statDate);
+            logger.warn("swap pool fee stat result is null: {} to {} ", fromDate, toDate);
         }
     }
 }

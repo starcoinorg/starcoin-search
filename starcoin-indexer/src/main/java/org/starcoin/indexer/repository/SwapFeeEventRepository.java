@@ -6,7 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.starcoin.bean.PoolFeeStat;
 import org.starcoin.bean.SwapFeeEvent;
 
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
 
 public interface SwapFeeEventRepository extends JpaRepository<SwapFeeEvent, String> {
@@ -15,8 +15,7 @@ public interface SwapFeeEventRepository extends JpaRepository<SwapFeeEvent, Stri
         "group by token_first, token_second, ts", nativeQuery = true)
     PoolFeeStat sumByPoolName(@Param("token_first") String tokenFirst, @Param("token_second") String tokenSecond,@Param("stat_date") String statDate);
 
-    @Query(value = "select sum(swap_fee) as fee_out, token_first, token_second," +
-            " ts, 10000 as event_id, '' as fee_addree, '' as signer, 0 as swap_fee from swap_fee_event where ts =:stat_date  " +
+    @Query(value = "select sum(swap_fee) as swapFee, token_first as tokenFirst, token_second as tokenSecond, ts from swap_fee_event where ts > :from_date and ts < :to_date  " +
             "group by token_first, token_second, ts", nativeQuery = true)
-    List<SwapFeeEvent> sumPoolFeeList(@Param("stat_date") Date statDate);
+    List<SwapFeeDTO> sumPoolFeeList(@Param("from_date") Date fromDate, @Param("to_date") Date toDate);
 }

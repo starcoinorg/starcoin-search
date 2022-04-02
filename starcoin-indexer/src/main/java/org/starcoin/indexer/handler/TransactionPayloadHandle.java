@@ -112,8 +112,9 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                             while (retry > 0) {
                                 //get oracle price
                                 logger.info("token price not cache, load from oracle: {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB());
+                                long priceTime = swapTransaction.getTimestamp() - 300000 * (6 - retry);
                                 List<org.starcoin.bean.OracleTokenPair> oracleTokenPairs =
-                                        swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
+                                        swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(priceTime));
                                 if (oracleTokenPairs != null && !oracleTokenPairs.isEmpty()) {
                                     BigDecimal priceA = null;
                                     OracleTokenPair oracleTokenA = oracleTokenPairs.get(0);

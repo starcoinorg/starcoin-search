@@ -12,13 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.starcoin.api.StateRPCClient;
-import org.starcoin.bean.OracleTokenPair;
-import org.starcoin.bean.SwapTransaction;
+import org.starcoin.bean.*;
 import org.starcoin.bean.Transaction;
-import org.starcoin.bean.TransferOffset;
 import org.starcoin.constant.Constant;
 import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.types.*;
+import org.starcoin.types.StructTag;
+import org.starcoin.types.TransactionPayload;
+import org.starcoin.types.TypeTag;
 import org.starcoin.utils.*;
 
 import javax.annotation.PostConstruct;
@@ -101,35 +102,78 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                         tokenList.add(swapTransaction.getTokenB());
                         swapTransaction.setAmountA(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenA(), swapTransaction.getAmountA()));
                         swapTransaction.setAmountB(ServiceUtils.divideScalingFactor(stateRPCClient, swapTransaction.getTokenB(), swapTransaction.getAmountB()));
-                        BigDecimal value = getTokenPrice(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
-                                swapTransaction.getTokenB(), swapTransaction.getAmountB());
+                        boolean isSwap = SwapType.isSwap(swapTransaction.getSwapType());
+                        BigDecimal value = getTotalValue(tokenPriceMap, swapTransaction.getTokenA(), swapTransaction.getAmountA(),
+                                swapTransaction.getTokenB(), swapTransaction.getAmountB(), isSwap);
                         if (value != null) {
                             swapTransaction.setTotalValue(value);
                         } else {
-                            //get oracle price
-                            List<org.starcoin.bean.OracleTokenPair> oracleTokenPairs =
-                                    swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
-                            if (oracleTokenPairs != null && !oracleTokenPairs.isEmpty()) {
-                                OracleTokenPair oracleToken = oracleTokenPairs.get(0);
-                                if (oracleToken != null) {
-                                    BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                                    price = price.movePointLeft(oracleToken.getDecimals());
-                                    tokenPriceMap.put(swapTransaction.getTokenA(), price);
-                                    swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountA()));
-                                } else {
-                                    oracleToken = oracleTokenPairs.get(1);
-                                    if (oracleToken != null) {
-                                        BigDecimal price = new BigDecimal(oracleToken.getPrice());
-                                        price = price.movePointLeft(oracleToken.getDecimals());
-                                        tokenPriceMap.put(swapTransaction.getTokenB(), price);
-                                        swapTransaction.setTotalValue(price.multiply(swapTransaction.getAmountB()));
-                                    } else {
-                                        logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
-                                        swapTransaction.setTotalValue(new BigDecimal(0));
+                            int retry = 3;
+                            while (retry > 0) {
+                                //get oracle price
+                                logger.info("token price not cache, load from oracle: {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB());
+                                List<org.starcoin.bean.OracleTokenPair> oracleTokenPairs =
+                                        swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(swapTransaction.getTimestamp()));
+                                if (oracleTokenPairs != null && !oracleTokenPairs.isEmpty()) {
+                                    BigDecimal priceA = null;
+                                    OracleTokenPair oracleTokenA = oracleTokenPairs.get(0);
+                                    if (oracleTokenA != null) {
+                                        priceA = new BigDecimal(oracleTokenA.getPrice());
+                                        priceA = priceA.movePointLeft(oracleTokenA.getDecimals());
+                                        tokenPriceMap.put(swapTransaction.getTokenA(), priceA);
+                                        logger.info("get oracle price1 ok: {}", oracleTokenA);
                                     }
+                                    // get tokenB price
+                                    BigDecimal priceB = null;
+                                    OracleTokenPair oracleTokenB = oracleTokenPairs.get(1);
+                                    if (oracleTokenB != null) {
+                                        priceB = new BigDecimal(oracleTokenB.getPrice());
+                                        priceB = priceB.movePointLeft(oracleTokenB.getDecimals());
+                                        tokenPriceMap.put(swapTransaction.getTokenB(), priceB);
+                                        logger.info("get oracle price2 ok: {}", oracleTokenB);
+                                    }
+                                    BigDecimal zero = new BigDecimal(0);
+                                    if (isSwap) {
+                                        if (priceA != null && priceA.compareTo(zero) == 1) {
+                                            swapTransaction.setTotalValue(priceA.multiply(swapTransaction.getAmountA()));
+                                            break;
+                                        }
+                                        if (priceB != null && priceB.compareTo(zero) == 1) {
+                                            swapTransaction.setTotalValue(priceB.multiply(swapTransaction.getAmountB()));
+                                            break;
+                                        }
+                                        logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                        retry--;
+                                    } else {
+                                        // add or remove
+                                        boolean isExistB = priceB != null && priceB.compareTo(zero) == 1;
+                                        if (priceA != null && priceA.compareTo(zero) == 1) {
+                                            BigDecimal valueA = priceA.multiply(swapTransaction.getAmountA());
+                                            if (isExistB) {
+                                                swapTransaction.setTotalValue(priceB.multiply(swapTransaction.getAmountB()).add(valueA));
+                                            } else {
+                                                swapTransaction.setTotalValue(valueA.multiply(new BigDecimal(2)));
+                                            }
+                                            break;
+                                        } else {
+                                            if (isExistB) {
+                                                swapTransaction.setTotalValue(priceB.multiply(swapTransaction.getAmountB()).multiply(new BigDecimal(2)));
+                                                break;
+                                            } else {
+                                                logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                                retry--;
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                    retry--;
                                 }
-                            } else {
-                                logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     }
@@ -152,14 +196,32 @@ public class TransactionPayloadHandle extends QuartzJobBean {
         }
     }
 
-    private BigDecimal getTokenPrice(Map<String, BigDecimal> priceMap, String tokenA, BigDecimal amountA, String tokenB, BigDecimal amountB) {
-        BigDecimal price = priceMap.get(tokenA);
-        if (price != null) {
-            return price.multiply(amountA);
-        }
-        price = priceMap.get(tokenB);
-        if (price != null) {
-            return price.multiply(amountB);
+    private BigDecimal getTotalValue(Map<String, BigDecimal> priceMap, String tokenA, BigDecimal amountA, String tokenB,
+                                     BigDecimal amountB, boolean isSwap) {
+        BigDecimal priceA = priceMap.get(tokenA);
+        BigDecimal priceB = priceMap.get(tokenB);
+        new BigDecimal(0);
+        BigDecimal total;
+        if (isSwap) {
+            if (priceA != null) {
+                return priceA.multiply(amountA);
+            } else if (priceB != null) {
+                return priceB.multiply(amountB);
+            }
+        } else {
+            BigDecimal two = new BigDecimal(2);
+            if (priceA != null) {
+                total = priceA.multiply(amountA);
+                if (priceB != null) {
+                    return total.add(priceB.multiply(amountB));
+                } else {
+                    return total.multiply(two);
+                }
+            } else {
+                if (priceB != null) {
+                    return two.multiply(priceB.multiply(amountB));
+                }
+            }
         }
         return null;
     }

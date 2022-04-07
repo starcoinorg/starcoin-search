@@ -169,6 +169,40 @@ public class QuartzConfig {
                 .build();
     }
 
+    // token price hour handle
+    @Bean
+    public JobDetail priceHourJob() {
+        return JobBuilder.newJob(TokenPriceHourIndexer.class).withIdentity("price_hour").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger priceHourTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(1)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(priceHourJob())
+                .withIdentity("price_hour")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    // token price hour handle
+    @Bean
+    public JobDetail priceStatJob() {
+        return JobBuilder.newJob(TokenPriceStatIndexer.class).withIdentity("price_stat").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger priceStatTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInHours(1)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(priceStatJob())
+                .withIdentity("price_stat")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
@@ -207,37 +241,30 @@ public class QuartzConfig {
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, indexerTrigger());
         }
-
         job = secondaryJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, secondaryTrigger());
         }
-
         job = MarketCapJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, marketCapTrigger());
         }
-
         job = transactionPayloadJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, transactionPayloadTrigger());
         }
-
         job = swapStatsJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, swapStatsTrigger());
         }
-
         job = cleanPendingTxnJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, cleanPendingTxnTrigger());
         }
-
         job = txnGlobalIndexUpdateJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, txnGlobalIndexUpdateTrigger());
         }
-
         job = swapEventHandleJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, swapEventHandleTrigger());
@@ -245,6 +272,14 @@ public class QuartzConfig {
         job = swapPoolFeeStatJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, swapPoolFeeStatTrigger());
+        }
+        job = priceHourJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, priceHourTrigger());
+        }
+        job = priceStatJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, priceStatTrigger());
         }
 
         scheduler.start();

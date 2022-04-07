@@ -36,6 +36,14 @@ public class OracleTokenPair {
         return pairId;
     }
 
+    public String getToken() {
+        String[] tokens = this.pairName.split("/");
+        if(tokens != null && tokens.length == 2) {
+            return  tokens[0].trim();
+        }
+        return null;
+    }
+
     public void setPairId(String pairId) {
         this.pairId = pairId;
     }

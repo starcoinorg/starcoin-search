@@ -97,9 +97,11 @@ public class SwapApiClient {
         Request request = new Request.Builder()
                 .url(httpUrl)
                 .build();
+
         try (Response response = OKClientUtils.getClient().newCall(request).execute()) {
             assert response.body() != null;
             String res = response.body().string();
+            System.out.println(res);
             return JSON.parseArray(res, OracleTokenPair.class);
         }
     }

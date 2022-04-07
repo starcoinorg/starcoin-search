@@ -24,7 +24,7 @@ import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 @SpringBootApplication(scanBasePackages = "org.starcoin")
 @EntityScan("org.starcoin.bean")
 public class IndexerApplication {
-    private static Logger logger = LoggerFactory.getLogger(IndexerApplication.class);
+    private static final Logger logger = LoggerFactory.getLogger(IndexerApplication.class);
     @Value("${starcoin.swap.api.url}")
     private String swapAPIUrl;
 
@@ -126,6 +126,18 @@ public class IndexerApplication {
                 long endTs = getTimeStamp(i);
                 swapHandle.swapStat(startTs, endTs);
                 logger.info("swap index repair ok: {} , {}", startTs, endTs);
+            }
+        }
+        //save price list
+        if(args[0].equals("token_price_handle")) {
+            TokenPriceHandle tokenPriceHandle = (TokenPriceHandle) context.getBean("tokenPriceHandle");
+            if("get".equals(args[1])) {
+                int date = Integer.parseInt(args[2]);
+                tokenPriceHandle.getPrice(date);
+            }
+            if("stat".equals(args[1])) {
+                int date = Integer.parseInt(args[2]);
+                tokenPriceHandle.statPrice(date);
             }
         }
     }

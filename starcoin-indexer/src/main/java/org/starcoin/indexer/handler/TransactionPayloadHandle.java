@@ -143,7 +143,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                             swapTransaction.setTotalValue(priceB.multiply(swapTransaction.getAmountB()));
                                             break;
                                         }
-                                        logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                        logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), priceTime);
                                         retry--;
                                     } else {
                                         // add or remove
@@ -161,13 +161,13 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                                 swapTransaction.setTotalValue(priceB.multiply(swapTransaction.getAmountB()).multiply(new BigDecimal(2)));
                                                 break;
                                             } else {
-                                                logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                                logger.warn("get oracle price null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), priceTime);
                                                 retry--;
                                             }
                                         }
                                     }
                                 } else {
-                                    logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), swapTransaction.getTimestamp());
+                                    logger.warn("getProximatePriceRounds null: {}, {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB(), priceTime);
                                     retry--;
                                 }
                                 try {
@@ -179,8 +179,13 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                         }
                     }
 
-                    swapTxnService.saveList(swapTransactionList);
-                    logger.info("save swap txn ok: {}", swapTransactionList.size());
+                    try {
+                        swapTxnService.saveList(swapTransactionList);
+                        logger.info("save swap txn ok: {}", swapTransactionList.size());
+                    } catch (Exception e) {
+                       logger.error("save swap err:", e);
+                    }
+
                 }
                 //update offset
                 Transaction last = transactionList.get(transactionList.size() - 1);
@@ -201,8 +206,6 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                      BigDecimal amountB, boolean isSwap) {
         BigDecimal priceA = priceMap.get(tokenA);
         BigDecimal priceB = priceMap.get(tokenB);
-        new BigDecimal(0);
-        BigDecimal total;
         if (isSwap) {
             if (priceA != null) {
                 return priceA.multiply(amountA);
@@ -210,6 +213,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                 return priceB.multiply(amountB);
             }
         } else {
+            BigDecimal total;
             BigDecimal two = new BigDecimal(2);
             if (priceA != null) {
                 total = priceA.multiply(amountA);

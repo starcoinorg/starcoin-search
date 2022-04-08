@@ -12,11 +12,11 @@ import java.util.List;
 public interface SwapTransactionRepository extends JpaRepository<SwapTransaction, String> {
     List<SwapTransaction> findAllByTransactionHash(String transactionHash);
 
-    @Query(value = "select * from swap_transaction where ts between :start_time and :end_time ", nativeQuery = true)
+    @Query(value = "select * from {h-domain}swap_transaction where ts between :start_time and :end_time ", nativeQuery = true)
     List<SwapTransaction> findSwapTransactionByTs(@Param("start_time") long startTime, @Param("end_time") long endTime);
 
     @Modifying
-    @Query(value = "update swap_transaction set total_value=:total_value where swap_seq=:swap_seq", nativeQuery = true)
+    @Query(value = "update {h-domain}swap_transaction set total_value=:total_value where swap_seq=:swap_seq", nativeQuery = true)
     void updateTotalValue(@Param("total_value") BigDecimal totalValue, @Param("swap_seq") long swapSeq);
 
     @Query(value = "select sum(total_value) as volume, sum(amount_a) as volumeAmount  from {h-domain}swap_transaction where token_a = :token "

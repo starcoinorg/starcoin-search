@@ -1,21 +1,19 @@
 package org.starcoin.bean;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "swap_transaction")
 public class SwapTransaction {
-
+    @SequenceGenerator(name = "seq_txn_id", allocationSize = 1, initialValue = 1, sequenceName = "swap_transaction_swap_seq_seq")
+    @GeneratedValue(generator = "seq_txn_id", strategy = GenerationType.SEQUENCE)
+    @Column(name = "swap_seq")
+    private long swapSeq;
     @Column(name = "total_value")
     private BigDecimal totalValue;
-
     @Column(name = "token_a")
     private String tokenA;
-
     @Column(name = "amount_a")
     private BigDecimal amountA;
     @Column(name = "token_b")
@@ -31,6 +29,14 @@ public class SwapTransaction {
     @Id
     @Column(name = "transaction_hash")
     private String transactionHash;
+
+    public long getSwapSeq() {
+        return swapSeq;
+    }
+
+    public void setSwapSeq(long swapSeq) {
+        this.swapSeq = swapSeq;
+    }
 
     public String getTransactionHash() {
         return transactionHash;

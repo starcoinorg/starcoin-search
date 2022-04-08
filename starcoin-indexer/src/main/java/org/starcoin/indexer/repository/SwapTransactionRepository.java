@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.starcoin.bean.SwapTransaction;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ public interface SwapTransactionRepository extends JpaRepository<SwapTransaction
     List<SwapTransaction> findSwapTransactionByTs(@Param("start_time") long startTime, @Param("end_time") long endTime);
 
     @Modifying
+    @Transactional
     @Query(value = "update {h-domain}swap_transaction set total_value=:total_value where swap_seq=:swap_seq", nativeQuery = true)
     void updateTotalValue(@Param("total_value") BigDecimal totalValue, @Param("swap_seq") long swapSeq);
 

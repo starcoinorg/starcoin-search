@@ -121,11 +121,19 @@ public class IndexerApplication {
             SwapHandle swapHandle = (SwapHandle) context.getBean("swapHandle");
             int beginDate = Integer.parseInt(args[1]);
             int endDate = Integer.parseInt(args[2]);
+            boolean isRepair = "repair".equals(args[3]);
             for (int i = beginDate; i < endDate; i++) {
-                long startTs = getTimeStamp(i - 1);
-                long endTs = getTimeStamp(i);
-                swapHandle.swapStat(startTs, endTs);
-                logger.info("swap index repair ok: {} , {}", startTs, endTs);
+                long startTs = getTimeStamp(i - 1) / 1000 * 1000;
+                long endTs = getTimeStamp(i)/ 1000 * 1000;
+                if(isRepair) {
+                    swapHandle.updateTokenVolume(startTs, endTs);
+                    logger.info("repair token/total volume ok: {} , {}", startTs, endTs);
+                    swapHandle.updatePoolVolume(startTs, endTs);
+                    logger.info("repair pool volume ok: {} , {}", startTs, endTs);
+                }else {
+                    swapHandle.swapStat(startTs, endTs);
+                    logger.info("swap index repair ok: {} , {}", startTs, endTs);
+                }
             }
         }
         //save price list

@@ -61,6 +61,10 @@ public class SwapHandle {
                 logger.warn("get token null: {}", localNetwork.getValue());
                 return;
             }
+
+            SwapStat swapStat = new SwapStat();
+            swapStat.setStatDate(new Date(startTime));
+
             Map<String, String> tokenMapping = new HashMap<>();
             Map<String, TokenTvl> tokenTvlMapping = new HashMap<>();
             List<TokenTvl> tokenTvls = swapApiClient.getTokenTvl(localNetwork.getValue());
@@ -72,7 +76,7 @@ public class SwapHandle {
                 tokenMapping.put(token.getTokenId(), tagStr);
                 //get token volume
                 TokenStat tokenStat = swapTxnService.getTokenVolume(tagStr, startTime, endTime);
-//                tokenStat.setVolumeAmount(divideScalingFactor(tagStr, tokenStat.getVolumeAmount()));
+                swapStat.setVolume(NumberUtils.getBigDecimal(swapStat.getVolume(), tokenStat.getVolume()));
                 TokenTvl tvl = tokenTvlMapping.get(token.getTokenId());
                 if (tvl != null) {
                     tokenStat.setTvl(tvl.getTvl());
@@ -86,14 +90,12 @@ public class SwapHandle {
             tokenStatService.saveAll(tokenStatList);
             //get pool volume
             List<SwapPoolStat> poolStatList = new ArrayList<>();
-            SwapStat swapStat = new SwapStat();
-            swapStat.setStatDate(new Date(startTime));
+
             for (LiquidityPoolInfo poolInfo : poolInfoList) {
                 LiquidityTokenId liquidityTokenId = poolInfo.getLiquidityPoolId().getLiquidityTokenId();
                 String tokenA = tokenMapping.get(liquidityTokenId.getTokenXId());
                 String tokenB = tokenMapping.get(liquidityTokenId.getTokenYId());
                 SwapPoolStat poolStat = swapTxnService.getPoolVolume(tokenA, tokenB, startTime, endTime);
-//                poolStat.setVolumeAmount(divideScalingFactor(tokenA, poolStat.getVolumeAmount()));
                 // get pool tvl
                 poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
                 poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());
@@ -101,7 +103,6 @@ public class SwapHandle {
                 poolStat.setTvlBAmount(poolInfo.getTokenYReserve());
                 poolStatList.add(poolStat);
                 //add for total
-                swapStat.setVolume(NumberUtils.getBigDecimal(swapStat.getVolume(), poolStat.getVolume()));
                 BigDecimal tvl = NumberUtils.getBigDecimal(swapStat.getTvl(), poolInfo.getTokenXReserveInUsd());
                 swapStat.setTvl(NumberUtils.getBigDecimal(tvl, poolInfo.getTokenYReserveInUsd()));
             }
@@ -112,7 +113,63 @@ public class SwapHandle {
         } catch (IOException e) {
             logger.error("handle swap error:", e);
         }
+    }
 
+    public void updateTokenVolume(long startTime, long endTime) {
+        //get all tokens
+        List<TokenStat> tokenStatList = tokenStatService.getTokenStatByDate(startTime);
+        if(tokenStatList != null && tokenStatList.size() > 0) {
+            // get total stat
+            SwapStat swapStat = swapStatService.get(startTime);
+            BigDecimal totalVolume = null;
+            if(swapStat != null) {
+                totalVolume = new BigDecimal(0);
+            }
+            for (TokenStat tokenStat: tokenStatList) {
+                // get volume
+                TokenStat tokenStatNew = swapTxnService.getTokenVolume(tokenStat.getToken(), startTime, endTime);
+                if(tokenStatNew != null) {
+                    tokenStat.setVolume(tokenStatNew.getVolume());
+                    tokenStat.setVolumeAmount(tokenStatNew.getVolumeAmount());
+                    tokenStatService.save(tokenStat);
+                    logger.info("update tokenStat ok: {}", tokenStat);
+                    if(totalVolume != null) {
+                        totalVolume = NumberUtils.getBigDecimal(totalVolume, tokenStatNew.getVolume());
+                    }
+                }else {
+                    logger.warn("tokenStat volume null: {}, {}, {}", tokenStat.getToken(), startTime, endTime);
+                }
+            }
+
+            //update total stat
+            if(totalVolume != null) {
+                swapStat.setVolume(totalVolume);
+                swapStatService.save(swapStat);
+                logger.info("update total volume to: {}, {}", totalVolume, startTime);
+            }
+        }else {
+            logger.warn("current date token stat null: {}", startTime);
+        }
+    }
+
+    public void updatePoolVolume(long startTime, long endTime) {
+        Date statDate = new Date(startTime);
+        List<SwapPoolStat> swapPoolStatList = swapPoolStatService.getSwapPoolStatByDate(statDate);
+        if(swapPoolStatList != null && swapPoolStatList.size() > 0) {
+            for (SwapPoolStat poolStat: swapPoolStatList) {
+                SwapPoolStat poolStatNew = swapTxnService.getPoolVolume(poolStat.getTokenFirst(), poolStat.getTokenSecond(), startTime, endTime);
+                if(poolStatNew != null) {
+                    poolStat.setVolume(poolStatNew.getVolume());
+                    poolStat.setVolumeAmount(poolStatNew.getVolumeAmount());
+                    swapPoolStatService.save(poolStat);
+                    logger.info("update pool stat volume ok: {}", poolStat);
+                }else {
+                    logger.warn("get volume null: {}, {}, {}, {}", poolStat.getTokenFirst(), poolStat.getTokenSecond(), startTime, endTime);
+                }
+            }
+        }else {
+            logger.warn("current date pool stat is null: {}", startTime);
+        }
     }
 
     TotalTvl getTvls() throws JSONRPC2SessionException {

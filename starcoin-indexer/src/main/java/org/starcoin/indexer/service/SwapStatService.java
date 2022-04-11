@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.starcoin.bean.SwapStat;
 import org.starcoin.indexer.repository.SwapStatRepository;
 
+import java.util.Date;
+
 @Service
 public class SwapStatService {
     @Autowired
@@ -12,5 +14,10 @@ public class SwapStatService {
 
     public void save(SwapStat swapStat) {
         swapStatRepository.save(swapStat);
+    }
+
+    public SwapStat get(long date) {
+        Date statDate = new Date(date);
+        return swapStatRepository.findTokenStatByDate(statDate);
     }
 }

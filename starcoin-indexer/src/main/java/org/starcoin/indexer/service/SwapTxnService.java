@@ -3,7 +3,6 @@ package org.starcoin.indexer.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.SwapPoolStat;
 import org.starcoin.bean.SwapTransaction;
@@ -12,14 +11,13 @@ import org.starcoin.indexer.repository.SwapTransactionRepository;
 import org.starcoin.indexer.repository.TokenVolumeDTO;
 import org.starcoin.utils.NumberUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 public class SwapTxnService {
     private static final Logger logger = LoggerFactory.getLogger(SwapTxnService.class);
 
-    @Value("${starcoin.network}")
-    private String network;
     @Autowired
     private SwapTransactionRepository swapTransactionRepository;
 
@@ -27,8 +25,16 @@ public class SwapTxnService {
         swapTransactionRepository.save(swapTransaction);
     }
 
+    public void updateTotalValue(BigDecimal totalValue, long seq) {
+        swapTransactionRepository.updateTotalValue(totalValue, seq);
+    }
+
     public List<SwapTransaction> getAll() {
         return swapTransactionRepository.findAll();
+    }
+
+    public List<SwapTransaction> getTransactionsByTs(long begin, long end) {
+        return swapTransactionRepository.findSwapTransactionByTs(begin, end);
     }
 
     public void saveList(List<SwapTransaction> swapTransactionList) {

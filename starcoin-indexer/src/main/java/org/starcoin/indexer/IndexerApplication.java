@@ -139,6 +139,14 @@ public class IndexerApplication {
                 int date = Integer.parseInt(args[2]);
                 tokenPriceHandle.statPrice(date);
             }
+            if("repair".equals(args[1])) {
+                int beginDate = Integer.parseInt(args[2]);
+                int endDate = Integer.parseInt(args[3]);
+                for (int i = beginDate; i < endDate; i++) {
+                    tokenPriceHandle.getPrice(i);
+                    logger.info("swap txn repair ok: {} ", i);
+                }
+            }
         }
     }
 

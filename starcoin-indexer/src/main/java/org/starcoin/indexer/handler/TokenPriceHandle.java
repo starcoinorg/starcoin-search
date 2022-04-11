@@ -5,11 +5,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.starcoin.bean.OracleTokenPair;
-import org.starcoin.bean.SwapToken;
-import org.starcoin.bean.TokenPrice;
-import org.starcoin.bean.TokenPriceStat;
+import org.starcoin.bean.*;
 import org.starcoin.constant.StarcoinNetwork;
+import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.indexer.service.TokenPriceService;
 import org.starcoin.utils.SwapApiClient;
 
@@ -25,6 +23,7 @@ import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @Service
 public class TokenPriceHandle {
+    private static final long AN_HOUR = 60 * 60 * 1000;
     private static final Logger logger = LoggerFactory.getLogger(TokenPriceHandle.class);
     @Value("${starcoin.network}")
     private String network;
@@ -34,6 +33,8 @@ public class TokenPriceHandle {
 
     @Autowired
     private TokenPriceService tokenPriceService;
+    @Autowired
+    private SwapTxnService swapTxnService;
 
     public void statPrice(int date) {
         long begin = getTimeStamp(date - 1);
@@ -63,6 +64,7 @@ public class TokenPriceHandle {
         }
         List<SwapToken> tokenList = null;
         Map<String, String> tokenInfos = new HashMap<>();
+        Map<String, BigDecimal> tokenPrices = new HashMap<>();
 
         try {
              tokenList = swapApiClient.getTokens(localNetwork.getValue());
@@ -96,6 +98,7 @@ public class TokenPriceHandle {
                                 String longName = tokenInfos.get(token);
                                 if(longName != null) {
                                     tokenPriceList.add(new TokenPrice(longName, timestamp, priceA));
+                                    tokenPrices.put(longName, priceA);
                                 }else {
                                     logger.warn("to long name err: {}", token);
                                 }
@@ -108,12 +111,59 @@ public class TokenPriceHandle {
                     if(tokenPriceList.size() > 0) {
                         tokenPriceService.savePriceList(tokenPriceList);
                         logger.info("save token price ok: {}", tokenPriceList.size());
+                        // update swap txn total value
+                        long begin = timestamp - AN_HOUR;
+                        long end = timestamp;
+                        List<SwapTransaction> swapTransactionList =  swapTxnService.getTransactionsByTs(begin, end);
+                        if(swapTransactionList != null && swapTransactionList.size() > 0) {
+                            for (SwapTransaction swapTxn: swapTransactionList) {
+                                BigDecimal total = getTotalValue(swapTxn, tokenPrices);
+                                if(total != null) {
+                                    swapTxnService.updateTotalValue(total, swapTxn.getSwapSeq());
+                                    logger.info("update swap transaction id: {}, total: {}",  swapTxn.getSwapSeq(), total);
+                                }else {
+                                    logger.warn("get swap transaction total null: {}", swapTxn.getSwapSeq());
+                                }
+                            }
+                        }else {
+                            logger.warn("get swap transaction null: {}, {}", begin, end);
+                        }
+                    }else {
+                        logger.warn("token price is null: {}", timestamp);
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("get token price error:", e);
             }
         }
+    }
 
+    private BigDecimal getTotalValue(SwapTransaction swapTxn, Map<String, BigDecimal> priceMap) {
+        BigDecimal priceA = priceMap.get(swapTxn.getTokenA());
+        BigDecimal priceB = priceMap.get(swapTxn.getTokenB());
+        boolean isSwap = SwapType.isSwap(swapTxn.getSwapType());
+        if (isSwap) {
+            if (priceA != null) {
+                return priceA.multiply(swapTxn.getAmountA());
+            } else if (priceB != null) {
+                return priceB.multiply(swapTxn.getAmountB());
+            }
+        } else {
+            BigDecimal total;
+            BigDecimal two = new BigDecimal(2);
+            if (priceA != null) {
+                total = priceA.multiply(swapTxn.getAmountA());
+                if (priceB != null) {
+                    return total.add(priceB.multiply(swapTxn.getAmountB()));
+                } else {
+                    return total.multiply(two);
+                }
+            } else {
+                if (priceB != null) {
+                    return two.multiply(priceB.multiply(swapTxn.getAmountB()));
+                }
+            }
+        }
+        return null;
     }
 }

@@ -13,7 +13,7 @@ public class TokenPriceStatIndexer extends QuartzJobBean {
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
-        tokenPriceHandle.statPrice(0);
+        tokenPriceHandle.statPrice(-1);
         logger.info("token price hour handle ok. ");
     }
 }

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-c84bc62
+          image: starcoin/starcoin_indexer:sha-9ce179a
           ports:
             - containerPort: 8300
           env:
@@ -26,7 +26,7 @@ spec:
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
-              value: "swap_stats"
+              value: "swap_stats,price_hour,price_stat"
             - name: TXN_OFFSET
               value: "4131794"
             - name: BULK_SIZE
@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "auto_repair 5014660"
+              value: "auto_repair 5127520"

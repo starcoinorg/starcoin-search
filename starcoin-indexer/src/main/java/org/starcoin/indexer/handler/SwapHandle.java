@@ -21,6 +21,7 @@ import org.starcoin.types.TypeTag;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 
 @Service
@@ -80,7 +81,7 @@ public class SwapHandle {
                 TokenTvl tvl = tokenTvlMapping.get(token.getTokenId());
                 if (tvl != null) {
                     tokenStat.setTvl(tvl.getTvl());
-                    tokenStat.setTvlAmount(tvl.getTvlAmount());
+                    tokenStat.setTvlAmount(divideScalingFactorInt(tagStr, tvl.getTvlAmount()));
                     tokenStatList.add(tokenStat);
                 } else {
                     logger.warn("tvl is null: {}", token);
@@ -99,8 +100,8 @@ public class SwapHandle {
                 // get pool tvl
                 poolStat.setTvlA(poolInfo.getTokenXReserveInUsd());
                 poolStat.setTvlB(poolInfo.getTokenYReserveInUsd());
-                poolStat.setTvlAAmount(poolInfo.getTokenXReserve());
-                poolStat.setTvlBAmount(poolInfo.getTokenYReserve());
+                poolStat.setTvlAAmount(divideScalingFactorInt(tokenA, poolInfo.getTokenXReserve()));
+                poolStat.setTvlBAmount(divideScalingFactorInt(tokenB, poolInfo.getTokenYReserve()));
                 poolStatList.add(poolStat);
                 //add for total
                 BigDecimal tvl = NumberUtils.getBigDecimal(swapStat.getTvl(), poolInfo.getTokenXReserveInUsd());
@@ -224,5 +225,10 @@ public class SwapHandle {
 
     private BigDecimal divideScalingFactor(String key, BigDecimal amount) {
         return ServiceUtils.divideScalingFactor(stateRPCClient, key, amount);
+    }
+
+    private BigInteger divideScalingFactorInt(String key, BigInteger amount) {
+        BigDecimal value = ServiceUtils.divideScalingFactor(stateRPCClient, key, new BigDecimal(amount));
+        return value.toBigInteger();
     }
 }

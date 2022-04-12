@@ -89,6 +89,13 @@ public class SwapPoolStat {
         this.id = id;
     }
 
+    public String getTokenFirst() {
+        return id.getTokenA();
+    }
+    public String getTokenSecond() {
+        return id.getTokenB();
+    }
+
 }
 
 @Embeddable

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair-price
-          image: starcoin/starcoin_indexer:sha-215fa2a
+          image: starcoin/starcoin_indexer:sha-ab890b9
           ports:
             - containerPort: 8300
           env:
@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "token_price_handle repair -60 -30"
+              value: "swap_handle -3 -2 repair"

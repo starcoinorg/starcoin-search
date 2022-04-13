@@ -11,6 +11,7 @@ import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.indexer.service.TokenPriceService;
 import org.starcoin.utils.SwapApiClient;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -18,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.starcoin.constant.Constant.STC_TOKEN_OR_TAG;
 import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @Service
@@ -36,17 +36,32 @@ public class TokenPriceHandle {
     @Autowired
     private SwapTxnService swapTxnService;
 
+    @PostConstruct
+    public void init() {
+        //init network
+        if (localNetwork == null) {
+            localNetwork = StarcoinNetwork.fromValue(network);
+        }
+    }
     public void statPrice(int date) {
         long begin = getTimeStamp(date - 1);
         long end = getTimeStamp(date);
-       TokenPriceStat tokenPriceStat = tokenPriceService.getTokenPrice(STC_TOKEN_OR_TAG, begin, end);
-       logger.info("stat price : {}", tokenPriceStat);
-       if(tokenPriceStat != null) {
-           tokenPriceService.savePriceStat(tokenPriceStat);
-           logger.info("stat price save ok: {}", tokenPriceStat);
-       }else {
-           logger.warn("stat price is null: {}, {}", begin, end);
-       }
+        List<SwapToken> tokenList = getTokens();
+        if(tokenList != null && tokenList.size() > 0) {
+            for (SwapToken token: tokenList) {
+                String tokenTag = token.getStructTag().toString();
+                TokenPriceStat tokenPriceStat = tokenPriceService.getTokenPrice(tokenTag, begin, end);
+                logger.info("stat price : {}", tokenPriceStat);
+                if(tokenPriceStat != null && tokenPriceStat.getPrice() != null) {
+                    tokenPriceService.savePriceStat(tokenPriceStat);
+                    logger.info("stat price save ok: {}", tokenPriceStat);
+                }else {
+                    logger.warn("stat price is null: {}, {}, {}", tokenTag, begin, end);
+                }
+            }
+        }else{
+            logger.warn("token list is null");
+        }
     }
 
     public void getPrice(int date) {
@@ -58,31 +73,18 @@ public class TokenPriceHandle {
 
     public  void getHourPrice(long timestamp) {
         logger.info("get price: {}" ,  timestamp);
-        //init network
-        if (localNetwork == null) {
-            localNetwork = StarcoinNetwork.fromValue(network);
-        }
-        List<SwapToken> tokenList = null;
+        List<SwapToken> tokenList = getTokens();
         Map<String, String> tokenInfos = new HashMap<>();
         Map<String, BigDecimal> tokenPrices = new HashMap<>();
 
-        try {
-             tokenList = swapApiClient.getTokens(localNetwork.getValue());
-            for (SwapToken token: tokenList) {
-                tokenInfos.put(token.getTokenId(), token.getStructTag().toString());
-            }
-        } catch (IOException e) {
-            logger.error("get token list error:", e);
-        }
         if(tokenList != null) {
 //            get an hour ago price
             List<String> tokens = new ArrayList<>();
             for (SwapToken token: tokenList) {
-                tokens.add(tokenInfos.get(token.getTokenId()));
+                String tokenTag = token.getStructTag().toString();
+                tokenInfos.put(token.getTokenId(), tokenTag);
+                tokens.add(tokenTag);
             }
-        //temp add stc
-//        tokenInfos.put("STC", STC_TOKEN_OR_TAG);
-//        tokens.add(STC_TOKEN_OR_TAG);
             try {
 //                long timestamp = getAnHourAgo();
                List<OracleTokenPair> pairs = swapApiClient.getProximatePriceRounds(localNetwork.getValue(), tokens, String.valueOf(timestamp));
@@ -136,6 +138,16 @@ public class TokenPriceHandle {
                 logger.error("get token price error:", e);
             }
         }
+    }
+
+    private List<SwapToken> getTokens() {
+        List<SwapToken> tokenInfos = new ArrayList<>();
+        try {
+           tokenInfos = swapApiClient.getTokens(localNetwork.getValue());
+        } catch (IOException e) {
+            logger.error("get token list error:", e);
+        }
+        return tokenInfos;
     }
 
     private BigDecimal getTotalValue(SwapTransaction swapTxn, Map<String, BigDecimal> priceMap) {

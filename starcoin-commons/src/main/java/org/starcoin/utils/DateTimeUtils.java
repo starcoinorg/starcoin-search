@@ -13,4 +13,10 @@ public class DateTimeUtils {
         Calendar calendar = Calendar.getInstance();
         return calendar.getTimeInMillis() - 3600 * 1000;
     }
+
+    public static long getWholeDatTime(long date) {
+        long now = date / 1000l;
+        long daySecond = 60 * 60 * 24;
+        return (now - now % daySecond) * 1000l;
+    }
 }

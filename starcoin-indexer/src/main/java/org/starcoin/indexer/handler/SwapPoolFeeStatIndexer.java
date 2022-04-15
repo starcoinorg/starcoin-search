@@ -13,6 +13,7 @@ import java.sql.Date;
 import java.util.List;
 
 import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
+import static org.starcoin.utils.DateTimeUtils.getWholeDatTime;
 
 public class SwapPoolFeeStatIndexer extends QuartzJobBean {
     private static final Logger logger = LoggerFactory.getLogger(SwapPoolFeeStatIndexer.class);
@@ -23,14 +24,15 @@ public class SwapPoolFeeStatIndexer extends QuartzJobBean {
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
-        Date fromDate = new Date(getTimeStamp(-2));
-        Date toDate = new Date(getTimeStamp(0));
-        List<PoolFeeStat> feeList = swapEventService.getFeeStat(fromDate, toDate);
+        long lastDayTime = getTimeStamp(0);
+        Date statDate = new Date(getWholeDatTime(lastDayTime));
+
+        List<PoolFeeStat> feeList = swapEventService.getFeeStat(statDate, lastDayTime);
         if(feeList != null && feeList.size() > 0) {
             poolFeeStatRepository.saveAll(feeList);
-            logger.info("swap pool fee stat handle ok: {} to {} ", fromDate, toDate);
+            logger.info("swap pool fee stat handle ok: {} to {} ", statDate, lastDayTime);
         }else {
-            logger.warn("swap pool fee stat result is null: {} to {} ", fromDate, toDate);
+            logger.warn("swap pool fee stat result is null: {} to {} ", statDate, lastDayTime);
         }
     }
 }

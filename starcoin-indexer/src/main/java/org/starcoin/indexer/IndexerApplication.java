@@ -139,6 +139,18 @@ public class IndexerApplication {
                 }
             }
         }
+        //fee stat
+        if(args[0].equals("fee_stat")) {
+            PoolFeeStatHandle poolFeeStatHandle = (PoolFeeStatHandle) context.getBean("poolFeeStatHandle");
+            int beginDate = Integer.parseInt(args[1]);
+            int endDate = Integer.parseInt(args[2]);
+            for (int i = beginDate; i < endDate; i++) {
+                long startTs = getTimeStamp(i);
+                poolFeeStatHandle.handle(startTs);
+                logger.info("fee_stat update ok: {}", startTs);
+            }
+        }
+
         //save price list
         if(args[0].equals("token_price_handle")) {
             TokenPriceHandle tokenPriceHandle = (TokenPriceHandle) context.getBean("tokenPriceHandle");

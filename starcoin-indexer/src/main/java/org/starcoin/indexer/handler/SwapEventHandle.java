@@ -5,7 +5,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.TransactionRPCClient;
+import org.starcoin.bean.Block;
 import org.starcoin.bean.Event;
 import org.starcoin.bean.SwapFeeEvent;
 import org.starcoin.bean.SwapFeeEventJson;
@@ -13,6 +15,7 @@ import org.starcoin.indexer.service.SwapEventService;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -21,7 +24,8 @@ public class SwapEventHandle {
     private static final Logger logger = LoggerFactory.getLogger(SwapEventHandle.class);
     @Autowired
     private TransactionRPCClient transactionRPCClient;
-
+    @Autowired
+    private BlockRPCClient blockRPCClient;
     @Autowired
     private SwapEventService swapEventService;
 
@@ -32,18 +36,19 @@ public class SwapEventHandle {
         try {
             //read from node
             long toNumber = offset + 32;
+            //read time from begin block
+            Block block =blockRPCClient.getBlockByHeight(offset);
+            Date eventDate = new Date();
+            if(block != null) {
+                eventDate = new Date(block.getHeader().getTimestamp());
+            }
             List<Event> eventList = transactionRPCClient.getEvents(offset, toNumber,
                     null, null, Collections.singletonList(TYPE_TAG), null);
             if(eventList != null) {
                 List<SwapFeeEvent> swapFeeEventList = new ArrayList<>();
-                long blockNumber = 0;
                 for (Event event: eventList) {
                     SwapFeeEventJson eventJson = JSON.parseObject(event.getDecodeEventData(), SwapFeeEventJson.class);
-                    swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson));
-                    long tempNumber = Long.parseLong(event.getBlockNumber());
-                    if( tempNumber > blockNumber) {
-                        blockNumber = tempNumber;
-                    }
+                    swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson, eventDate));
                 }
                 swapEventService.saveAllFeeEvent(swapFeeEventList);
                 logger.info("handle swap event ok: " + offset);

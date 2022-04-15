@@ -61,6 +61,7 @@ public class UpdateTVLHandle {
            if(block != null) {
                String stateRoot = block.getHeader().getStateRoot();
                long timestamp = block.getHeader().getTimestamp();
+               logger.info("block num: {}, state root: {}", beginBlockNumber, stateRoot);
                Map<String[], Long[]> poolReserves = ServiceUtils.getTokenReserveFromState(stateRPCClient, contractAddress, stateRoot);
                Map<String, TokenTvl> tokenTvlMap = new HashMap<>();
                long wholeDateTime = getWholeDatTime(timestamp);
@@ -68,7 +69,7 @@ public class UpdateTVLHandle {
                SwapStat swapStat = new SwapStat(statDate);
                //update pool tvl
                for (String[] key: poolReserves.keySet()) {
-                   logger.info("handle : {} / {}", key[1], key[0]);
+                   logger.info("handle pool : {} / {}", key[1], key[0]);
                    //get token tvl
                    TokenTvl tokenTvlA = tokenTvlMap.get(key[1]);
                    TokenTvl tokenTvlB = tokenTvlMap.get(key[0]);
@@ -76,6 +77,7 @@ public class UpdateTVLHandle {
                    if(value[0] == 0 || value[1]== 0) {
                        continue;
                    }
+                   logger.info("handle pool amount : {} / {}", value[1], value[0]);
                    SwapPoolStat poolStat = new SwapPoolStat(key[1], key[0], wholeDateTime);
                    //set amount
                    BigDecimal amountA = ServiceUtils.divideScalingFactor(stateRPCClient, key[1], new BigDecimal(value[1]));

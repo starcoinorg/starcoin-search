@@ -139,6 +139,11 @@ public class IndexerApplication {
                 }
             }
         }
+        if(args[0].equals("update_tvl")) {
+            UpdateTVLHandle updateTVLHandle = (UpdateTVLHandle) context.getBean("updateTVLHandle");
+            int beginDate = Integer.parseInt(args[1]);
+            updateTVLHandle.handle(beginDate);
+        }
         //save price list
         if(args[0].equals("token_price_handle")) {
             TokenPriceHandle tokenPriceHandle = (TokenPriceHandle) context.getBean("tokenPriceHandle");

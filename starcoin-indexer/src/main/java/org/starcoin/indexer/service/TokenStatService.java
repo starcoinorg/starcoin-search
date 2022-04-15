@@ -17,6 +17,11 @@ public class TokenStatService {
         tokenStatRepository.saveAll(tokenStatList);
     }
 
+    public void updateTvl(TokenStat tokenStat) {
+        tokenStatRepository.updateTvlAndAmount(tokenStat.getToken(), tokenStat.getTimestamp(), tokenStat.getTvl(),
+                tokenStat.getTvlAmount());
+    }
+
     public TokenStat getTokenStat(long startTime, String tokenName) {
         Date startDate = new Date(startTime);
         return tokenStatRepository.findTokenStatById(startDate, tokenName);

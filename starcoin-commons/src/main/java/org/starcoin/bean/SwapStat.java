@@ -17,6 +17,12 @@ public class SwapStat {
     private BigDecimal volume;
     @Column(name = "tvl")
     private BigDecimal tvl;
+    public SwapStat(Date date) {
+        this.statDate = date;
+    }
+
+    public SwapStat() {
+    }
 
     public Date getStatDate() {
         return statDate;
@@ -40,5 +46,14 @@ public class SwapStat {
 
     public void setTvl(BigDecimal tvl) {
         this.tvl = tvl;
+    }
+
+    @Override
+    public String toString() {
+        return "SwapStat{" +
+                "statDate=" + statDate +
+                ", volume=" + volume +
+                ", tvl=" + tvl +
+                '}';
     }
 }

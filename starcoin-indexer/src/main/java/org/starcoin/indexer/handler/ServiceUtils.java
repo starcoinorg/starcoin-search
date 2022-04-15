@@ -198,6 +198,28 @@ public class ServiceUtils {
         return actualValue;
     }
 
+    public static Map<String[], Long[]> getTokenReserveFromState(StateRPCClient stateRPCClient, String contractAddress, String stateRoot) throws JSONRPC2SessionException {
+        ListResource resource = stateRPCClient.getState(contractAddress, true, stateRoot);
+//        System.out.println(resource);
+        Map<String[], Long[]> poolReserves = new HashMap<>();
+        for (String key : resource.getResources().keySet()) {
+            if(key.contains("TokenSwapPair")) {
+                String tokenPair = key.substring(key.indexOf("<") + 1, key.length() - 1);
+                String[] tokens = tokenPair.split(",");
+                if (tokens.length != 2) {
+                    logger.warn("state data error:", key);
+                    continue;
+                }
+//                System.out.println("x: " + tokens[0] + ", y: " + tokens[1]);
+                long xReserve = resource.getResources().get(key).getJson().get("token_x_reserve").get("value").longValue();
+                long yReserve = resource.getResources().get(key).getJson().get("token_y_reserve").get("value").longValue();
+//                System.out.println("x: " + xReserve + ", y: " + yReserve);
+                poolReserves.put(new String[]{tokens[0].trim(), tokens[1].trim()}, new Long[]{xReserve, yReserve});
+            }
+        }
+        return poolReserves;
+    }
+
     static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {
         List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
         if (transactionList == null) {

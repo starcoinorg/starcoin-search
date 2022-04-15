@@ -26,7 +26,6 @@ import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 public class SwapEventService {
     private static final Logger logger = LoggerFactory.getLogger(SwapEventService.class);
     private static final String SWAP_EVENT_HANDLE_OFFSET = "SWAP_EVENT_OFFSET";
-    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     @Autowired
     private HandleOffsetRepository handleOffsetRepository;
     @Autowired

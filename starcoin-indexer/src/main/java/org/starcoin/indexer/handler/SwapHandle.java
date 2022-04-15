@@ -63,8 +63,7 @@ public class SwapHandle {
                 return;
             }
 
-            SwapStat swapStat = new SwapStat();
-            swapStat.setStatDate(new Date(startTime));
+            SwapStat swapStat = new SwapStat(new Date(startTime));
 
             Map<String, String> tokenMapping = new HashMap<>();
             Map<String, TokenTvl> tokenTvlMapping = new HashMap<>();

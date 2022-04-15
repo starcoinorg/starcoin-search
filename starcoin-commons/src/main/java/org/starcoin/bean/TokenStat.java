@@ -95,9 +95,12 @@ public class TokenStat {
         return tokenStatId.getToken();
     }
 
+    public Date getTimestamp() {return tokenStatId.getTimestamp();}
+
     @Override
     public String toString() {
         return "TokenStat{" +
+                "tokenStatId=" + tokenStatId +
                 ", volumeAmount=" + volumeAmount +
                 ", volume=" + volume +
                 ", tvl=" + tvl +
@@ -135,5 +138,13 @@ class TokenStatId implements Serializable {
 
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "TokenStatId{" +
+                "token='" + token + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
     }
 }

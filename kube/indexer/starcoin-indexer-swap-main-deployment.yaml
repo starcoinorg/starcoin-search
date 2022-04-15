@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-repair-deployment
+  name: starcoin-indexer-swap-deployment
   namespace: starcoin-main
   labels:
-    app: starcoin-indexer-repair
+    app: starcoin-indexer-swap
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer-repair
+      app: starcoin-indexer-swap
   template:
     metadata:
       labels:
-        app: starcoin-indexer-repair
+        app: starcoin-indexer-swap
     spec:
       containers:
-        - name: starcoin-indexer-repair
+        - name: starcoin-indexer-swap
           image: starcoin/starcoin_indexer:sha-21c0315
           ports:
             - containerPort: 8300
@@ -26,9 +26,9 @@ spec:
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
-              value: ""
+              value: "swap_stats,price_hour,price_stat"
             - name: TXN_OFFSET
-              value: "4131794"
+              value: "0"
             - name: BULK_SIZE
               value: "100"
             - name: STARCOIN_ES_PWD
@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "auto_repair 5210280"
+              value: ""

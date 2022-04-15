@@ -84,6 +84,9 @@ public class SwapPoolStat {
     public PoolStatId getId() {
         return id;
     }
+    public Date getTimeStamp() {
+        return id.getTimestamp();
+    }
 
     public void setId(PoolStatId id) {
         this.id = id;
@@ -96,6 +99,18 @@ public class SwapPoolStat {
         return id.getTokenB();
     }
 
+    @Override
+    public String toString() {
+        return "SwapPoolStat{" +
+                "id=" + id +
+                ", volumeAmount=" + volumeAmount +
+                ", volume=" + volume +
+                ", tvlA=" + tvlA +
+                ", tvlAAmount=" + tvlAAmount +
+                ", tvlB=" + tvlB +
+                ", tvlBAmount=" + tvlBAmount +
+                '}';
+    }
 }
 
 @Embeddable
@@ -143,5 +158,14 @@ class PoolStatId implements Serializable {
 
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "PoolStatId{" +
+                "tokenA='" + tokenA + '\'' +
+                ", tokenB='" + tokenB + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
     }
 }

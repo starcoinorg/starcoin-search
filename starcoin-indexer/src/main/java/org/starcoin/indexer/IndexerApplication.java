@@ -142,7 +142,11 @@ public class IndexerApplication {
         if(args[0].equals("update_tvl")) {
             UpdateTVLHandle updateTVLHandle = (UpdateTVLHandle) context.getBean("updateTVLHandle");
             int beginDate = Integer.parseInt(args[1]);
-            updateTVLHandle.handle(beginDate);
+            int count = Integer.parseInt(args[2]);
+            for (int i= 0; i < count; i++) {
+                updateTVLHandle.handle(beginDate + i * 17280);
+            }
+           logger.info("update tvl ok: {}, {}", beginDate, count);
         }
         //save price list
         if(args[0].equals("token_price_handle")) {

@@ -34,7 +34,7 @@ public class SwapFeeEvent {
         this.timestamp = timestamp;
     }
 
-    public static SwapFeeEvent fromJson(SwapFeeEventJson eventJson) {
+    public static SwapFeeEvent fromJson(SwapFeeEventJson eventJson, Date eventDate) {
         SwapFeeEvent swapFeeEvent = new SwapFeeEvent();
         swapFeeEvent.setTokenFirst(eventJson.getxTokenCode().uniform());
         swapFeeEvent.setTokenSecond(eventJson.getyTokenCode().uniform());
@@ -42,7 +42,7 @@ public class SwapFeeEvent {
         swapFeeEvent.setFeeOut(eventJson.getFeeOut());
         swapFeeEvent.setFeeAddree(eventJson.getFeeAddree());
         swapFeeEvent.setSigner(eventJson.getSigner());
-        swapFeeEvent.setTimestamp(new Date());
+        swapFeeEvent.setTimestamp(eventDate);
         return swapFeeEvent;
     }
 

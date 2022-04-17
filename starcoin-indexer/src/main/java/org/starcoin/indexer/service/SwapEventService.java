@@ -6,11 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.*;
+import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.repository.HandleOffsetRepository;
 import org.starcoin.indexer.repository.SwapFeeDTO;
 import org.starcoin.indexer.repository.SwapFeeEventRepository;
 import org.starcoin.utils.SwapApiClient;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -20,7 +22,6 @@ import java.sql.Date;
 import java.util.List;
 
 import static org.starcoin.constant.Constant.STC_TOKEN_OR_TAG;
-import static org.starcoin.utils.DateTimeUtils.getTimeStamp;
 
 @Service
 public class SwapEventService {
@@ -34,7 +35,15 @@ public class SwapEventService {
     private SwapApiClient swapApiClient;
     @Value("${starcoin.network}")
     private String network;
+    private StarcoinNetwork localNetwork;
 
+    @PostConstruct
+    public void init() {
+        //init network
+        if (localNetwork == null) {
+            localNetwork = StarcoinNetwork.fromValue(network);
+        }
+    }
     public long getOffset() {
         HandleOffset offset = null;
         try {
@@ -71,8 +80,8 @@ public class SwapEventService {
         }
     }
 
-    public List<PoolFeeStat> getFeeStat(Date fromDate, Date toDate) {
-        List<SwapFeeDTO> feeEvents = swapFeeEventRepository.sumPoolFeeList(fromDate, toDate);
+    public List<PoolFeeStat> getFeeStat(Date statDate, long statDatetime) {
+        List<SwapFeeDTO> feeEvents = swapFeeEventRepository.sumPoolFeeList(statDate);
         if(feeEvents != null && feeEvents.size() > 0) {
             List<PoolFeeStat> poolFeeStatList = new ArrayList<>();
 
@@ -81,8 +90,7 @@ public class SwapEventService {
             int reTry = 3;
             while (reTry > 0) {
                 try {
-                    long current = getTimeStamp(-1);
-                    oracleTokenPair = swapApiClient.getProximatePriceRound(network, STC_TOKEN_OR_TAG, String.valueOf(current));
+                    oracleTokenPair = swapApiClient.getProximatePriceRound(localNetwork.getValue(), STC_TOKEN_OR_TAG, String.valueOf(statDatetime));
                     break;
                 } catch (IOException e) {
                     logger.error("get price error and retry", e);

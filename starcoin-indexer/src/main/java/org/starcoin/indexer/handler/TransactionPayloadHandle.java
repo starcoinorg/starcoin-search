@@ -15,6 +15,7 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.bean.Transaction;
 import org.starcoin.constant.Constant;
+import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.types.*;
 import org.starcoin.types.StructTag;
@@ -39,7 +40,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
 
     @Value("${starcoin.network}")
     private String network;
-
+    private StarcoinNetwork localNetwork;
     @Autowired
     private ElasticSearchHandler elasticSearchHandler;
     @Autowired
@@ -71,6 +72,10 @@ public class TransactionPayloadHandle extends QuartzJobBean {
             client = elasticSearchHandler.getClient();
         }
         index = ServiceUtils.getIndex(network, Constant.PAYLOAD_INDEX);
+        //init network
+        if (localNetwork == null) {
+            localNetwork = StarcoinNetwork.fromValue(network);
+        }
     }
 
     @Override
@@ -114,7 +119,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                                 logger.info("token price not cache, load from oracle: {}, {}", swapTransaction.getTokenA(), swapTransaction.getTokenB());
                                 long priceTime = swapTransaction.getTimestamp() - 300000 * (6 - retry);
                                 List<org.starcoin.bean.OracleTokenPair> oracleTokenPairs =
-                                        swapApiClient.getProximatePriceRounds(network, tokenList, String.valueOf(priceTime));
+                                        swapApiClient.getProximatePriceRounds(localNetwork.getValue(), tokenList, String.valueOf(priceTime));
                                 if (oracleTokenPairs != null && !oracleTokenPairs.isEmpty()) {
                                     BigDecimal priceA = null;
                                     OracleTokenPair oracleTokenA = oracleTokenPairs.get(0);

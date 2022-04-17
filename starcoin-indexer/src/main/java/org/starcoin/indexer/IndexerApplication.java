@@ -139,6 +139,7 @@ public class IndexerApplication {
                 }
             }
         }
+
         if(args[0].equals("update_tvl")) {
             UpdateTVLHandle updateTVLHandle = (UpdateTVLHandle) context.getBean("updateTVLHandle");
             int beginDate = Integer.parseInt(args[1]);
@@ -148,6 +149,19 @@ public class IndexerApplication {
             }
            logger.info("update tvl ok: {}, {}", beginDate, count);
         }
+
+        //fee stat
+        if(args[0].equals("fee_stat")) {
+            PoolFeeStatHandle poolFeeStatHandle = (PoolFeeStatHandle) context.getBean("poolFeeStatHandle");
+            int beginDate = Integer.parseInt(args[1]);
+            int endDate = Integer.parseInt(args[2]);
+            for (int i = beginDate; i < endDate; i++) {
+                long startTs = getTimeStamp(i);
+                poolFeeStatHandle.handle(startTs);
+                logger.info("fee_stat update ok: {}", startTs);
+            }
+        }
+      
         //save price list
         if(args[0].equals("token_price_handle")) {
             TokenPriceHandle tokenPriceHandle = (TokenPriceHandle) context.getBean("tokenPriceHandle");

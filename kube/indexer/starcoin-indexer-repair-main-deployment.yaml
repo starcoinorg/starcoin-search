@@ -26,9 +26,9 @@ spec:
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
-              value: ""
+              value: "swap_event_handle"
             - name: TXN_OFFSET
-              value: "4131794"
+              value: "0"
             - name: BULK_SIZE
               value: "100"
             - name: STARCOIN_ES_PWD

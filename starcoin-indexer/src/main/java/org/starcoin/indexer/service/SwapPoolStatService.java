@@ -24,6 +24,11 @@ public class SwapPoolStatService {
     public SwapPoolStat getSwapPoolStat(String tokenA, String tokenB, Date statDate) {
         return swapPoolStatRepository.findSwapPoolStatById(tokenA, tokenB, statDate);
     }
+    public void updateTvlAndAmount(SwapPoolStat poolStat) {
+        swapPoolStatRepository.updateTvlAndAmount(poolStat.getTokenFirst(), poolStat.getTokenSecond(),
+                poolStat.getTimeStamp(), poolStat.getTvlA(), poolStat.getTvlAAmount(),
+                poolStat.getTvlB(), poolStat.getTvlBAmount());
+    }
 
     public List<SwapPoolStat> getSwapPoolStatByDate(Date statDate) {
         return swapPoolStatRepository.findSwapPoolStatByDate(statDate);

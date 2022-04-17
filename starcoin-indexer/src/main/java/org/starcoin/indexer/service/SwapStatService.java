@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.starcoin.bean.SwapStat;
 import org.starcoin.indexer.repository.SwapStatRepository;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Service
@@ -14,6 +15,10 @@ public class SwapStatService {
 
     public void save(SwapStat swapStat) {
         swapStatRepository.save(swapStat);
+    }
+
+    public void updateTvl(Date date, BigDecimal tvl) {
+        swapStatRepository.updateTvl(date, tvl);
     }
 
     public SwapStat get(long date) {

@@ -52,12 +52,12 @@ public class SwapEventHandle {
                 }
                 swapEventService.saveAllFeeEvent(swapFeeEventList);
                 logger.info("handle swap event ok: " + offset);
+                //set new offset
+                swapEventService.updateOffset(toNumber);
+                logger.info("update swap handle offset: " + toNumber);
             }else {
                 logger.warn("get events from node is null: " + offset);
             }
-            //set new offset
-            swapEventService.updateOffset(toNumber);
-            logger.info("update swap handle offset: " + toNumber);
         } catch (Exception e) {
             logger.error("handle swap event error:", e);
         }

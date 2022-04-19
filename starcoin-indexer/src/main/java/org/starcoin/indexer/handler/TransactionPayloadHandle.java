@@ -89,15 +89,16 @@ public class TransactionPayloadHandle extends QuartzJobBean {
             //init offset
             transactionPayloadRemoteOffset = new TransferOffset();
             transactionPayloadRemoteOffset.setTimestamp("0");
+            transactionPayloadRemoteOffset.setOffset(0);
             ServiceUtils.setRemoteOffset(client, index, transactionPayloadRemoteOffset);
             logger.info("offset not init, init ok!");
         }
         try {
-            List<Transaction> transactionList = elasticSearchHandler.getTransactionByTimestamp(transactionPayloadRemoteOffset.getTimestamp());
+            List<Transaction> transactionList = elasticSearchHandler.getTransactionByGlobalIndex(transactionPayloadRemoteOffset.getOffset());
             if (!transactionList.isEmpty()) {
                 List<SwapTransaction> swapTransactionList = new ArrayList<>();
                 elasticSearchHandler.addUserTransactionToList(transactionList);
-                elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper, swapTransactionList);
+                long globalIndex = elasticSearchHandler.bulkAddPayload(index, transactionList, objectMapper, swapTransactionList);
                 //add es success and add swap txn
                 if (!swapTransactionList.isEmpty()) {
                     Map<String, BigDecimal> tokenPriceMap = new HashMap<>();
@@ -196,6 +197,7 @@ public class TransactionPayloadHandle extends QuartzJobBean {
                 Transaction last = transactionList.get(transactionList.size() - 1);
                 TransferOffset currentOffset = new TransferOffset();
                 currentOffset.setTimestamp(String.valueOf(last.getTimestamp()));
+                currentOffset.setOffset(globalIndex);
                 ServiceUtils.setRemoteOffset(client, index, currentOffset);
                 logger.info("update payload ok: {}", currentOffset);
             } else {

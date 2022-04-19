@@ -97,7 +97,7 @@ public class TransferHandle {
         return result;
     }
 
-    public void bulk(List<Transfer> transferList, int offset) {
+    public void bulk(List<Transfer> transferList, long offset) {
         if (transferList.isEmpty()) {
             logger.warn("transfer list is null");
             return;
@@ -105,7 +105,7 @@ public class TransferHandle {
         int size = transferList.size();
         BulkRequest bulkRequest = new BulkRequest();
         long timestamp = 0;
-        int successSize = offset;
+        long successSize = offset;
         for (Transfer transfer : transferList) {
             // update token index
             BigInteger amount = transfer.getAmountValue();

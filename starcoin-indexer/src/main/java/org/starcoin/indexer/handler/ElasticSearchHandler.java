@@ -632,10 +632,12 @@ public class ElasticSearchHandler {
         bulkRequest.add(updateRequest);
     }
 
-    public void bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper, List<SwapTransaction> swapTransactionList) throws IOException, DeserializationError {
+    public long bulkAddPayload(String payloadIndex, List<Transaction> transactionList, ObjectMapper objectMapper, List<SwapTransaction> swapTransactionList) throws IOException, DeserializationError {
         BulkRequest bulkRequest = new BulkRequest();
         List<org.starcoin.bean.TransactionPayload> transactionPayloadList = new ArrayList<>();
+        long globalIndex = 0;
         for (Transaction transaction : transactionList) {
+            globalIndex = transaction.getTransactionGlobalIndex();
             if (transaction.getUserTransaction() != null) {
                 RawTransaction rawTransaction = transaction.getUserTransaction().getRawTransaction();
                 String payload = rawTransaction.getPayload();
@@ -684,6 +686,7 @@ public class ElasticSearchHandler {
             transactionPayloadService.savePayload(transactionPayloadList);
             logger.info("save txn payload to pg ok: {}", transactionPayloadList.size());
         }
+        return globalIndex;
     }
 
     private void transferDifficulty(BlockHeader header) {
@@ -1027,6 +1030,26 @@ public class ElasticSearchHandler {
 
         return result.getContents();
     }
+    public List<Transaction> getTransactionByGlobalIndex(long globalIndex) throws IOException {
+        SearchRequest searchRequest = new SearchRequest(transactionIndex);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(20);
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("transaction_global_index").gt(globalIndex);
+        boolQuery.must(termQueryBuilder);
+        boolQuery.must(QueryBuilders.rangeQuery("transaction_index").gt(0));
+        searchSourceBuilder.query(boolQuery);
+
+        searchRequest.source(searchSourceBuilder);
+        searchSourceBuilder.sort("timestamp", SortOrder.ASC);
+
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        Result<Transaction> result = ServiceUtils.getSearchResult(searchResponse, Transaction.class);
+
+        return result.getContents();
+    }
+
 
     public void addUserTransactionToList(List<Transaction> transactionList) throws JSONRPC2SessionException {
         for (Transaction transaction : transactionList) {

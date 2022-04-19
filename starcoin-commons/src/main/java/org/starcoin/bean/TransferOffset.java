@@ -2,7 +2,7 @@ package org.starcoin.bean;
 
 public class TransferOffset {
     private String timestamp;
-    private int offset;
+    private long offset;
 
     public String getTimestamp() {
         return timestamp;
@@ -12,11 +12,11 @@ public class TransferOffset {
         this.timestamp = timestamp;
     }
 
-    public int getOffset() {
+    public long getOffset() {
         return offset;
     }
 
-    public void setOffset(int offset) {
+    public void setOffset(long offset) {
         this.offset = offset;
     }
 

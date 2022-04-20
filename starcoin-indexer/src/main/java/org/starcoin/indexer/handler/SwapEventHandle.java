@@ -41,7 +41,11 @@ public class SwapEventHandle {
             Date eventDate = new Date();
             if(block != null) {
                 eventDate = new Date(block.getHeader().getTimestamp());
+            }else {
+                logger.error("get block is null: {}", offset);
+                return;
             }
+            long handleCount = 0;
             List<Event> eventList = transactionRPCClient.getEvents(offset, toNumber,
                     null, null, Collections.singletonList(TYPE_TAG), null);
             if(eventList != null) {
@@ -49,12 +53,19 @@ public class SwapEventHandle {
                 for (Event event: eventList) {
                     SwapFeeEventJson eventJson = JSON.parseObject(event.getDecodeEventData(), SwapFeeEventJson.class);
                     swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson, eventDate));
+                    handleCount ++;
                 }
-                swapEventService.saveAllFeeEvent(swapFeeEventList);
-                logger.info("handle swap event ok: " + offset);
-                //set new offset
-                swapEventService.updateOffset(toNumber);
-                logger.info("update swap handle offset: " + toNumber);
+                if(handleCount > 0) {
+                    toNumber = offset + handleCount;
+                    swapEventService.saveAllFeeEvent(swapFeeEventList);
+                    logger.info("handle swap event ok: " + toNumber);
+                    //set new offset
+                    swapEventService.updateOffset(toNumber);
+                    logger.info("update swap handle offset: " + toNumber);
+                }else {
+                    logger.warn("handle count null: {}", offset);
+                }
+
             }else {
                 logger.warn("get events from node is null: " + offset);
             }

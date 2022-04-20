@@ -42,8 +42,21 @@ public class SwapEventHandle {
             if(block != null) {
                 eventDate = new Date(block.getHeader().getTimestamp());
             }else {
-                logger.error("get block is null: {}", offset);
-                return;
+                logger.warn("get block is null: {}", offset);
+                List<Block> blockList = blockRPCClient.getBlockListFromHeight(offset - 32, 32);
+                if(blockList != null && blockList.size() > 0) {
+                    long newTime = 0;
+                    long newTo = 0;
+                    for (Block block1 : blockList) {
+                        newTime = block1.getHeader().getTimestamp();
+                        newTo = block1.getHeader().getHeight();
+                    }
+                    toNumber = newTo;
+                    eventDate = new Date(newTime);
+                }else {
+                    logger.warn("get block list null: {}", offset - 32);
+                    return;
+                }
             }
             long handleCount = 0;
             List<Event> eventList = transactionRPCClient.getEvents(offset, toNumber,
@@ -56,15 +69,14 @@ public class SwapEventHandle {
                     handleCount ++;
                 }
                 if(handleCount > 0) {
-                    toNumber = offset + handleCount;
                     swapEventService.saveAllFeeEvent(swapFeeEventList);
-                    logger.info("handle swap event ok: " + toNumber);
-                    //set new offset
-                    swapEventService.updateOffset(toNumber);
-                    logger.info("update swap handle offset: " + toNumber);
+                    logger.info("handle swap event ok: " + offset);
                 }else {
                     logger.warn("handle count null: {}", offset);
                 }
+                //set new offset
+                swapEventService.updateOffset(toNumber);
+                logger.info("update swap handle offset: " + toNumber);
 
             }else {
                 logger.warn("get events from node is null: " + offset);

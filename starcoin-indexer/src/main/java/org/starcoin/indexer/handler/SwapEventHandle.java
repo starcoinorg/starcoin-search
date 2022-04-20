@@ -49,16 +49,22 @@ public class SwapEventHandle {
                     long newTo = 0;
                     for (Block block1 : blockList) {
                         newTime = block1.getHeader().getTimestamp();
-                        newTo = block1.getHeader().getHeight();
+                        if(block1.getHeader().getHeight() > newTo) {
+                            newTo = block1.getHeader().getHeight();
+                        }
                     }
                     toNumber = newTo;
+                    if(offset > toNumber) {
+                        offset = newTo - 32;
+                        logger.info("reset offset to : {}", offset);
+                    }
                     eventDate = new Date(newTime);
                 }else {
                     logger.warn("get block list null: {}", offset - 32);
                     return;
                 }
             }
-            long handleCount = 0;
+            long handleNumber = 0;
             List<Event> eventList = transactionRPCClient.getEvents(offset, toNumber,
                     null, null, Collections.singletonList(TYPE_TAG), null);
             if(eventList != null) {
@@ -66,11 +72,12 @@ public class SwapEventHandle {
                 for (Event event: eventList) {
                     SwapFeeEventJson eventJson = JSON.parseObject(event.getDecodeEventData(), SwapFeeEventJson.class);
                     swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson, eventDate));
-                    handleCount ++;
+                    handleNumber = Long.getLong(event.getBlockNumber());
                 }
-                if(handleCount > 0) {
+                if(handleNumber > 0) {
                     swapEventService.saveAllFeeEvent(swapFeeEventList);
-                    logger.info("handle swap event ok: " + offset);
+                    logger.info("handle swap event ok: " + handleNumber);
+                    toNumber = handleNumber;
                 }else {
                     logger.warn("handle count null: {}", offset);
                 }

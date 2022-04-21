@@ -72,7 +72,11 @@ public class SwapEventHandle {
                 for (Event event: eventList) {
                     SwapFeeEventJson eventJson = JSON.parseObject(event.getDecodeEventData(), SwapFeeEventJson.class);
                     swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson, eventDate));
-                    handleNumber = Long.parseLong(event.getBlockNumber());
+                    if(event != null) {
+                        handleNumber = Long.parseLong(event.getBlockNumber());
+                    }else {
+                        logger.warn("event is null");
+                    }
                 }
                 if(handleNumber > 0) {
                     swapEventService.saveAllFeeEvent(swapFeeEventList);

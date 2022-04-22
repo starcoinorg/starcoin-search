@@ -94,7 +94,7 @@ public class QuartzConfig {
     @Bean
     public Trigger swapStatsTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInHours(4)
+                .withIntervalInMinutes(60)
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(swapStatsJob())
                 .withIdentity("swap_stats")
@@ -144,7 +144,7 @@ public class QuartzConfig {
     @Bean
     public Trigger swapEventHandleTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(120)  //设置时间周期单位秒
+                .withIntervalInSeconds(30)  //设置时间周期单位秒
                 .repeatForever();
         return TriggerBuilder.newTrigger().forJob(swapEventHandleJob())
                 .withIdentity("swap_event_handle")

@@ -7,10 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.TransactionRPCClient;
-import org.starcoin.bean.Block;
-import org.starcoin.bean.Event;
-import org.starcoin.bean.SwapFeeEvent;
-import org.starcoin.bean.SwapFeeEventJson;
+import org.starcoin.bean.*;
 import org.starcoin.indexer.service.SwapEventService;
 
 import java.util.ArrayList;
@@ -34,14 +31,27 @@ public class SwapEventHandle {
         long offset = swapEventService.getOffset();
 
         try {
-            //read from node
-            long toNumber = offset + 32;
+            //get chain header
+            BlockHeader header = blockRPCClient.getChainHeader();
+            if(header == null) {
+                logger.warn("get chain header null and retry: {}", offset);
+                return;
+            }
+            if(offset > header.getHeight()) {
+                logger.warn("handle already to chain header.");
+                return;
+            }
+            long toNumber = (header.getHeight() > (offset + 32))? (offset + 32): header.getHeight();
             //read time from begin block
             Block block =blockRPCClient.getBlockByHeight(offset);
             Date eventDate = new Date();
             if(block != null) {
                 eventDate = new Date(block.getHeader().getTimestamp());
+            }else {
+                logger.warn("get block is null: {}", offset);
+                return;
             }
+            long handleNumber = 0;
             List<Event> eventList = transactionRPCClient.getEvents(offset, toNumber,
                     null, null, Collections.singletonList(TYPE_TAG), null);
             if(eventList != null) {
@@ -49,12 +59,18 @@ public class SwapEventHandle {
                 for (Event event: eventList) {
                     SwapFeeEventJson eventJson = JSON.parseObject(event.getDecodeEventData(), SwapFeeEventJson.class);
                     swapFeeEventList.add(SwapFeeEvent.fromJson(eventJson, eventDate));
+                    handleNumber ++;
                 }
-                swapEventService.saveAllFeeEvent(swapFeeEventList);
-                logger.info("handle swap event ok: " + offset);
+                if(handleNumber > 0) {
+                    swapEventService.saveAllFeeEvent(swapFeeEventList);
+                    logger.info("handle swap event ok: " + handleNumber);
+                }else {
+                    logger.warn("handle count null: {}", offset);
+                }
                 //set new offset
                 swapEventService.updateOffset(toNumber);
                 logger.info("update swap handle offset: " + toNumber);
+
             }else {
                 logger.warn("get events from node is null: " + offset);
             }

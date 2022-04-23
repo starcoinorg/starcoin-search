@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "swap_transaction")
 public class SwapTransaction {
+    @Id
     @SequenceGenerator(name = "seq_txn_id", allocationSize = 1, initialValue = 1, sequenceName = "swap_transaction_swap_seq_seq")
     @GeneratedValue(generator = "seq_txn_id", strategy = GenerationType.SEQUENCE)
     @Column(name = "swap_seq")
@@ -26,7 +27,6 @@ public class SwapTransaction {
     private long timestamp;
     @Column(name = "swap_type")
     private SwapType swapType;
-    @Id
     @Column(name = "transaction_hash")
     private String transactionHash;
 

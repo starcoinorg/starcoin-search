@@ -84,6 +84,8 @@ public class ElasticSearchHandler {
 
     @Value("${starcoin.network}")
     private String network;
+    @Value("${swap.contract.address}")
+    private String contractAddress;
     private Set<TokenCode> tokenCodeList = new HashSet<>();
 
     private String blockIdsIndex;
@@ -647,8 +649,8 @@ public class ElasticSearchHandler {
                 if (transactionPayload instanceof TransactionPayload.ScriptFunction) {
                     TransactionPayload.ScriptFunction scriptFunctionPayload = (TransactionPayload.ScriptFunction) transactionPayload;
                     String function = scriptFunctionPayload.value.function.toString();
-                    if (SwapType.isSwapType(function)) {
-                        //todo add farm swap function
+                    String functionAddress = scriptFunctionPayload.value.module.address.toString();
+                    if (SwapType.isSwapType(function) && functionAddress.equals(contractAddress)) {
                         if (scriptFunctionPayload.value.ty_args.size() > 1 && scriptFunctionPayload.value.args.size() > 1) {
                             //parse token and amount
                             String tokenA = StructTagUtil.structTagToString(((org.starcoin.types.TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(0)).value);

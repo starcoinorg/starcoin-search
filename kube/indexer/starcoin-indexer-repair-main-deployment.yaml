@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-f0e7d8d
+          image: starcoin/starcoin_indexer:sha-6b3888e
           ports:
             - containerPort: 8300
           env:
@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "auto_repair 5295740"
+              value: "auto_repair 5356700"

@@ -20,10 +20,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.starcoin.api.ContractRPCClient;
 import org.starcoin.api.Result;
+import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
-import org.starcoin.bean.TokenInfo;
-import org.starcoin.bean.TokenMarketCap;
+import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
 
 import javax.annotation.PostConstruct;
@@ -32,8 +33,9 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.starcoin.api.TokenContractRPCClient.STCTypeTag;
-import static org.starcoin.indexer.handler.ServiceUtils.tokenCache;
+import static org.starcoin.constant.Constant.STAR_TOKEN_OR_TAG;
+import static org.starcoin.constant.Constant.STC_TOKEN_OR_TAG;
+import static org.starcoin.indexer.handler.ServiceUtils.getTokenInfo;
 
 @Service
 public class MarketCapHandle {
@@ -44,6 +46,10 @@ public class MarketCapHandle {
 
     @Autowired
     private TokenContractRPCClient tokenContractRPCClient;
+    @Autowired
+    private ContractRPCClient contractRPCClient;
+    @Autowired
+    private StateRPCClient stateRPCClient;
 
     public MarketCapHandle(RestHighLevelClient client) {
         this.client = client;
@@ -86,7 +92,7 @@ public class MarketCapHandle {
             BulkRequest bulkRequest = new BulkRequest();
             for (TokenMarketCap marketCap : marketCaps) {
                 //factor
-                TokenInfo tokenInfo = tokenCache.get(marketCap.getTypeTag());
+                TokenInfo tokenInfo = getTokenInfo(stateRPCClient, marketCap.getTypeTag());
                 if (tokenInfo != null) {
                     marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
                 } else {
@@ -111,9 +117,12 @@ public class MarketCapHandle {
         for (SearchHit hit : searchHit) {
             TokenMarketCap marketCap = JSON.parseObject(hit.getSourceAsString(), TokenMarketCap.class);
             try {
-                if (marketCap.getTypeTag().equals(STCTypeTag)) {
+                if (marketCap.getTypeTag().equals(STC_TOKEN_OR_TAG)) {
                     marketCap.setMarketCap(tokenContractRPCClient.getSTCCurrentSupply());
-                } else {
+                }else if(marketCap.getTypeTag().equals(STAR_TOKEN_OR_TAG)) {
+                    marketCap.setMarketCap(getStarMarketCap());
+                }
+                else {
                     marketCap.setMarketCap(tokenContractRPCClient.getTokenCurrentSupply(marketCap.getTypeTag()));
                 }
                 tokens.add(marketCap);
@@ -147,6 +156,27 @@ public class MarketCapHandle {
             return updateRequest;
         } catch (IOException e) {
             logger.error("build market cap error:", e);
+        }
+        return null;
+    }
+
+    public BigInteger getStarMarketCap() {
+        try {
+            ContractCall call = new ContractCall();
+            call.setFunctionId("0x8c109349c6bd91411d6bc962e080c4a3::TokenSwapGov::get_circulating_supply");
+
+            call.setTypeArgs(new ArrayList<>());
+            call.setArgs(new ArrayList<>());
+
+            call.setArgs(new ArrayList<>());
+
+            List result = contractRPCClient.call(call);
+            if (result.size() > 0) {
+                long cap = (Long) result.get(0);
+                return BigInteger.valueOf(cap);
+            }
+        } catch (JSONRPC2SessionException e) {
+            logger.warn("call contract function star market cap failure:", e);
         }
         return null;
     }

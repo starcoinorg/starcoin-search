@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS barnard.swap_fee_event
 CREATE TABLE IF NOT EXISTS barnard.transaction_payload
 (
     transaction_hash character varying(66) COLLATE pg_catalog."default" NOT NULL,
-    json             text                                               NOT NULL,
+    json_val            json                                            NOT NULL,
     CONSTRAINT transaction_payload_pkey PRIMARY KEY (transaction_hash)
 );
 

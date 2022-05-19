@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-01d1251
+          image: starcoin/starcoin_indexer:sha-2389431
           ports:
             - containerPort: 8300
           env:
@@ -27,6 +27,8 @@ spec:
               value: "barnard.0727"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats"
+            - name: TXN_OFFSET
+              value: "0"
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_PWD

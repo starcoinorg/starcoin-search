@@ -16,9 +16,20 @@ public class TransferJournalEntity {
     private String token;
     @Column(name = "amount")
     private BigInteger amount;
-    @Column(name = "update_time")
+    @Column(name = "create_time")
     private Date createTime;
 
+    public TransferJournalEntity(String transferId, String address, String token, BigInteger amount, Date createTime) {
+        this.address = address;
+        this.transferId = transferId;
+        this.token = token;
+        this.amount = amount;
+        this.createTime = createTime;
+    }
+
+    public TransferJournalEntity() {
+
+    }
 
     public String getAddress() {
         return address;

@@ -9,6 +9,27 @@ CREATE TABLE IF NOT EXISTS barnard.handle_offset
     CONSTRAINT handle_offset_pkey PRIMARY KEY (offset_id)
 );
 
+CREATE TABLE IF NOT EXISTS barnard.address_holder
+(
+    holder_id   BIGSERIAL NOT NULL,
+    address     character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    token       character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    amount      numeric  NOT NULL,
+    update_time DATE NOT NULL DEFAULT now(),
+    CONSTRAINT address_holder_pkey PRIMARY KEY (holder_id),
+    CONSTRAINT address_holder_unq UNIQUE (address, token)
+);
+
+CREATE TABLE IF NOT EXISTS barnard.transfer_journal
+(
+    transfer_id   character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    address     character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    token       character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    amount      numeric  NOT NULL,
+    create_time DATE NOT NULL,
+    CONSTRAINT transfer_journal_pkey PRIMARY KEY (transfer_id)
+);
+
 CREATE TABLE IF NOT EXISTS barnard.swap_fee_event
 (
     event_id         BIGSERIAL NOT NULL,

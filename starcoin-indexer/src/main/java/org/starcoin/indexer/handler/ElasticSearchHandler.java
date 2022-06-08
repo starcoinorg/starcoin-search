@@ -52,6 +52,7 @@ import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
 import org.starcoin.bean.TransactionPayloadInfo;
 import org.starcoin.constant.Constant;
+import org.starcoin.indexer.service.AddressHolderService;
 import org.starcoin.indexer.service.TransactionPayloadService;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
@@ -81,6 +82,8 @@ public class ElasticSearchHandler {
     private final TransactionRPCClient transactionRPCClient;
     @Autowired
     private TransactionPayloadService transactionPayloadService;
+    @Autowired
+    private AddressHolderService addressHolderService;
 
     @Value("${starcoin.network}")
     private String network;
@@ -351,8 +354,7 @@ public class ElasticSearchHandler {
             }
             //add holder
             if (!holderAddress.isEmpty()) {
-                for (AddressHolder holder : holderAddress
-                ) {
+                for (AddressHolder holder : holderAddress) {
                     updateAddressHolder(bulkRequest, holder);
                 }
             }
@@ -386,14 +388,18 @@ public class ElasticSearchHandler {
 
 
     private void updateAddressHolder(BulkRequest bulkRequest, AddressHolder holder) {
-        long amount = stateRPCClient.getAddressAmount(holder.address, holder.getTokenCode());
-        if (amount == -1) {
+        BigInteger amount = stateRPCClient.getAddressAmountValue(holder.getAddress(), holder.getToken());
+        if (amount.compareTo(BigInteger.valueOf(-1)) == 0) {
             //resource not exist
             DeleteRequest deleteRequest = new DeleteRequest(addressHolderIndex);
-            deleteRequest.id(holder.address + "-" + holder.tokenCode);
+            deleteRequest.id(holder.getAddress() + "-" + holder.getToken());
             bulkRequest.add(deleteRequest);
+            addressHolderService.delete(holder);
         } else {
+            holder.setAmount(amount);
+            holder.setUpdateTime(new Date());
             bulkRequest.add(buildHolderRequest(holder, amount));
+            addressHolderService.save(holder);
         }
     }
 
@@ -874,15 +880,15 @@ public class ElasticSearchHandler {
         }
     }
 
-    private UpdateRequest buildHolderRequest(AddressHolder holder, long amount) {
+    private UpdateRequest buildHolderRequest(AddressHolder holder, BigInteger amount) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
-            String id = holder.address + "-" + holder.tokenCode;
+            String id = holder.getAddress() + "-" + holder.getToken();
             builder.startObject();
             {
-                builder.field("address", holder.address);
-                builder.field("type_tag", holder.tokenCode);
-                builder.field("amount", amount);
+                builder.field("address", holder.getAddress());
+                builder.field("type_tag", holder.getToken());
+                builder.field("amount", amount.toString());
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(addressHolderIndex);
@@ -1110,43 +1116,43 @@ public class ElasticSearchHandler {
         }
     }
 
-    static class AddressHolder {
-        private final String address;
-        private final String tokenCode;
-
-        AddressHolder(String address, String tokenCode) {
-            this.address = address;
-            this.tokenCode = tokenCode;
-        }
-
-        public String getAddress() {
-            return address;
-        }
-
-        public String getTokenCode() {
-            return tokenCode;
-        }
-
-        @Override
-        public String toString() {
-            return "AddressHolder{" +
-                    "address='" + address + '\'' +
-                    ", tokenCode='" + tokenCode + '\'' +
-                    '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            AddressHolder holder = (AddressHolder) o;
-            return address.equals(holder.address) && tokenCode.equals(holder.tokenCode);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(address, tokenCode);
-        }
-    }
+//    static class AddressHolder {
+//        private final String address;
+//        private final String tokenCode;
+//
+//        AddressHolder(String address, String tokenCode) {
+//            this.address = address;
+//            this.tokenCode = tokenCode;
+//        }
+//
+//        public String getAddress() {
+//            return address;
+//        }
+//
+//        public String getTokenCode() {
+//            return tokenCode;
+//        }
+//
+//        @Override
+//        public String toString() {
+//            return "AddressHolder{" +
+//                    "address='" + address + '\'' +
+//                    ", tokenCode='" + tokenCode + '\'' +
+//                    '}';
+//        }
+//
+//        @Override
+//        public boolean equals(Object o) {
+//            if (this == o) return true;
+//            if (o == null || getClass() != o.getClass()) return false;
+//            AddressHolder holder = (AddressHolder) o;
+//            return address.equals(holder.address) && tokenCode.equals(holder.tokenCode);
+//        }
+//
+//        @Override
+//        public int hashCode() {
+//            return Objects.hash(address, tokenCode);
+//        }
+//    }
 
 }

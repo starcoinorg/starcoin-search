@@ -20,7 +20,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.bean.Transfer;
-import org.starcoin.bean.TransferJournal;
 import org.starcoin.bean.TransferJournalEntity;
 import org.starcoin.bean.TransferOffset;
 import org.starcoin.constant.Constant;

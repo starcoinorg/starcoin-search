@@ -9,8 +9,10 @@ import org.starcoin.bean.AddressHolder;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.List;
 
 
+//TODO merge to commons repository dir
 public interface AddressHolderRepository extends JpaRepository<AddressHolder, String> {
     @Modifying
     @Transactional
@@ -20,4 +22,7 @@ public interface AddressHolderRepository extends JpaRepository<AddressHolder, St
     @Transactional
     @Query(value = "insert into {h-domain}address_holder (address, token, amount, update_time) values (:address, :token, :amount, :update_time) on conflict(address, token) do update set amount=:amount, update_time=:update_time ", nativeQuery = true)
     void upsert(@Param("address")String address, @Param("token")String token, @Param("amount")BigInteger amount, @Param("update_time") Date updateTime);
+
+    @Query(value = "select sum(amount) as market, token from {h-domain}address_holder group by token ", nativeQuery = true)
+    List<MarketCapDTO> getMarketCap();
 }

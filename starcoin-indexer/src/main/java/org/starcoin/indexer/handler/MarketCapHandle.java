@@ -26,9 +26,11 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
+import org.starcoin.indexer.service.AddressHolderService;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,15 +88,18 @@ public class MarketCapHandle {
         return getResult(searchResponse);
     }
 
-    public void bulk(Result<TokenMarketCap> tokenMarketCapResult) {
-        if (tokenMarketCapResult.getTotal() > 1) {
-            List<TokenMarketCap> marketCaps = tokenMarketCapResult.getContents();
+    public void bulk(List<TokenMarketCap> tokenMarketCapList) {
+        if (tokenMarketCapList != null && !tokenMarketCapList.isEmpty()) {
             BulkRequest bulkRequest = new BulkRequest();
-            for (TokenMarketCap marketCap : marketCaps) {
+            for (TokenMarketCap marketCap : tokenMarketCapList) {
+                logger.info("market cap: {}", marketCap);
                 //factor
                 TokenInfo tokenInfo = getTokenInfo(stateRPCClient, marketCap.getTypeTag());
                 if (tokenInfo != null) {
-                    marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
+                    logger.info("info: {}", tokenInfo.getScalingFactor());
+                    BigDecimal value = new BigDecimal(marketCap.getMarketCap()).movePointLeft((int) Math.log10(tokenInfo.getScalingFactor()));
+                    logger.info(" {} dive: {}", marketCap.getMarketCap(), value);
+                    marketCap.setMarketCap(value.toBigInteger());
                 } else {
                     logger.warn("when handle market cap, token info not exist: {}", marketCap.getTypeTag());
                 }

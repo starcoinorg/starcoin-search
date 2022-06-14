@@ -11,6 +11,11 @@ public class TokenMarketCap {
 
     private BigInteger marketCap;
 
+    public TokenMarketCap(String token, BigInteger marketCap) {
+        this.typeTag = token;
+        this.marketCap = marketCap;
+    }
+
     public String getTypeTag() {
         return typeTag;
     }
@@ -25,5 +30,13 @@ public class TokenMarketCap {
 
     public void setMarketCap(BigInteger marketCap) {
         this.marketCap = marketCap;
+    }
+
+    @Override
+    public String toString() {
+        return "TokenMarketCap{" +
+                "typeTag='" + typeTag + '\'' +
+                ", marketCap=" + marketCap +
+                '}';
     }
 }

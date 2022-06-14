@@ -26,9 +26,11 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
+import org.starcoin.indexer.service.AddressHolderService;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,35 +68,18 @@ public class MarketCapHandle {
         }
     }
 
-    public Result<TokenMarketCap> getTokenMarketCap() {
-        SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.ADDRESS_INDEX));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        //page size
-        searchSourceBuilder.size(Constant.ELASTICSEARCH_MAX_HITS);
-        searchSourceBuilder.from(0);
-        searchSourceBuilder.collapse(new CollapseBuilder("type_tag.keyword"));
-
-        searchRequest.source(searchSourceBuilder);
-        searchSourceBuilder.trackTotalHits(true);
-        SearchResponse searchResponse;
-        try {
-            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            logger.error("get token market cap error:", e);
-            return Result.EmptyResult;
-        }
-        return getResult(searchResponse);
-    }
-
-    public void bulk(Result<TokenMarketCap> tokenMarketCapResult) {
-        if (tokenMarketCapResult.getTotal() > 1) {
-            List<TokenMarketCap> marketCaps = tokenMarketCapResult.getContents();
+    public void bulk(List<TokenMarketCap> tokenMarketCapList) {
+        if (tokenMarketCapList != null && !tokenMarketCapList.isEmpty()) {
+            //update from chain
+            updateMarketCap(tokenMarketCapList);
             BulkRequest bulkRequest = new BulkRequest();
-            for (TokenMarketCap marketCap : marketCaps) {
+            for (TokenMarketCap marketCap : tokenMarketCapList) {
+                logger.info("market cap: {}", marketCap);
                 //factor
                 TokenInfo tokenInfo = getTokenInfo(stateRPCClient, marketCap.getTypeTag());
                 if (tokenInfo != null) {
-                    marketCap.setMarketCap(marketCap.getMarketCap().divide(new BigInteger(String.valueOf(tokenInfo.getScalingFactor()))));
+                    BigDecimal value = new BigDecimal(marketCap.getMarketCap()).movePointLeft((int) Math.log10(tokenInfo.getScalingFactor()));
+                    marketCap.setMarketCap(value.toBigInteger());
                 } else {
                     logger.warn("when handle market cap, token info not exist: {}", marketCap.getTypeTag());
                 }
@@ -109,13 +94,9 @@ public class MarketCapHandle {
         }
     }
 
-    private Result<TokenMarketCap> getResult(SearchResponse searchResponse) {
-        SearchHit[] searchHit = searchResponse.getHits().getHits();
-        Result<TokenMarketCap> result = new Result<>();
-        result.setTotal(searchResponse.getHits().getTotalHits().value);
-        List<TokenMarketCap> tokens = new ArrayList<>();
-        for (SearchHit hit : searchHit) {
-            TokenMarketCap marketCap = JSON.parseObject(hit.getSourceAsString(), TokenMarketCap.class);
+    private void updateMarketCap(List<TokenMarketCap> tokenMarketCapList) {
+        if(tokenMarketCapList.isEmpty()) return;
+        for (TokenMarketCap marketCap : tokenMarketCapList) {
             try {
                 if (marketCap.getTypeTag().equals(STC_TOKEN_OR_TAG)) {
                     marketCap.setMarketCap(tokenContractRPCClient.getSTCCurrentSupply());
@@ -125,13 +106,10 @@ public class MarketCapHandle {
                 else {
                     marketCap.setMarketCap(tokenContractRPCClient.getTokenCurrentSupply(marketCap.getTypeTag()));
                 }
-                tokens.add(marketCap);
-            } catch (JSONRPC2SessionException e) {
+            } catch (Exception e) {
                 logger.error("get market cap err:", e);
             }
         }
-        result.setContents(tokens);
-        return result;
     }
 
     private UpdateRequest buildMarketCapRequest(TokenMarketCap marketCap) {

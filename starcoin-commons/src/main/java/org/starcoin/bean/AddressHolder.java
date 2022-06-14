@@ -1,5 +1,7 @@
 package org.starcoin.bean;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import javax.persistence.*;
 import java.math.BigInteger;
 import java.util.Date;
@@ -15,6 +17,7 @@ public class AddressHolder {
     @Column(name = "address")
     private String address;
     @Column(name = "token")
+    @JSONField(name = "type_tag")
     private String token;
     @Column(name = "amount")
     private BigInteger amount;

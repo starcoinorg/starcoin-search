@@ -15,17 +15,22 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.bean.Transfer;
+import org.starcoin.bean.TransferJournal;
+import org.starcoin.bean.TransferJournalEntity;
 import org.starcoin.bean.TransferOffset;
 import org.starcoin.constant.Constant;
+import org.starcoin.indexer.service.TransferJournalService;
 import org.starcoin.utils.ResultWithId;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Date;
 import java.util.List;
 
 import static org.starcoin.constant.Constant.TRANSFER_INDEX;
@@ -38,6 +43,9 @@ public class TransferHandle {
     private String offsetIndex;
     @Value("${starcoin.network}")
     private String network;
+
+    @Autowired
+    private TransferJournalService transferJournalService;
 
     public TransferHandle(RestHighLevelClient client) {
         this.client = client;
@@ -145,6 +153,8 @@ public class TransferHandle {
             String addressIndex = ServiceUtils.getIndex(network, Constant.TRANSFER_JOURNAL_INDEX);
             IndexRequest indexRequest = new IndexRequest(addressIndex);
             indexRequest.source(addressBuilder);
+            //write to pg
+            transferJournalService.save(new TransferJournalEntity(transferId, address, typeTag, amount, new Date(timestamp)));
             return indexRequest;
         }
         return null;

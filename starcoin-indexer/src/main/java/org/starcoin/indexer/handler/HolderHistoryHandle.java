@@ -24,12 +24,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.api.StateRPCClient;
+import org.starcoin.bean.AddressHolder;
 import org.starcoin.bean.EventFull;
 import org.starcoin.constant.Constant;
 import org.starcoin.types.event.DepositEvent;
 import org.starcoin.utils.Hex;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,7 +49,7 @@ public class HolderHistoryHandle {
 
     public void handle() {
         logger.info("holder handle begin...");
-        Set<ElasticSearchHandler.AddressHolder> holders = new HashSet<>();
+        Set<AddressHolder> holders = new HashSet<>();
         //read event
         SearchRequest searchRequest = new SearchRequest(ServiceUtils.getIndex(network, Constant.TRANSACTION_EVENT_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -94,9 +96,8 @@ public class HolderHistoryHandle {
         if (!holders.isEmpty()) {
             int batchSize = 500;
             int i = 0;
-            for (ElasticSearchHandler.AddressHolder holder : holders
-            ) {
-                long amount = stateRPCClient.getAddressAmount(holder.getAddress(), holder.getTokenCode());
+            for (AddressHolder holder : holders) {
+                BigInteger amount = stateRPCClient.getAddressAmountValue(holder.getAddress(), holder.getToken());
                 logger.info("holder: {}, amount: {}", holder, amount);
                 bulkRequest.add(buildHolderRequest(holder, amount));
                 i += 1;
@@ -122,7 +123,7 @@ public class HolderHistoryHandle {
         logger.info("holder handle end...");
     }
 
-    private void addHolders(Set<ElasticSearchHandler.AddressHolder> holders, Result<EventFull> result) {
+    private void addHolders(Set<AddressHolder> holders, Result<EventFull> result) {
         if (result == null) {
             return;
         }
@@ -135,7 +136,7 @@ public class HolderHistoryHandle {
                         inner.token_code.module +
                         "::" +
                         inner.token_code.name;
-                holders.add(new ElasticSearchHandler.AddressHolder(event.getEventAddress(), sb));
+                holders.add(new AddressHolder(event.getEventAddress(), sb));
             } catch (DeserializationError deserializationError) {
                 logger.error("decode event data error:", deserializationError);
             }
@@ -143,16 +144,16 @@ public class HolderHistoryHandle {
         logger.info("add ok: {}", holders.size());
     }
 
-    private UpdateRequest buildHolderRequest(ElasticSearchHandler.AddressHolder holder, long amount) {
+    private UpdateRequest buildHolderRequest(AddressHolder holder, BigInteger amount) {
         String addressIndex = ServiceUtils.getIndex(network, Constant.ADDRESS_INDEX);
         try {
-            String id = holder.getAddress() + "-" + holder.getTokenCode();
+            String id = holder.getAddress() + "-" + holder.getToken();
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
             {
                 builder.field("address", holder.getAddress());
-                builder.field("type_tag", holder.getTokenCode());
-                builder.field("amount", amount);
+                builder.field("type_tag", holder.getToken());
+                builder.field("amount", amount.toString());
             }
             builder.endObject();
             IndexRequest indexRequest = new IndexRequest(addressIndex);

@@ -153,7 +153,7 @@ public class TransferHandle {
             IndexRequest indexRequest = new IndexRequest(addressIndex);
             indexRequest.source(addressBuilder);
             //write to pg
-            transferJournalService.save(new TransferJournalEntity(transferId, address, typeTag, amount, new Date(timestamp)));
+            transferJournalService.save(new TransferJournalEntity(address, typeTag, amount, new Date(timestamp)));
             return indexRequest;
         }
         return null;

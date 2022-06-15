@@ -100,6 +100,13 @@ PUT _component_template/block-mappings
         # copy token_info.mapping.json to here.
       }
     }
+
+    PUT _component_template/market_cap-mappings
+    {
+      "template": {
+        # copy market_cap.mapping.json to here.
+      }
+    }
 4.
   PUT _index_template/blocks-template
   {
@@ -175,4 +182,11 @@ PUT _component_template/block-mappings
       "index_patterns": ["*.token_info"],
       "priority": 500,
       "composed_of": ["token_info-mappings"]
+    }
+
+    PUT _index_template/market_cap-template
+    {
+      "index_patterns": ["*.market_cap"],
+      "priority": 500,
+      "composed_of": ["market_cap-mappings"]
     }

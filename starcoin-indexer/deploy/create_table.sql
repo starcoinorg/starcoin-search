@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS barnard.address_holder
 
 CREATE TABLE IF NOT EXISTS barnard.transfer_journal
 (
-    transfer_id   character varying(66) COLLATE pg_catalog."default" NOT NULL,
+    transfer_id   BIGSERIAL NOT NULL,
     address     character varying(66) COLLATE pg_catalog."default" NOT NULL,
     token       character varying(256) COLLATE pg_catalog."default" NOT NULL,
     amount      numeric  NOT NULL,

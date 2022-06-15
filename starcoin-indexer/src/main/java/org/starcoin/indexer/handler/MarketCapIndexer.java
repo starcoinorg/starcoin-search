@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
-import org.starcoin.api.Result;
 import org.starcoin.bean.TokenMarketCap;
 import org.starcoin.indexer.service.AddressHolderService;
 
@@ -24,7 +23,6 @@ public class MarketCapIndexer extends QuartzJobBean {
         //get token
         try {
             List<TokenMarketCap> tokenMarketCapList = addressHolderService.getMarketCap();
-            logger.info("token cap: {}", tokenMarketCapList.size());
             handle.bulk(tokenMarketCapList);
             logger.info("handle market OK");
         } catch (Exception e) {

@@ -73,7 +73,11 @@ public class IndexerApplication {
             HolderHistoryHandle handle = (HolderHistoryHandle) context.getBean("holderHistoryHandle");
             handle.handle();
         }
-
+        //holder migrate to pg
+        if (args[0].equals("migrate_holder")) {
+            MigrateAddressHolder handle = (MigrateAddressHolder) context.getBean("migrateAddressHolder");
+            handle.handle();
+        }
         //repair block data
         RepairHandle repairHandle = (RepairHandle) context.getBean("repairHandle");
         if (args[0].equals("repair")) {

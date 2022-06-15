@@ -1,0 +1,27 @@
+{
+  "mappings": {
+    "properties": {
+      "type_tag": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "deleted": {
+        "type": "boolean"
+      },
+      "market_cap": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      }
+    }
+  }
+}

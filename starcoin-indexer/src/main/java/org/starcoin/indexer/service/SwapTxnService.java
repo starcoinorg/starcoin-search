@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.starcoin.bean.SwapPoolStat;
 import org.starcoin.bean.SwapTransaction;
+import org.starcoin.bean.SwapType;
 import org.starcoin.bean.TokenStat;
 import org.starcoin.indexer.repository.SwapTransactionRepository;
 import org.starcoin.indexer.repository.TokenVolumeDTO;
@@ -27,6 +28,25 @@ public class SwapTxnService {
 
     public void updateTotalValue(BigDecimal totalValue, long seq) {
         swapTransactionRepository.updateTotalValue(totalValue, seq);
+    }
+
+    public void updateAmountAndTotal(SwapTransaction swapTransaction) {
+        swapTransactionRepository.updateAmountAndTotal(
+                swapTransaction.getAmountA(),
+                swapTransaction.getAmountB(),
+                swapTransaction.getTotalValue(),
+                swapTransaction.getSwapSeq());
+    }
+
+    public void updateAmount(SwapTransaction swapTransaction) {
+        swapTransactionRepository.updateAmount(
+                swapTransaction.getAmountA(),
+                swapTransaction.getAmountB(),
+                swapTransaction.getSwapSeq());
+    }
+
+    public List<SwapTransaction> getRemoveSwapTransactions() {
+        return swapTransactionRepository.findAllBySwapType(SwapType.RemoveLiquidity);
     }
 
     public List<SwapTransaction> getAll() {

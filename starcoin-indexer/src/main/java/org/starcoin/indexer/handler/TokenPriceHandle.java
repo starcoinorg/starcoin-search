@@ -86,7 +86,6 @@ public class TokenPriceHandle {
                 tokens.add(tokenTag);
             }
             try {
-//                long timestamp = getAnHourAgo();
                List<OracleTokenPair> pairs = swapApiClient.getProximatePriceRounds(localNetwork.getValue(), tokens, String.valueOf(timestamp));
                 if (pairs != null && !pairs.isEmpty()) {
                     List<TokenPrice> tokenPriceList = new ArrayList<>();

@@ -34,6 +34,7 @@ import org.starcoin.scan.repository.TransferJournalRepository;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -53,7 +54,11 @@ public class TokenService extends BaseService {
             TokenVolumeDTO tokenVolumeDTO = repository.getVolumeByToken(token);
             if(tokenVolumeDTO != null) {
                 return tokenVolumeDTO.getVolume();
+            }else {
+                logger.warn("get token volume null: {}, {}", network, token);
             }
+        }else {
+            logger.warn("get transfer journal repository null: {}, {}", network, token);
         }
         return null;
     }
@@ -84,7 +89,7 @@ public class TokenService extends BaseService {
             Double marketCap = marketMap.get(typeTag);
             if (marketCap != null) {
                 view.setMarketCap(marketCap);
-                view.setMarketCapStr(marketCap.toString());
+                view.setMarketCapStr(DecimalFormat.getNumberInstance().format(marketCap));
             }
             viewList.add(view);
         }
@@ -224,6 +229,7 @@ public class TokenService extends BaseService {
         if (!result2.getContents().isEmpty()) {
             TokenStatistic tokenStatistic2 = result2.getContents().get(0);
             tokenStatisticView.setMarketCap(tokenStatistic2.getMarketCap());
+            tokenStatisticView.setMarketCapStr(DecimalFormat.getNumberInstance().format(tokenStatistic2.getMarketCap()));
         }
         tokenStatisticView.setAddressHolder(tokenStatistic3.getAddressHolder());
         Result<TokenStatisticView> result = new Result<>();

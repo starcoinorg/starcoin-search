@@ -1,7 +1,7 @@
 package org.starcoin.scan.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.starcoin.scan.entity.BlockInfo;
+import org.starcoin.bean.BlockInfoEntity;
 
-public interface BlockInfoRepository extends JpaRepository<BlockInfo, String> {
+public interface BlockInfoRepository extends JpaRepository<BlockInfoEntity, String> {
 }

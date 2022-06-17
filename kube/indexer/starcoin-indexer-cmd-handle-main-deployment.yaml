@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcoin-indexer-cmd-handle-deployment
-  namespace: starcoin-barnard
+  namespace: starcoin-main
   labels:
     app: starcoin-indexer-cmd-handle
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-cmd-handle
-          image: starcoin/starcoin_indexer:sha-288dd78
+          image: starcoin/starcoin_indexer:sha-ba00b10
           ports:
             - containerPort: 8300
           env:
@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "migrate_holder"
+              value: "repair_swap_txn 34328 34348"

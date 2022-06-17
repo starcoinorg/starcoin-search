@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-eb55d17
+          image: starcoin/starcoin_indexer:sha-ba00b10
           ports:
             - containerPort: 8300
           env:

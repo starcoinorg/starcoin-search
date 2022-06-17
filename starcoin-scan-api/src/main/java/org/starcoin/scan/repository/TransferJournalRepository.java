@@ -15,7 +15,7 @@ public interface TransferJournalRepository extends JpaRepository<TransferJournal
             , nativeQuery = true)
     TokenVolumeDTO getVolumeByTokenAndDate(@Param("token") String token, @Param("date") String date);
 
-    @Query(value = "select sum(amount) as volume , token  from {h-domain}transfer_journal where create_time > now() - interval '1 day' group by token "
+    @Query(value = "select sum(amount) as volume , token  from {h-domain}transfer_journal where create_time > now() - interval '1 day' and amount > 0 group by token "
             , nativeQuery = true)
     List<TokenVolumeDTO> getAllVolumes();
 }

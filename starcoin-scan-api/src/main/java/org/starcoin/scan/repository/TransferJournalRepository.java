@@ -8,7 +8,7 @@ import org.starcoin.bean.TransferJournalEntity;
 import java.util.List;
 
 public interface TransferJournalRepository extends JpaRepository<TransferJournalEntity, String> {
-    @Query(value = "select sum(amount) as volume, token  from {h-domain}transfer_journal where token = :token and create_time > now() - interval '90 day' group by token "
+    @Query(value = "select sum(amount) as volume, token  from {h-domain}transfer_journal where token = :token and create_time > now() - interval '1 day' group by token "
             , nativeQuery = true)
     TokenVolumeDTO getVolumeByToken(@Param("token") String token);
     @Query(value = "select sum(amount) as volume , token  from {h-domain}transfer_journal where token = :token and create_time = :date"

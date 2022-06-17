@@ -190,7 +190,9 @@ public class IndexerApplication {
         //repair swap transaction
         if(args[0].equals("repair_swap_txn")) {
             SwapTransactionRepair swapTransactionRepair = (SwapTransactionRepair) context.getBean("swapTransactionRepair");
-            swapTransactionRepair.repair();
+            int begin = Integer.parseInt(args[1]);
+            int end = Integer.parseInt(args[2]);
+            swapTransactionRepair.repair(begin, end);
         }
     }
 

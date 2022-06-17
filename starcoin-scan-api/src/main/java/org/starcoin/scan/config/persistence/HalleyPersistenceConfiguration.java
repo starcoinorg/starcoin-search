@@ -54,7 +54,7 @@ public class HalleyPersistenceConfiguration {
     public LocalContainerEntityManagerFactoryBean halleyEntityManagerFactory(@Qualifier("halleyEntityManagerFactoryBuilder") EntityManagerFactoryBuilder builder) {
         return builder
                 .dataSource(halleyDataSource)
-                .packages("org.starcoin.scan.entity")
+                .packages("org.starcoin.bean")
                 .persistenceUnit("halleyPersistenceUnit")
                 .properties(getVendorProperties())
                 .build();

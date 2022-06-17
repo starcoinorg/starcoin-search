@@ -49,7 +49,7 @@ public class SwapTransactionRepair {
         }
     }
 
-    public void repair() throws IOException {
+    public void repair(int begin, int end) throws IOException {
         logger.info("swap transaction repair begin ..");
         //read from swap transaction list
         List<SwapTransaction> swapTransactionList = swapTxnService.getRemoveSwapTransactions();
@@ -73,6 +73,10 @@ public class SwapTransactionRepair {
 
         int count = 0;
         for (SwapTransaction swapTransaction: swapTransactionList) {
+            long seq = swapTransaction.getSwapSeq();
+            if(seq< begin || seq > end) {
+                continue;
+            }
             logger.info("repair before: {}", swapTransaction);
             String txnId = swapTransaction.getTransactionHash();
             TransactionPayload transactionPayload = transactionPayloadRepository.findByTransactionHash(txnId);

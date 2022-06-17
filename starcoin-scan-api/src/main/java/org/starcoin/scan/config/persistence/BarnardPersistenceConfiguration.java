@@ -54,7 +54,7 @@ public class BarnardPersistenceConfiguration {
     public LocalContainerEntityManagerFactoryBean barnardEntityManagerFactory(@Qualifier("barnardEntityManagerFactoryBuilder") EntityManagerFactoryBuilder builder) {
         return builder
                 .dataSource(barnardDataSource)
-                .packages("org.starcoin.scan.entity")
+                .packages("org.starcoin.bean")
                 .persistenceUnit("barnardPersistenceUnit")
                 .properties(getVendorProperties())
                 .build();

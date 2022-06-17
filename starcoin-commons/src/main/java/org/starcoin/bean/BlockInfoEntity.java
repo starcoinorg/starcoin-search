@@ -1,4 +1,4 @@
-package org.starcoin.scan.entity;
+package org.starcoin.bean;
 
 
 import com.alibaba.fastjson.annotation.JSONField;
@@ -10,7 +10,7 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "block_info")
-public class BlockInfo {
+public class BlockInfoEntity {
     @Id
     @Column(name = "block_hash")
     private String blockHash;

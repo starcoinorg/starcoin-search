@@ -28,7 +28,7 @@ public class IndexerApplication {
     @Value("${starcoin.swap.api.url}")
     private String swapAPIUrl;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Map<String, String> envMap = System.getenv();
         String programArgs = envMap.get("PROGRAM_ARGS");
         logger.info("PROGRAM_ARGS: {}", programArgs);
@@ -185,6 +185,12 @@ public class IndexerApplication {
                     logger.info("swap txn repair ok: {} ", i);
                 }
             }
+        }
+
+        //repair swap transaction
+        if(args[0].equals("repair_swap_txn")) {
+            SwapTransactionRepair swapTransactionRepair = (SwapTransactionRepair) context.getBean("swapTransactionRepair");
+            swapTransactionRepair.repair();
         }
     }
 

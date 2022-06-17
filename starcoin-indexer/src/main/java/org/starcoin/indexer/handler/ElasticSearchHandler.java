@@ -658,11 +658,16 @@ public class ElasticSearchHandler {
                     String functionAddress = scriptFunctionPayload.value.module.address.toString();
                     if (SwapType.isSwapType(function) && functionAddress.equals(contractAddress)) {
                         if (scriptFunctionPayload.value.ty_args.size() > 1 && scriptFunctionPayload.value.args.size() > 1) {
+                            SwapType swapType = SwapType.fromValue(function);
                             //parse token and amount
                             String tokenA = StructTagUtil.structTagToString(((org.starcoin.types.TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(0)).value);
                             String tokenB = StructTagUtil.structTagToString(((org.starcoin.types.TypeTag.Struct) scriptFunctionPayload.value.ty_args.get(1)).value);
                             BigInteger argFirst = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(0));
                             BigInteger argSecond = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(1));
+                            if(swapType == SwapType.RemoveLiquidity) {
+                                argFirst = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(1));
+                                argSecond = ServiceUtils.deserializeU128(scriptFunctionPayload.value.args.get(2));
+                            }
                             SwapTransaction swapTransaction = new SwapTransaction();
                             swapTransaction.setTransactionHash(transaction.getTransactionHash());
                             swapTransaction.setTimestamp(transaction.getTimestamp());
@@ -671,7 +676,7 @@ public class ElasticSearchHandler {
                             swapTransaction.setTokenB(tokenB);
                             swapTransaction.setAmountA(new BigDecimal(argFirst));
                             swapTransaction.setAmountB(new BigDecimal(argSecond));
-                            swapTransaction.setSwapType(SwapType.fromValue(function));
+                            swapTransaction.setSwapType(swapType);
                             swapTransactionList.add(swapTransaction);
                         } else {
                             logger.warn("swap txn args error: {}", transaction.getTransactionHash());

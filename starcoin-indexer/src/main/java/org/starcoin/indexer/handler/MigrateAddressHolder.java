@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
-import org.starcoin.bean.AddressHolderEntity;
+import org.starcoin.bean.AddressHolder;
 import org.starcoin.constant.Constant;
 import org.starcoin.indexer.service.AddressHolderService;
 
@@ -48,12 +48,12 @@ public class MigrateAddressHolder {
         searchRequest.source(searchSourceBuilder);
         searchRequest.scroll(TimeValue.timeValueMinutes(10));
         searchSourceBuilder.trackTotalHits(true);
-        Result<AddressHolderEntity> result = null;
+        Result<AddressHolder> result = null;
         String scrollId = null;
         try {
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
             scrollId = searchResponse.getScrollId();
-            result = ServiceUtils.getSearchResult(searchResponse, AddressHolderEntity.class);
+            result = ServiceUtils.getSearchResult(searchResponse, AddressHolder.class);
             saveHolders(result);
             while (true) {
                 if (scrollId == null) {
@@ -62,7 +62,7 @@ public class MigrateAddressHolder {
                 SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollId).scroll(TimeValue.timeValueMinutes(10));
                 searchResponse = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
                 if (searchResponse != null && searchResponse.getHits().getHits().length > 0) {
-                    result = ServiceUtils.getSearchResult(searchResponse, AddressHolderEntity.class);
+                    result = ServiceUtils.getSearchResult(searchResponse, AddressHolder.class);
                     saveHolders(result);
                     logger.info("query: {}", scrollId);
                 } else {
@@ -77,10 +77,10 @@ public class MigrateAddressHolder {
         logger.info("holder migrated size: {}", COUNT);
     }
 
-    private void saveHolders(Result<AddressHolderEntity> result) {
+    private void saveHolders(Result<AddressHolder> result) {
         if(result == null) return;
-        List<AddressHolderEntity> addressHolderEntityList = result.getContents();
-        for (AddressHolderEntity holder: addressHolderEntityList) {
+        List<AddressHolder> addressHolderList = result.getContents();
+        for (AddressHolder holder: addressHolderList) {
             holder.setUpdateTime(new Date());
             addressHolderService.save(holder);
             COUNT++;

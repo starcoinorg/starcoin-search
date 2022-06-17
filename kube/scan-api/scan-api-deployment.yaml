@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: scan-api
-          image: starcoin/starcoin_scan:sha-a6b4218
+          image: starcoin/starcoin_scan:sha-2afcd33
           ports:
             - containerPort: 8500
           env:
@@ -35,8 +35,14 @@ spec:
                 secretKeyRef:
                   name: elasticsearch-pw-elastic
                   key: password
+            - name: MAIN_DS_URL
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=main"
             - name: DS_URL
               value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+            - name: BARNARD_DS_URL
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=barnard"
+            - name: HALLEY_DS_URL
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=halley"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD

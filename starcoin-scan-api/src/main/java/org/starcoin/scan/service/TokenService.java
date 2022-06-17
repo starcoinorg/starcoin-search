@@ -26,11 +26,15 @@ import org.starcoin.api.Result;
 import org.starcoin.bean.TokenHolderInfo;
 import org.starcoin.bean.TokenInfo;
 import org.starcoin.bean.TokenStatistic;
+import org.starcoin.bean.TokenStatisticView;
 import org.starcoin.constant.Constant;
+import org.starcoin.scan.repository.TokenVolumeDTO;
+import org.starcoin.scan.repository.TransferJournalRepository;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -44,40 +48,63 @@ public class TokenService extends BaseService {
     @Autowired
     private RestHighLevelClient client;
 
-    public Result<TokenStatistic> tokenAggregateList(String network, int page, int count) {
+    public BigDecimal getTokenVolume(String network, String token) {
+        TransferJournalRepository repository = getTransferJournalRepository(network);
+        if(repository != null) {
+            TokenVolumeDTO tokenVolumeDTO = repository.getVolumeByToken(token);
+            if(tokenVolumeDTO != null) {
+                return tokenVolumeDTO.getVolume();
+            }else {
+                logger.warn("get token volume null: {}, {}", network, token);
+            }
+        }else {
+            logger.warn("get transfer journal repository null: {}, {}", network, token);
+        }
+        return null;
+    }
+
+    public Result<TokenStatisticView> tokenAggregateList(String network, int page, int count) {
+        Result<TokenStatisticView> result = new Result<>();
         //get token holder
         Result<TokenStatistic> holders = tokenHolderList(network, page, count);
         List<TokenStatistic> holderContents = holders.getContents();
         if (holderContents.isEmpty()) {
-            return holders;
+            return result;
         }
         //get volume
         Result<TokenStatistic> volumes = tokenVolumeList(network, page, count);
-        Map<String, Long> volumeMap = getVolumeMap(network, volumes);
+        Map<String, BigDecimal> volumeMap = getVolumeMap(network);
         //get market cap
         Result<TokenStatistic> market = tokenMarketCap(network, page, ELASTICSEARCH_MAX_HITS);
         Map<String, Double> marketMap = getMarketMap(market);
+        List<TokenStatisticView> viewList = new ArrayList<>();
         for (TokenStatistic tokenStatistic : holderContents) {
+            TokenStatisticView view = TokenStatisticView.fromTokenStatistic(tokenStatistic);
             String typeTag = tokenStatistic.getTypeTag();
-            Long volume = volumeMap.get(typeTag);
+            BigDecimal volume = volumeMap.get(typeTag);
             if (volume != null) {
-                tokenStatistic.setVolume(volume);
+                view.setVolume(volume.longValue());
+                view.setVolumeStr(volume.toString());
             }
             Double marketCap = marketMap.get(typeTag);
             if (marketCap != null) {
-                tokenStatistic.setMarketCap(marketCap);
+                view.setMarketCap(marketCap);
+                view.setMarketCapStr(DecimalFormat.getNumberInstance().format(marketCap));
             }
+            viewList.add(view);
         }
-        return holders;
+        result.setContents(viewList);
+        result.setTotal(holders.getTotal());
+        return result;
     }
 
     private Map<String, Double> getMarketMap(Result<TokenStatistic> markets) {
         Map<String, Double> marketMap = new HashMap<>();
-        List<TokenStatistic> volumeContents = markets.getContents();
-        if (volumeContents.isEmpty()) {
+        List<TokenStatistic> marketContents = markets.getContents();
+        if (marketContents.isEmpty()) {
             return marketMap;
         }
-        for (TokenStatistic statistic : volumeContents) {
+        for (TokenStatistic statistic : marketContents) {
             marketMap.put(statistic.getTypeTag(), statistic.getMarketCap());
         }
         return marketMap;
@@ -145,41 +172,17 @@ public class TokenService extends BaseService {
         return BigDecimal.ZERO;
     }
 
-    public Result<TokenStatistic> tokenInfoAggregate(String network, String token) {
+    public Result<TokenStatisticView> tokenInfoAggregate(String network, String token) {
         if (token == null || token.length() == 0) {
             return null;
         }
-        Result<TokenStatistic> result1 = new Result<>();
         //get volume info
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSFER_JOURNAL_INDEX));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        queryBuilder
-                .must(QueryBuilders.rangeQuery("amount").gt(0))
-                .must(QueryBuilders.rangeQuery("timestamp").gte("now/d-1d").lte("now/d"))
-                .must(QueryBuilders.termQuery("type_tag.keyword", token));
-        searchSourceBuilder.query(queryBuilder);
-        TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms("token_stat")
-                .field("type_tag.keyword")
-                .order(BucketOrder.aggregation("amounts", false))
-                .subAggregation(AggregationBuilders.sum("amounts").field("amount"));
-
-        searchSourceBuilder.from(0);
-        searchSourceBuilder.aggregation(aggregationBuilder);
-        searchSourceBuilder.trackTotalHits(true);
-        searchRequest.source(searchSourceBuilder);
-        searchSourceBuilder.timeout(new TimeValue(20, TimeUnit.SECONDS));
-
-        try {
-            result1 = searchStatistic(client.search(searchRequest, RequestOptions.DEFAULT), StatisticType.Volumes);
-        } catch (IOException e) {
-            logger.error("get token volume error:", e);
-        }
+        BigDecimal tokenVolume = getTokenVolume(network, token);
         // get market cap
         Result<TokenStatistic> result2 = new Result<>();
-        searchRequest = new SearchRequest(getIndex(network, Constant.MARKET_CAP_INDEX));
-        searchSourceBuilder = new SearchSourceBuilder();
-        queryBuilder = QueryBuilders.boolQuery();
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.MARKET_CAP_INDEX));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
         queryBuilder
                 .must(QueryBuilders.termsQuery("type_tag.keyword", token));
         searchSourceBuilder.query(queryBuilder);
@@ -211,24 +214,26 @@ public class TokenService extends BaseService {
             logger.error("get token holder error:", e);
         }
         //aggregate result
-        TokenStatistic tokenStatistic = new TokenStatistic();
-        tokenStatistic.setTypeTag(token);
-        if (!result1.getContents().isEmpty()) {
-            tokenStatistic = result1.getContents().get(0);
+        TokenStatisticView tokenStatisticView = new TokenStatisticView();
+        tokenStatisticView.setTypeTag(token);
+        if (tokenVolume != null) {
             TokenInfo tokenInfo = getTokenInfo(network, token);
             if (tokenInfo != null) {
-                tokenStatistic.setVolume(tokenStatistic.getVolume() / tokenInfo.getScalingFactor());
+                BigDecimal volume = tokenVolume.movePointLeft((int) Math.log10(tokenInfo.getScalingFactor()));
+                tokenStatisticView.setVolume(volume.longValue());
+                tokenStatisticView.setVolumeStr(volume.toString());
             } else {
                 logger.warn("token info not cached: {}", token);
             }
         }
         if (!result2.getContents().isEmpty()) {
             TokenStatistic tokenStatistic2 = result2.getContents().get(0);
-            tokenStatistic.setMarketCap(tokenStatistic2.getMarketCap());
+            tokenStatisticView.setMarketCap(tokenStatistic2.getMarketCap());
+            tokenStatisticView.setMarketCapStr(DecimalFormat.getNumberInstance().format(tokenStatistic2.getMarketCap()));
         }
-        tokenStatistic.setAddressHolder(tokenStatistic3.getAddressHolder());
-        Result<TokenStatistic> result = new Result<>();
-        result.setContents(Collections.singletonList(tokenStatistic));
+        tokenStatisticView.setAddressHolder(tokenStatistic3.getAddressHolder());
+        Result<TokenStatisticView> result = new Result<>();
+        result.setContents(Collections.singletonList(tokenStatisticView));
         return result;
     }
 
@@ -286,6 +291,30 @@ public class TokenService extends BaseService {
             logger.error("get token market cap error:", e);
             return null;
         }
+    }
+
+    //todo add page/count for large amount of tokens volume list
+    public Map<String, BigDecimal> getVolumeMap(String network) {
+        Map<String, BigDecimal> volumeMap = new HashMap<>();
+        TransferJournalRepository repository = getTransferJournalRepository(network);
+        if(repository != null) {
+            List<TokenVolumeDTO> volumeDTOList = repository.getAllVolumes();
+            if(volumeDTOList != null && !volumeDTOList.isEmpty()) {
+                String typeTag;
+                Map<String, TokenInfo> tokens = getTokenInfoMap(network);
+                for (TokenVolumeDTO dto : volumeDTOList) {
+                    typeTag = dto.getToken();
+                    TokenInfo tokenInfo = tokens.get(typeTag);
+                    if (tokenInfo != null) {
+                        volumeMap.put(typeTag, dto.getVolume().movePointLeft((int) Math.log10(tokenInfo.getScalingFactor())));
+                    } else {
+                        logger.warn("token info not cached: {}", typeTag);
+                        volumeMap.put(typeTag, dto.getVolume());
+                    }
+                }
+            }
+        }
+        return volumeMap;
     }
 
     public Result<TokenStatistic> tokenVolumeList(String network, int page, int count) {

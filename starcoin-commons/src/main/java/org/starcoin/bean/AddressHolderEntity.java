@@ -8,7 +8,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "address_holder")
-public class AddressHolder {
+public class AddressHolderEntity {
     @Id
     @SequenceGenerator(name = "seq_holder_id", allocationSize = 1, initialValue = 1, sequenceName = "address_holder_holder_id_seq")
     @GeneratedValue(generator = "seq_holder_id", strategy = GenerationType.SEQUENCE)
@@ -24,12 +24,12 @@ public class AddressHolder {
     @Column(name = "update_time")
     private Date updateTime;
 
-    public AddressHolder(String address, String token) {
+    public AddressHolderEntity(String address, String token) {
         this.address = address;
         this.token = token;
     }
 
-    public AddressHolder() {
+    public AddressHolderEntity() {
     }
 
     public long getId() {

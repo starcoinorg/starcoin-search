@@ -53,7 +53,7 @@ public class MainPersistenceConfiguration {
     public LocalContainerEntityManagerFactoryBean mainEntityManagerFactory(@Qualifier("mainEntityManagerFactoryBuilder") EntityManagerFactoryBuilder builder) {
         return builder
                 .dataSource(mainDataSource)
-                .packages("org.starcoin.scan.entity") // 设置实体类所在位置
+                .packages("org.starcoin.bean") // 设置实体类所在位置
                 .persistenceUnit("mainPersistenceUnit")
                 .properties(getVendorProperties())
                 .build();

@@ -323,7 +323,7 @@ public class ElasticSearchHandler {
             IndexRequest blockContent = new IndexRequest(blockContentIndex);
             blockContent.id(block.getHeader().getBlockHash()).source(JSON.toJSONString(block), XContentType.JSON);
             bulkRequest.add(blockContent);
-            Set<AddressHolder> holderAddress = new HashSet<>();
+            Set<AddressHolderEntity> holderAddress = new HashSet<>();
 
             //add transactions
             for (Transaction transaction : block.getTransactionList()) {
@@ -354,7 +354,7 @@ public class ElasticSearchHandler {
             }
             //add holder
             if (!holderAddress.isEmpty()) {
-                for (AddressHolder holder : holderAddress) {
+                for (AddressHolderEntity holder : holderAddress) {
                     updateAddressHolder(bulkRequest, holder);
                 }
             }
@@ -387,7 +387,7 @@ public class ElasticSearchHandler {
     }
 
 
-    private void updateAddressHolder(BulkRequest bulkRequest, AddressHolder holder) {
+    private void updateAddressHolder(BulkRequest bulkRequest, AddressHolderEntity holder) {
         BigInteger amount = stateRPCClient.getAddressAmountValue(holder.getAddress(), holder.getToken());
         if (amount.compareTo(BigInteger.valueOf(-1)) == 0) {
             //resource not exist
@@ -500,7 +500,7 @@ public class ElasticSearchHandler {
         addUpdateRequest(blockContentIndex, blockHash, bulkRequest);
         //delete transaction
         List<Transaction> transactionList = block.getTransactionList();
-        Set<AddressHolder> holderAddress = new HashSet<>();
+        Set<AddressHolderEntity> holderAddress = new HashSet<>();
         if (transactionList != null && !transactionList.isEmpty()) {
             String transactionHash;
             List<String> transactionHashes = new ArrayList<>();
@@ -545,7 +545,7 @@ public class ElasticSearchHandler {
         }
         //flush address holder
         if (!holderAddress.isEmpty()) {
-            for (AddressHolder holder : holderAddress) {
+            for (AddressHolderEntity holder : holderAddress) {
                 updateAddressHolder(bulkRequest, holder);
             }
         }
@@ -885,7 +885,7 @@ public class ElasticSearchHandler {
         }
     }
 
-    private UpdateRequest buildHolderRequest(AddressHolder holder, BigInteger amount) {
+    private UpdateRequest buildHolderRequest(AddressHolderEntity holder, BigInteger amount) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             String id = holder.getAddress() + "-" + holder.getToken();
@@ -927,7 +927,7 @@ public class ElasticSearchHandler {
         return sb.toString();
     }
 
-    private IndexRequest buildEventRequest(Event event, String blockAuthor, long timestamp, String indexName, Set<AddressHolder> holders) {
+    private IndexRequest buildEventRequest(Event event, String blockAuthor, long timestamp, String indexName, Set<AddressHolderEntity> holders) {
         IndexRequest request = new IndexRequest(indexName);
         XContentBuilder builder = null;
         try {
@@ -969,7 +969,7 @@ public class ElasticSearchHandler {
         return request;
     }
 
-    private void addToHolders(Event event, String tagName, String tagModule, String blockAuthor, Set<AddressHolder> holders, String eventAddress) {
+    private void addToHolders(Event event, String tagName, String tagModule, String blockAuthor, Set<AddressHolderEntity> holders, String eventAddress) {
         byte[] bytes = Hex.decode(event.getData());
         try {
             if (tagName.equalsIgnoreCase(Constant.DEPOSIT_EVENT)) {
@@ -979,11 +979,11 @@ public class ElasticSearchHandler {
                         inner.token_code.module +
                         "::" +
                         inner.token_code.name;
-                holders.add(new AddressHolder(eventAddress, sb));
+                holders.add(new AddressHolderEntity(eventAddress, sb));
                 tokenCodeList.add(inner.token_code);
             } else if (tagName.equalsIgnoreCase(Constant.WITHDRAW_EVENT)) {
                 if (tagModule.equalsIgnoreCase(Constant.EVENT_TREASURY_MODULE)) {
-                    holders.add(new AddressHolder(blockAuthor, STCTypeTag));
+                    holders.add(new AddressHolderEntity(blockAuthor, STCTypeTag));
                 } else {
                     WithdrawEvent inner = WithdrawEvent.bcsDeserialize(bytes);
                     String sb = inner.token_code.address +
@@ -991,7 +991,7 @@ public class ElasticSearchHandler {
                             inner.token_code.module +
                             "::" +
                             inner.token_code.name;
-                    holders.add(new AddressHolder(eventAddress, sb));
+                    holders.add(new AddressHolderEntity(eventAddress, sb));
                     tokenCodeList.add(inner.token_code);
                 }
             }

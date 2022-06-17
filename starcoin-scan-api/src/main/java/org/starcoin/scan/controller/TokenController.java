@@ -9,10 +9,12 @@ import org.starcoin.bean.TokenHolderInfo;
 import org.starcoin.bean.TokenStatistic;
 import org.starcoin.bean.TokenStatisticView;
 import org.starcoin.scan.service.TokenService;
+import org.starcoin.scan.service.TransferJournalService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Api(tags = "token")
@@ -26,36 +28,15 @@ public class TokenController {
     @GetMapping("/{network}/stats/{page}")
     public Result<TokenStatisticView> getAggregate(@PathVariable("network") String network, @PathVariable("page") int page,
                                                @RequestParam(value = "count", required = false, defaultValue = "50") int count) {
-        Result<TokenStatistic> result = tokenService.tokenAggregateList(network, page, count);
-        Result<TokenStatisticView> resultView = new Result<>();
-        if(result != null && !result.getContents().isEmpty()) {
-           List<TokenStatistic> tokenStatisticList = result.getContents();
-            List<TokenStatisticView> viewList = new ArrayList<>();
-            for (TokenStatistic stat: tokenStatisticList) {
-                viewList.add(TokenStatisticView.fromTokenStatistic(stat));
-            }
-            resultView.setContents(viewList);
-            resultView.setTotal(result.getTotal());
-        }
-        return resultView;
+        return tokenService.tokenAggregateList(network, page, count);
     }
 
     @ApiOperation("get token aggregate info")
     @GetMapping("/{network}/info/{token}")
     public Result<TokenStatisticView> tokenInfoAggregate(@PathVariable("network") String network, @PathVariable(value = "token", required = true) String token) {
-        Result<TokenStatistic> result = tokenService.tokenInfoAggregate(network, token);
-        Result<TokenStatisticView> viewResult = new Result<>();
-        if(result != null && !result.getContents().isEmpty()) {
-            List<TokenStatistic> tokenStatisticList = result.getContents();
-            List<TokenStatisticView> viewList = new ArrayList<>();
-            for (TokenStatistic stat: tokenStatisticList) {
-                viewList.add(TokenStatisticView.fromTokenStatistic(stat));
-            }
-            viewResult.setContents(viewList);
-            viewResult.setTotal(result.getTotal());
-        }
-        return viewResult;
+        return tokenService.tokenInfoAggregate(network, token);
     }
+
 
     @ApiOperation("get token market cap")
     @GetMapping("/{network}/market_cap/{token}")

@@ -2,7 +2,7 @@ package org.starcoin.indexer.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.starcoin.bean.AddressHolder;
+import org.starcoin.bean.AddressHolderEntity;
 import org.starcoin.bean.TokenMarketCap;
 import org.starcoin.indexer.repository.AddressHolderRepository;
 import org.starcoin.indexer.repository.MarketCapDTO;
@@ -15,17 +15,17 @@ public class AddressHolderService {
     @Autowired
     private AddressHolderRepository addressHolderRepository;
 
-    public void saveList(List<AddressHolder> addressHolderList) {
+    public void saveList(List<AddressHolderEntity> addressHolderList) {
         if(addressHolderList != null && !addressHolderList.isEmpty()) {
             addressHolderRepository.saveAllAndFlush(addressHolderList);
         }
     }
 
-    public void save(AddressHolder addressHolder) {
+    public void save(AddressHolderEntity addressHolder) {
         addressHolderRepository.upsert(addressHolder.getAddress(), addressHolder.getToken(), addressHolder.getAmount(), addressHolder.getUpdateTime());
     }
 
-    public void delete(AddressHolder addressHolder) {
+    public void delete(AddressHolderEntity addressHolder) {
         if(addressHolder != null) {
             addressHolderRepository.deleteByAddressAndToken(addressHolder.getAddress(), addressHolder.getToken());
         }

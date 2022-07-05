@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "main"
             - name: PROGRAM_ARGS
-              value: "repair_swap_txn 34328 34348"
+              value: "repair_swap_txn 34558 34573"

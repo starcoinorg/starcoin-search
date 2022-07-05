@@ -4,8 +4,13 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
 import org.starcoin.scan.service.RateLimitService;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import java.util.List;
 
 @Api(tags = "user")
 @RestController
@@ -16,76 +21,111 @@ public class UserController {
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public long login(@PathVariable("address") String address) throws Exception {
-        //todo write user_id to session
-        return rateLimitService.logIn(address);
+    public long login(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+        long userId = rateLimitService.logIn(address);
+        HttpSession session = request.getSession();
+        session.setAttribute(address, userId);
+        return userId;
     }
 
     @ApiOperation("logout")
     @GetMapping("/logout/{address}/")
-    public long logout(@PathVariable("address") String address) throws Exception {
-        //todo remove user_id to session
-        return 1;
+    public String logout(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+        HttpSession session = request.getSession();
+        session.removeAttribute(address);
+        return "ok";
     }
 
     @ApiOperation("show user info")
-    @GetMapping("/show")
-    public UserInfo showUser() throws Exception {
-        //todo get user_id from session
-        Long userId = 3l;
+    @GetMapping("/show/{address}")
+    public UserInfo showUser(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(address);
+        if(userId == null) {
+            return null;
+        }
         return rateLimitService.showUser(userId);
     }
 
     @ApiOperation("update wallet address")
-    @GetMapping("/update/address/{new_address}")
-    public long updateUserAddr(@PathVariable("new_address") String address, @RequestParam("old") String old) throws Exception {
-        //todo get user_id from session
-        long userId = 0;
-        return rateLimitService.updateAddress(userId, address, old);
+    @GetMapping("/update/address/{new}")
+    public long updateUserAddr(HttpServletRequest request, @PathVariable(value = "new") String address, @RequestParam(value = "old") String old) throws Exception {
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(old);
+        if(userId == null) {
+            return -1;
+        }
+        long result = rateLimitService.updateAddress(userId, address, old);
+        if(result == 1) {
+            //update ok, set session
+            session.setAttribute(address, userId);
+        }
+        return result;
     }
 
     @ApiOperation("update user profile info")
-    @GetMapping("/update/")
-    public long updateUser(@RequestParam("mobile") String mobile,
-                           @RequestParam("email") String email,
-                           @RequestParam("avatar") String avatar,
-                           @RequestParam("twitter") String twitter,
-                           @RequestParam("discord") String discord,
-                           @RequestParam("telegram") String telegram,
-                           @RequestParam("domain") String domain,
-                           @RequestParam("blog") String blog,
-                           @RequestParam("profile") String profile
+    @GetMapping("/update/{address}")
+    public long updateUser(HttpServletRequest request, @PathVariable(value = "address") String address,
+                           @RequestParam(value = "mobile",required = false) String mobile,
+                           @RequestParam(value = "email",required = false) String email,
+                           @RequestParam(value = "avatar",required = false) String avatar,
+                           @RequestParam(value = "twitter",required = false) String twitter,
+                           @RequestParam(value = "discord",required = false) String discord,
+                           @RequestParam(value = "telegram",required = false) String telegram,
+                           @RequestParam(value = "domain",required = false) String domain,
+                           @RequestParam(value = "blog",required = false) String blog,
+                           @RequestParam(value = "profile",required = false) String profile
                            ) throws Exception {
-        //get user_id from session
-        long userId = 0;
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(address);
+        if(userId == null) {
+            return -1;
+        }
         return rateLimitService.updateUserInfo(userId, mobile, email, avatar, twitter, discord, telegram, domain, blog, profile);
     }
 
     @ApiOperation("delete user")
-    @GetMapping("/destroy")
-    public long destroy() throws Exception {
-        //todo get user_id from session
-        long userId = 0;
+    @GetMapping("/destroy/{address}")
+    public long destroy(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(address);
+        if(userId == null) {
+            return -1;
+        }
         return rateLimitService.destroyUser(userId);
+    }
+
+    @ApiOperation("get user api keys")
+    @GetMapping("/apikey/list/")
+    public List<ApiKey> getAppKeys(HttpServletRequest request, @RequestParam(value = "address") String address) throws Exception {
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(address);
+        if(userId == null) {
+            return null;
+        }
+        return rateLimitService.getApiKeys(userId);
     }
 
     @ApiOperation("add api key of dapp")
     @GetMapping("/apikey/add/{app_name}")
-    public long addAppKey(@PathVariable("app_name") String appName) throws Exception {
-        //get user_id from session
-        long userId = 0;
+    public long addAppKey(HttpServletRequest request, @RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName) throws Exception {
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute(address);
+        if(userId == null) {
+            return -1;
+        }
         return rateLimitService.addApiKey(userId, appName);
     }
 
     @ApiOperation("update app name")
     @GetMapping("/apikey/update/{app_name}")
-    public long updateAppName(@PathVariable("app_name") String appName, @RequestParam("app_key") String appKey) throws Exception {
+    public long updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey) throws Exception {
         rateLimitService.updateAppName(appName, appKey);
         return 0;
     }
     @ApiOperation("remove api key")
     @GetMapping("/apikey/remove")
-    public long updateAppName(@RequestParam("app_key") String appKey) throws Exception {
+    public long updateAppName(@RequestParam(value = "app_key") String appKey) throws Exception {
         rateLimitService.remove(appKey);
         return 0;
     }

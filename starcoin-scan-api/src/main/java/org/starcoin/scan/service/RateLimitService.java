@@ -99,6 +99,10 @@ public class RateLimitService {
        return false;
     }
 
+    public List<ApiKey> getApiKeys(long userId) {
+        return apiKeyRepository.findApiKeyByUserId(userId);
+    }
+
     public long addApiKey(long userId, String appName) {
         //check userid
         if(checkUser(userId)) {

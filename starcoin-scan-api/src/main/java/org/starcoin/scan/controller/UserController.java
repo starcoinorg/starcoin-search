@@ -2,11 +2,15 @@ package org.starcoin.scan.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.apache.tomcat.util.buf.HexUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
 import org.starcoin.scan.service.RateLimitService;
+import org.starcoin.types.SignedMessage;
+import org.starcoin.utils.Hex;
+import org.starcoin.utils.SignatureUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -21,11 +25,18 @@ public class UserController {
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public long login(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
-        long userId = rateLimitService.logIn(address);
-        HttpSession session = request.getSession();
-        session.setAttribute(address, userId);
-        return userId;
+    public long login(HttpServletRequest request, @PathVariable(value = "address") String address,@RequestParam("sign")String sign) throws Exception {
+        //verify sign
+        SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
+        boolean checked = SignatureUtils.signedMessageCheckSignature(message);
+        if(checked) {
+            //login
+            long userId = rateLimitService.logIn(address);
+            HttpSession session = request.getSession();
+            session.setAttribute(address, userId);
+            return userId;
+        }
+        return -1;
     }
 
     @ApiOperation("logout")

@@ -17,10 +17,10 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
     @Modifying
     @Transactional
     @Query(value = "update {h-domain}api_key set app_name=:app_name where api_key= :api_key ", nativeQuery = true)
-    void updateAppName(@Param("app_name")String appName, @Param("api_key") String apiKey);
+    int updateAppName(@Param("app_name")String appName, @Param("api_key") String apiKey);
 
     @Modifying
     @Transactional
     @Query(value = "update {h-domain}api_key set is_valid=flase where api_key= :api_key ", nativeQuery = true)
-    void deleteByAppKey(@Param("api_key") String apiKey);
+    int deleteByAppKey(@Param("api_key") String apiKey);
 }

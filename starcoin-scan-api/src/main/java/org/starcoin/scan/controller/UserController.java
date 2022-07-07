@@ -131,14 +131,12 @@ public class UserController {
     @ApiOperation("update app name")
     @GetMapping("/apikey/update/{app_name}")
     public long updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey) throws Exception {
-        rateLimitService.updateAppName(appName, appKey);
-        return 0;
+        return rateLimitService.updateAppName(appName, appKey);
     }
     @ApiOperation("remove api key")
     @GetMapping("/apikey/remove")
     public long updateAppName(@RequestParam(value = "app_key") String appKey) throws Exception {
-        rateLimitService.remove(appKey);
-        return 0;
+        return rateLimitService.remove(appKey);
     }
 
     }

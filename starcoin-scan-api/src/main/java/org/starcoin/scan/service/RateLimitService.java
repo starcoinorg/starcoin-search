@@ -44,13 +44,11 @@ public class RateLimitService {
         }
     }
     public long updateAddress(long userId, String newAddress, String old) {
-        userInfoRepository.updateAddress(newAddress, userId, old);
-        return 1;//todo handle result value
+        return userInfoRepository.updateAddress(newAddress, userId, old);
     }
 
     public long destroyUser(long userId) {
-        userInfoRepository.updateStatus(userId);
-        return 1;
+        return userInfoRepository.updateStatus(userId);
     }
 
     public long updateUserInfo(long userId, String mobile, String email, String avatar, String twitter, String discord, String telegram, String domain, String blog, String profile) {
@@ -121,12 +119,12 @@ public class RateLimitService {
         return 0;
     }
 
-    public void updateAppName(String newAppName, String appKey) {
-        apiKeyRepository.updateAppName(newAppName, appKey);
+    public int updateAppName(String newAppName, String appKey) {
+        return apiKeyRepository.updateAppName(newAppName, appKey);
     }
 
 
-    public void remove(String appKey) {
-        apiKeyRepository.deleteByAppKey(appKey);
+    public int remove(String appKey) {
+        return apiKeyRepository.deleteByAppKey(appKey);
     }
 }

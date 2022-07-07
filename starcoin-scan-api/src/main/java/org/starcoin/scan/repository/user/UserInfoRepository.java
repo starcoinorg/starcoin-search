@@ -15,10 +15,10 @@ public interface UserInfoRepository extends JpaRepository<UserInfo, Long> {
     @Modifying
     @Transactional
     @Query(value = "update {h-domain}user_info set wallet_addr=:new_wallet_addr where user_id= :user_id and wallet_addr = :old_address", nativeQuery = true)
-    void updateAddress(@Param("new_wallet_addr")String newAddress, @Param("user_id")long userId,  @Param("old_address") String old);
+    int updateAddress(@Param("new_wallet_addr")String newAddress, @Param("user_id")long userId,  @Param("old_address") String old);
 
     @Modifying
     @Transactional
     @Query(value = "update {h-domain}user_info set is_valid=false where user_id= :user_id and is_valid = true", nativeQuery = true)
-    void updateStatus(@Param("user_id")long userId);
+    int updateStatus(@Param("user_id")long userId);
 }

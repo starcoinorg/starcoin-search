@@ -1,25 +1,33 @@
 package org.starcoin.bean;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import javax.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "api_key")
+@Table(name = "api_keys")
 public class ApiKey {
     @Id
-    @SequenceGenerator(name = "seq_api_key_id", allocationSize = 1, initialValue = 1, sequenceName = "api_key_id_seq")
+    @SequenceGenerator(name = "seq_api_key_id", allocationSize = 1, initialValue = 1, sequenceName = "api_keys_key_id_seq")
     @GeneratedValue(generator = "seq_api_key_id", strategy = GenerationType.SEQUENCE)
     @Column(name = "key_id")
+    @JSONField(name = "key_id")
     private long id;
     @Column(name = "user_id")
+    @JSONField(name = "user_id")
     private long userId;
     @Column(name = "app_name")
+    @JSONField(name = "app_name")
     private String appName;
     @Column(name = "api_key")
+    @JSONField(name = "api_key")
     private String apiKey;
     @Column(name = "is_valid")
+    @JSONField(name = "is_valid")
     private boolean isValid;
     @Column(name = "create_time")
+    @JSONField(name = "create_time")
     private Date createTime;
 
     public ApiKey(long userId, String appName, String apiKey) {

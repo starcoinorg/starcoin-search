@@ -4,6 +4,7 @@ import com.novi.serde.DeserializationError;
 import com.novi.serde.SerializationError;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
@@ -21,6 +22,7 @@ import java.util.List;
 @Api(tags = "user")
 @RestController
 @RequestMapping("v2/user")
+@Slf4j
 public class UserController {
     @Autowired
     private RateLimitService rateLimitService;
@@ -30,6 +32,7 @@ public class UserController {
     public JSONResult login(HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign) {
         //verify sign
         boolean checked = false;
+        log.info("user login : {}, {}", address, sign);
         try {
             SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
             if (!message.account.toString().equals(address)) {
@@ -44,6 +47,8 @@ public class UserController {
             long userId = rateLimitService.logIn(address);
             HttpSession session = request.getSession();
             session.setAttribute(address, userId);
+            log.info("save session: {}, {}, {}", address, userId, session.getMaxInactiveInterval());
+            session.setMaxInactiveInterval(3600);
             return new JSONResult<>("200", "login success");
         }
         return new JSONResult<>("401", "signature message verification does not pass");
@@ -59,10 +64,11 @@ public class UserController {
 
     @ApiOperation("show user info")
     @GetMapping("/show/{address}")
-    public JSONResult<UserInfo> showUser(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+    public JSONResult<UserInfo> showUser(HttpServletRequest request, @PathVariable(value = "address") String address){
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
         if (userId == null) {
+            log.warn("user show but not login: {}", address);
             return new JSONResult("401", "address not login");
         }
         return new JSONResult("200", "ok", rateLimitService.showUser(userId));

@@ -1,5 +1,7 @@
 package org.starcoin.bean;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import javax.persistence.*;
 import java.util.Date;
 
@@ -10,34 +12,46 @@ public class UserInfo {
     @SequenceGenerator(name = "seq_user_id", allocationSize = 1, initialValue = 1, sequenceName = "user_info_user_id_seq")
     @GeneratedValue(generator = "seq_user_id", strategy = GenerationType.SEQUENCE)
     @Column(name = "user_id")
+    @JSONField(name = "user_id")
     private long id;
     @Column(name = "is_valid")
+    @JSONField(name = "is_valid")
     private boolean isValid;
     @Column(name = "wallet_addr")
+    @JSONField(name = "wallet_addr")
     private String walletAddr;
     @Column(name = "mobile")
     private String mobile;
     @Column(name = "e_mail")
+    @JSONField(name = "e_mail")
     private String eMail;
     @Column(name = "user_grade")
+    @JSONField(name = "user_grade")
     private UserGrade userGrade;
     @Column(name = "avatar")
     private String avatar;
     @Column(name = "twitter_name")
+    @JSONField(name = "twitter_name")
     private String twitterName;
     @Column(name = "discord_name")
+    @JSONField(name = "discord_name")
     private String discordName;
     @Column(name = "telegram_name")
+    @JSONField(name = "telegram_name")
     private String telegramName;
     @Column(name = "domain_name")
+    @JSONField(name = "domain_name")
     private String domainName;
     @Column(name = "blog_addr")
+    @JSONField(name = "blog_addr")
     private String blogAddr;
     @Column(name = "profile")
     private String profile;
+    @JSONField(name = "create_time")
     @Column(name = "create_time")
     private Date createTime;
     @Column(name = "last_login")
+    @JSONField(name = "last_login")
     private Date lastLogin;
 
     public UserInfo() {}

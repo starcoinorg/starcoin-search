@@ -1,13 +1,15 @@
 package org.starcoin.scan.controller;
 
+import com.novi.serde.DeserializationError;
+import com.novi.serde.SerializationError;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.apache.tomcat.util.buf.HexUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
 import org.starcoin.scan.service.RateLimitService;
+import org.starcoin.scan.utils.JSONResult;
 import org.starcoin.types.SignedMessage;
 import org.starcoin.utils.Hex;
 import org.starcoin.utils.SignatureUtils;
@@ -25,118 +27,133 @@ public class UserController {
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public long login(HttpServletRequest request, @PathVariable(value = "address") String address,@RequestParam("sign")String sign) throws Exception {
+    public JSONResult login(HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign) {
         //verify sign
-        SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
-        boolean checked = SignatureUtils.signedMessageCheckSignature(message);
-        if(checked) {
+        boolean checked = false;
+        try {
+            SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
+            if (!message.account.toString().equals(address)) {
+                return new JSONResult<>("401", "address information and signature do not match");
+            }
+            checked = SignatureUtils.signedMessageCheckSignature(message);
+        } catch (DeserializationError | SerializationError e) {
+            return new JSONResult<>("401", "incorrect signature message");
+        }
+        if (checked) {
             //login
             long userId = rateLimitService.logIn(address);
             HttpSession session = request.getSession();
             session.setAttribute(address, userId);
-            return userId;
+            return new JSONResult<>("200", "login success");
         }
-        return -1;
+        return new JSONResult<>("401", "signature message verification does not pass");
     }
 
     @ApiOperation("logout")
     @GetMapping("/logout/{address}/")
-    public String logout(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+    public JSONResult logout(HttpServletRequest request, @PathVariable(value = "address") String address) {
         HttpSession session = request.getSession();
         session.removeAttribute(address);
-        return "ok";
+        return new JSONResult<>("200", "logout ok");
     }
 
     @ApiOperation("show user info")
     @GetMapping("/show/{address}")
-    public UserInfo showUser(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+    public JSONResult<UserInfo> showUser(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if(userId == null) {
-            return null;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
-        return rateLimitService.showUser(userId);
+        return new JSONResult("200", "ok", rateLimitService.showUser(userId));
     }
 
     @ApiOperation("update wallet address")
     @GetMapping("/update/address/{new}")
-    public long updateUserAddr(HttpServletRequest request, @PathVariable(value = "new") String address, @RequestParam(value = "old") String old) throws Exception {
+    public JSONResult updateUserAddr(HttpServletRequest request, @PathVariable(value = "new") String address, @RequestParam(value = "old") String old) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(old);
-        if(userId == null) {
-            return -1;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
         long result = rateLimitService.updateAddress(userId, address, old);
-        if(result == 1) {
+        if (result == 1) {
             //update ok, set session
             session.setAttribute(address, userId);
+            return new JSONResult("200", "address update ok");
         }
-        return result;
+        return new JSONResult("500", "address update failure, status:" + result);
     }
 
     @ApiOperation("update user profile info")
     @GetMapping("/update/{address}")
-    public long updateUser(HttpServletRequest request, @PathVariable(value = "address") String address,
-                           @RequestParam(value = "mobile",required = false) String mobile,
-                           @RequestParam(value = "email",required = false) String email,
-                           @RequestParam(value = "avatar",required = false) String avatar,
-                           @RequestParam(value = "twitter",required = false) String twitter,
-                           @RequestParam(value = "discord",required = false) String discord,
-                           @RequestParam(value = "telegram",required = false) String telegram,
-                           @RequestParam(value = "domain",required = false) String domain,
-                           @RequestParam(value = "blog",required = false) String blog,
-                           @RequestParam(value = "profile",required = false) String profile
-                           ) throws Exception {
+    public JSONResult updateUser(HttpServletRequest request, @PathVariable(value = "address") String address,
+                                 @RequestParam(value = "mobile", required = false) String mobile,
+                                 @RequestParam(value = "email", required = false) String email,
+                                 @RequestParam(value = "avatar", required = false) String avatar,
+                                 @RequestParam(value = "twitter", required = false) String twitter,
+                                 @RequestParam(value = "discord", required = false) String discord,
+                                 @RequestParam(value = "telegram", required = false) String telegram,
+                                 @RequestParam(value = "domain", required = false) String domain,
+                                 @RequestParam(value = "blog", required = false) String blog,
+                                 @RequestParam(value = "profile", required = false) String profile
+    ) {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if(userId == null) {
-            return -1;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
-        return rateLimitService.updateUserInfo(userId, mobile, email, avatar, twitter, discord, telegram, domain, blog, profile);
+        long code = rateLimitService.updateUserInfo(userId, mobile, email, avatar, twitter, discord, telegram, domain, blog, profile);
+        return new JSONResult("200", "address update ok, status:" + code);
     }
 
     @ApiOperation("delete user")
     @GetMapping("/destroy/{address}")
-    public long destroy(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
+    public JSONResult destroy(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if(userId == null) {
-            return -1;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
-        return rateLimitService.destroyUser(userId);
+        long code = rateLimitService.destroyUser(userId);
+        return new JSONResult("200", "address destroy ok, status:" + code);
     }
 
     @ApiOperation("get user api keys")
     @GetMapping("/apikey/list/")
-    public List<ApiKey> getAppKeys(HttpServletRequest request, @RequestParam(value = "address") String address) throws Exception {
+    public JSONResult<List<ApiKey>> getAppKeys(HttpServletRequest request, @RequestParam(value = "address") String address) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if(userId == null) {
-            return null;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
-        return rateLimitService.getApiKeys(userId);
+        List<ApiKey> apiKeyList = rateLimitService.getApiKeys(userId);
+        return new JSONResult("200", "ok", apiKeyList);
     }
 
     @ApiOperation("add api key of dapp")
     @GetMapping("/apikey/add/{app_name}")
-    public long addAppKey(HttpServletRequest request, @RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName) throws Exception {
+    public JSONResult addAppKey(HttpServletRequest request, @RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if(userId == null) {
-            return -1;
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
         }
-        return rateLimitService.addApiKey(userId, appName);
+        long code = rateLimitService.addApiKey(userId, appName);
+        return new JSONResult("200", "app name add ok, status:" + code);
     }
 
     @ApiOperation("update app name")
     @GetMapping("/apikey/update/{app_name}")
-    public long updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey) throws Exception {
-        return rateLimitService.updateAppName(appName, appKey);
-    }
-    @ApiOperation("remove api key")
-    @GetMapping("/apikey/remove")
-    public long updateAppName(@RequestParam(value = "app_key") String appKey) throws Exception {
-        return rateLimitService.remove(appKey);
+    public JSONResult updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey) {
+        long code = rateLimitService.updateAppName(appName, appKey);
+        return new JSONResult("200", "update app name ok, status:" + code);
     }
 
+    @ApiOperation("remove api key")
+    @GetMapping("/apikey/remove")
+    public JSONResult updateAppName(@RequestParam(value = "app_key") String appKey) {
+        long code = rateLimitService.remove(appKey);
+        return new JSONResult("200", "remove api key ok, status:" + code);
     }
+}

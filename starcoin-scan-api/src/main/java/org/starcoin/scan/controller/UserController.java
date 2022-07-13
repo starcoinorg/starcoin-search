@@ -6,6 +6,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
@@ -30,7 +31,7 @@ public class UserController {
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public JSONResult login(HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign, HttpSession session) {
+    public JSONResult login(Model model, HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign, HttpSession session) {
         //verify sign
         boolean checked = false;
         log.info("user login : {}, {}", address, sign);
@@ -46,7 +47,7 @@ public class UserController {
         if (checked) {
             //login
             long userId = rateLimitService.logIn(address);
-            session.setAttribute(address, userId);
+            model.addAttribute(address, userId);
             log.info("save session: {}, {}, {}", address, userId, session.getMaxInactiveInterval());
             session.setMaxInactiveInterval(3600);
             Enumeration<String> att = session.getAttributeNames();

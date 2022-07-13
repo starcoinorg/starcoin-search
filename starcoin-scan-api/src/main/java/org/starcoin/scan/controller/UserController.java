@@ -17,6 +17,7 @@ import org.starcoin.utils.SignatureUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.Enumeration;
 import java.util.List;
 
 @Api(tags = "user")
@@ -29,7 +30,7 @@ public class UserController {
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public JSONResult login(@PathVariable(value = "address") String address, @RequestParam("sign") String sign, HttpSession session) {
+    public JSONResult login(HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign, HttpSession session) {
         //verify sign
         boolean checked = false;
         log.info("user login : {}, {}", address, sign);
@@ -48,6 +49,14 @@ public class UserController {
             session.setAttribute(address, userId);
             log.info("save session: {}, {}, {}", address, userId, session.getMaxInactiveInterval());
             session.setMaxInactiveInterval(3600);
+            Enumeration<String> att = session.getAttributeNames();
+            while (att.hasMoreElements()) {
+                log.info("session: {}", att.nextElement());
+            }
+            att = request.getSession().getAttributeNames();
+            while (att.hasMoreElements()) {
+                log.info("req session: {}", att.nextElement());
+            }
             return new JSONResult<>("200", "login success");
         }
         return new JSONResult<>("401", "signature message verification does not pass");
@@ -55,7 +64,15 @@ public class UserController {
 
     @ApiOperation("logout")
     @GetMapping("/logout/{address}/")
-    public JSONResult logout(HttpServletRequest request, @PathVariable(value = "address") String address) {
+    public JSONResult logout(HttpServletRequest request, @PathVariable(value = "address") String address,  HttpSession session2) {
+        Enumeration<String> att = session2.getAttributeNames();
+        while (att.hasMoreElements()) {
+            log.info("session: {}", att.nextElement());
+        }
+        att = request.getSession().getAttributeNames();
+        while (att.hasMoreElements()) {
+            log.info("req session: {}", att.nextElement());
+        }
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
         if (userId == null) {

@@ -33,6 +33,10 @@ public class RateLimitService {
        return null;
     }
 
+    public UserInfo getUser(String address) {
+        return userInfoRepository.getByWalletAddr(address);
+    }
+
     public long logIn(String address) {
         UserInfo dbUser = userInfoRepository.getByWalletAddr(address);
         if(dbUser != null) {

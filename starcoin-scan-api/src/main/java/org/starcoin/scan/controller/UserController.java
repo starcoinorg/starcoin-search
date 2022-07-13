@@ -77,10 +77,10 @@ public class UserController {
         }
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            log.warn("user not login: {}", address);
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            log.warn("user not login: {}", address);
+//            return new JSONResult("401", "address not login");
+//        }
         session.removeAttribute(address);
         return new JSONResult<>("200", "logout ok");
     }
@@ -90,11 +90,11 @@ public class UserController {
     public JSONResult<UserInfo> showUser(HttpServletRequest request, @PathVariable(value = "address") String address){
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            log.warn("user show but not login: {}", address);
-            return new JSONResult("401", "address not login");
-        }
-        return new JSONResult("200", "ok", rateLimitService.showUser(userId));
+//        if (userId == null) {
+//            log.warn("user show but not login: {}", address);
+//            return new JSONResult("401", "address not login");
+//        }
+        return new JSONResult("200", "ok", rateLimitService.getUser(address));
     }
 
     @ApiOperation("update wallet address")
@@ -102,9 +102,9 @@ public class UserController {
     public JSONResult updateUserAddr(HttpServletRequest request, @PathVariable(value = "new") String address, @RequestParam(value = "old") String old, HttpSession session){
         HttpSession requestSession = request.getSession();
         Long userId = (Long) requestSession.getAttribute(old);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            return new JSONResult("401", "address not login");
+//        }
         long result = rateLimitService.updateAddress(userId, address, old);
         if (result == 1) {
             //update ok, set session
@@ -130,9 +130,9 @@ public class UserController {
     ) {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            return new JSONResult("401", "address not login");
+//        }
         long code = rateLimitService.updateUserInfo(userId, mobile, email, avatar, twitter, discord, telegram, domain, blog, profile);
         return new JSONResult("200", "address update ok, status:" + code);
     }
@@ -142,9 +142,9 @@ public class UserController {
     public JSONResult destroy(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            return new JSONResult("401", "address not login");
+//        }
         long code = rateLimitService.destroyUser(userId);
         return new JSONResult("200", "address destroy ok, status:" + code);
     }
@@ -154,9 +154,9 @@ public class UserController {
     public JSONResult<List<ApiKey>> getAppKeys(HttpServletRequest request, @RequestParam(value = "address") String address){
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            return new JSONResult("401", "address not login");
+//        }
         List<ApiKey> apiKeyList = rateLimitService.getApiKeys(userId);
         return new JSONResult("200", "ok", apiKeyList);
     }
@@ -166,9 +166,9 @@ public class UserController {
     public JSONResult addAppKey(HttpServletRequest request, @RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName) throws Exception {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute(address);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
+//        if (userId == null) {
+//            return new JSONResult("401", "address not login");
+//        }
         long code = rateLimitService.addApiKey(userId, appName);
         return new JSONResult("200", "app name add ok, status:" + code);
     }

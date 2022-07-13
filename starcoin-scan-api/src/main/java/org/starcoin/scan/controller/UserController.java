@@ -47,6 +47,7 @@ public class UserController {
         if (checked) {
             //login
             long userId = rateLimitService.logIn(address);
+            session.setAttribute(address, userId);
             model.addAttribute(address, userId);
             log.info("save session: {}, {}, {}", address, userId, session.getMaxInactiveInterval());
             session.setMaxInactiveInterval(3600);

@@ -1,0 +1,6 @@
+hazelcast:
+  cluster-name: stcscan-hazelcast-cluster
+  network:
+    join:
+      multicast:
+        enabled: true

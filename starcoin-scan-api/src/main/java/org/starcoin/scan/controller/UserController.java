@@ -1,12 +1,13 @@
 package org.starcoin.scan.controller;
 
+import com.hazelcast.core.HazelcastInstance;
 import com.novi.serde.DeserializationError;
 import com.novi.serde.SerializationError;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.ui.Model;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
@@ -15,11 +16,8 @@ import org.starcoin.scan.utils.JSONResult;
 import org.starcoin.types.SignedMessage;
 import org.starcoin.utils.Hex;
 import org.starcoin.utils.SignatureUtils;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 @Api(tags = "user")
 @RestController
@@ -28,10 +26,28 @@ import java.util.List;
 public class UserController {
     @Autowired
     private RateLimitService rateLimitService;
+    @Qualifier("hazelcastInstance")
+    @Autowired
+    private HazelcastInstance hazelcastInstance;
+
+    private ConcurrentMap<String, Long> sessionMap() {
+        return hazelcastInstance.getMap("session");
+    }
+
+    private Long getSession(String address) {
+        if(address != null && address.length() == 34) { // address length
+            return sessionMap().get(address);
+        }
+        return null;
+    }
 
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
-    public JSONResult login(Model model, HttpServletRequest request, @PathVariable(value = "address") String address, @RequestParam("sign") String sign, HttpSession session) {
+    public JSONResult login(@PathVariable(value = "address") String address, @RequestParam("sign") String sign) {
+        Long userId = getSession(address);
+        if (userId != null) {
+            return new JSONResult<>("401", "address already log in.");
+        }
         //verify sign
         boolean checked = false;
         log.info("user login : {}, {}", address, sign);
@@ -46,19 +62,9 @@ public class UserController {
         }
         if (checked) {
             //login
-            long userId = rateLimitService.logIn(address);
-            session.setAttribute(address, userId);
-            model.addAttribute(address, userId);
-            log.info("save session: {}, {}, {}", address, userId, session.getMaxInactiveInterval());
-            session.setMaxInactiveInterval(3600);
-            Enumeration<String> att = session.getAttributeNames();
-            while (att.hasMoreElements()) {
-                log.info("session: {}", att.nextElement());
-            }
-            att = request.getSession().getAttributeNames();
-            while (att.hasMoreElements()) {
-                log.info("req session: {}", att.nextElement());
-            }
+            long uid = rateLimitService.logIn(address);
+            sessionMap().put(address, uid);
+            log.info("save session: {}, {}", address, uid);
             return new JSONResult<>("200", "login success");
         }
         return new JSONResult<>("401", "signature message verification does not pass");
@@ -66,50 +72,39 @@ public class UserController {
 
     @ApiOperation("logout")
     @GetMapping("/logout/{address}/")
-    public JSONResult logout(HttpServletRequest request, @PathVariable(value = "address") String address,  HttpSession session2) {
-        Enumeration<String> att = session2.getAttributeNames();
-        while (att.hasMoreElements()) {
-            log.info("session: {}", att.nextElement());
+    public JSONResult logout(@PathVariable(value = "address") String address) {
+        Long userId = getSession(address);
+        if (userId == null) {
+            log.warn("user not login: {}", address);
+            return new JSONResult("401", "address not login");
         }
-        att = request.getSession().getAttributeNames();
-        while (att.hasMoreElements()) {
-            log.info("req session: {}", att.nextElement());
-        }
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            log.warn("user not login: {}", address);
-//            return new JSONResult("401", "address not login");
-//        }
-        session.removeAttribute(address);
+        sessionMap().remove(address);
         return new JSONResult<>("200", "logout ok");
     }
 
     @ApiOperation("show user info")
     @GetMapping("/show/{address}")
-    public JSONResult<UserInfo> showUser(HttpServletRequest request, @PathVariable(value = "address") String address){
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            log.warn("user show but not login: {}", address);
-//            return new JSONResult("401", "address not login");
-//        }
+    public JSONResult<UserInfo> showUser(@PathVariable(value = "address") String address){
+        Long userId = getSession(address);
+        if (userId == null) {
+            log.warn("user show but not login: {}", address);
+            return new JSONResult("401", "address not login");
+        }
         return new JSONResult("200", "ok", rateLimitService.getUser(address));
     }
 
     @ApiOperation("update wallet address")
     @GetMapping("/update/address/{new}")
-    public JSONResult updateUserAddr(HttpServletRequest request, @PathVariable(value = "new") String address, @RequestParam(value = "old") String old, HttpSession session){
-        HttpSession requestSession = request.getSession();
-        Long userId = (Long) requestSession.getAttribute(old);
-//        if (userId == null) {
-//            return new JSONResult("401", "address not login");
-//        }
+    public JSONResult updateUserAddr(@PathVariable(value = "new") String address, @RequestParam(value = "old") String old){
+        Long userId = getSession(old);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
         long result = rateLimitService.updateAddress(userId, address, old);
         if (result == 1) {
             //update ok, set session
-            session.removeAttribute(old);
-            session.setAttribute(address, userId);
+            sessionMap().remove(old);
+            sessionMap().put(address, userId);
             return new JSONResult("200", "address update ok");
         }
         return new JSONResult("500", "address update failure, status:" + result);
@@ -117,7 +112,7 @@ public class UserController {
 
     @ApiOperation("update user profile info")
     @GetMapping("/update/{address}")
-    public JSONResult updateUser(HttpServletRequest request, @PathVariable(value = "address") String address,
+    public JSONResult updateUser(@PathVariable(value = "address") String address,
                                  @RequestParam(value = "mobile", required = false) String mobile,
                                  @RequestParam(value = "email", required = false) String email,
                                  @RequestParam(value = "avatar", required = false) String avatar,
@@ -128,54 +123,50 @@ public class UserController {
                                  @RequestParam(value = "blog", required = false) String blog,
                                  @RequestParam(value = "profile", required = false) String profile
     ) {
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            return new JSONResult("401", "address not login");
-//        }
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
         long code = rateLimitService.updateUserInfo(userId, mobile, email, avatar, twitter, discord, telegram, domain, blog, profile);
         return new JSONResult("200", "address update ok, status:" + code);
     }
 
     @ApiOperation("delete user")
     @GetMapping("/destroy/{address}")
-    public JSONResult destroy(HttpServletRequest request, @PathVariable(value = "address") String address) throws Exception {
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            return new JSONResult("401", "address not login");
-//        }
+    public JSONResult destroy(@PathVariable(value = "address") String address){
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
         long code = rateLimitService.destroyUser(userId);
         return new JSONResult("200", "address destroy ok, status:" + code);
     }
 
     @ApiOperation("get user api keys")
     @GetMapping("/apikey/list/")
-    public JSONResult<List<ApiKey>> getAppKeys(HttpServletRequest request, @RequestParam(value = "address") String address){
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            return new JSONResult("401", "address not login");
-//        }
+    public JSONResult<List<ApiKey>> getAppKeys(@RequestParam(value = "address") String address){
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
         List<ApiKey> apiKeyList = rateLimitService.getApiKeys(userId);
         return new JSONResult("200", "ok", apiKeyList);
     }
 
     @ApiOperation("add api key of dapp")
     @GetMapping("/apikey/add/{app_name}")
-    public JSONResult addAppKey(HttpServletRequest request, @RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName) throws Exception {
-        HttpSession session = request.getSession();
-        Long userId = (Long) session.getAttribute(address);
-//        if (userId == null) {
-//            return new JSONResult("401", "address not login");
-//        }
+    public JSONResult addAppKey(@RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName){
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
         long code = rateLimitService.addApiKey(userId, appName);
         return new JSONResult("200", "app name add ok, status:" + code);
     }
 
     @ApiOperation("update app name")
     @GetMapping("/apikey/update/{app_name}")
-    public JSONResult updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey) {
+    public JSONResult updateAppName(@PathVariable(value = "app_name") String appName, @RequestParam(value = "app_key") String appKey){
         long code = rateLimitService.updateAppName(appName, appKey);
         return new JSONResult("200", "update app name ok, status:" + code);
     }

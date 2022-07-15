@@ -21,6 +21,6 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
 
     @Modifying
     @Transactional
-    @Query(value = "update {h-domain}api_keys set is_valid=flase where api_key= :api_key ", nativeQuery = true)
+    @Query(value = "update {h-domain}api_keys set is_valid=false where api_key= :api_key and is_valid = true", nativeQuery = true)
     int deleteByAppKey(@Param("api_key") String apiKey);
 }

@@ -13,7 +13,6 @@
 
     <properties>
         <bucket4j.version>6.3.0</bucket4j.version>
-        <jackson.verson>2.13.2</jackson.verson>
     </properties>
     <distributionManagement>
         <repository>
@@ -86,21 +85,6 @@
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast</artifactId>
             <version>5.1.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.verson}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${jackson.verson}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.verson}</version>
         </dependency>
     </dependencies>
 

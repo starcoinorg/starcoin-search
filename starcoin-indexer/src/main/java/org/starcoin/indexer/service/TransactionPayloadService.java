@@ -13,6 +13,7 @@ public class TransactionPayloadService {
     private TransactionPayloadRepository transactionPayloadRepository;
 
     public void savePayload(List<TransactionPayload> transactionPayloadList) {
-        transactionPayloadRepository.saveAllAndFlush(transactionPayloadList);
+        transactionPayloadRepository.saveAll(transactionPayloadList);
+        transactionPayloadRepository.flush();
     }
 }

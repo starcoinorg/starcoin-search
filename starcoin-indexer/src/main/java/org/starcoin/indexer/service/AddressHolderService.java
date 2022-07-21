@@ -17,7 +17,9 @@ public class AddressHolderService {
 
     public void saveList(List<AddressHolderEntity> addressHolderList) {
         if(addressHolderList != null && !addressHolderList.isEmpty()) {
-            addressHolderRepository.saveAllAndFlush(addressHolderList);
+            addressHolderRepository.saveAll(addressHolderList);
+            addressHolderRepository.flush();
+
         }
     }
 

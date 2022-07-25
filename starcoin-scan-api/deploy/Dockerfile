@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk-alpine as build
+FROM openjdk:11-jdk-alpine as build
 WORKDIR /workspace/app
 
 COPY ../../mvnw .
@@ -11,7 +11,7 @@ COPY settings.xml .
 
 RUN --mount=type=cache,target=/root/.m2 ./mvnw --settings settings.xml install -DskipTests --quiet
 
-FROM openjdk:8-jdk-alpine
+FROM openjdk:11-jdk-alpine
 ARG STARCOIN_ES_URL
 ARG STARCOIN_ES_PROTOCOL
 ARG STARCOIN_ES_PORT

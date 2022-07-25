@@ -49,7 +49,7 @@ ENV DB_SCHEMA=$DB_SCHEMA
 ENV PROGRAM_ARGS=$PROGRAM_ARGS
 
 
-RUN addgroup -S starcoin && adduser -S starcoin -G starcoin
+RUN adduser -S starcoin -G starcoin
 VOLUME /tmp
 RUN mkdir logs && chown -R starcoin:starcoin logs
 USER starcoin

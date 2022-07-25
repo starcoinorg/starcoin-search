@@ -25,7 +25,7 @@ ENV STARCOIN_ES_PORT=$STARCOIN_ES_PORT
 ENV STARCOIN_ES_USER=$STARCOIN_ES_USER
 ENV STARCOIN_ES_PWD=$STARCOIN_ES_PWD
 ENV STARCOIN_ES_INDEX_VERSION=$STARCOIN_ES_INDEX_VERSION
-RUN addgroup -S starcoin && adduser -S starcoin -G starcoin
+RUN adduser -S starcoin -G starcoin
 VOLUME /tmp
 RUN mkdir logs && chown -R starcoin:starcoin logs
 USER starcoin

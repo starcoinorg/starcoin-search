@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.starcoin.bean.ApiKey;
 import org.starcoin.bean.UserInfo;
 import org.starcoin.scan.service.RateLimitService;
+import org.starcoin.scan.utils.CodeUtils;
 import org.starcoin.scan.utils.JSONResult;
 import org.starcoin.types.SignedMessage;
 import org.starcoin.utils.Hex;
@@ -32,6 +33,10 @@ public class UserController {
 
     private ConcurrentMap<String, Long> sessionMap() {
         return hazelcastInstance.getMap("session");
+    }
+
+    private ConcurrentMap<String, String> codeCache() {
+        return  hazelcastInstance.getMap("code");
     }
 
     private Long getSession(String address) {
@@ -92,10 +97,21 @@ public class UserController {
         }
         return new JSONResult("200", "ok", rateLimitService.getUser(address));
     }
+    @ApiOperation("get code")
+    @GetMapping("/code/")
+    public JSONResult getCode(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
+        String code = CodeUtils.generateCode(6);
+        codeCache().put(address + "::" + opt, code);
+        return new JSONResult("200", "ok", code);
+    }
 
     @ApiOperation("update wallet address")
     @GetMapping("/update/address/{new}")
-    public JSONResult updateUserAddr(@PathVariable(value = "new") String address, @RequestParam(value = "old") String old){
+    public JSONResult updateUserAddr(@PathVariable(value = "new") String address, @RequestParam(value = "old") String old, @RequestParam("sign") String sign){
         Long userId = getSession(old);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -133,7 +149,7 @@ public class UserController {
 
     @ApiOperation("delete user")
     @GetMapping("/destroy/{address}")
-    public JSONResult destroy(@PathVariable(value = "address") String address){
+    public JSONResult destroy(@PathVariable(value = "address") String address, @RequestParam("sign") String sign){
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");

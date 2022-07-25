@@ -1,4 +1,4 @@
-FROM openjdk:11-jdk-alpine as build
+FROM adoptopenjdk/openjdk11:jre-11.0.6_10-alpine as build
 WORKDIR /workspace/app
 
 COPY ../../mvnw .
@@ -11,7 +11,7 @@ COPY settings.xml .
 
 RUN --mount=type=cache,target=/root/.m2 ./mvnw --settings settings.xml install -DskipTests --quiet
 
-FROM openjdk:11-jdk-alpine
+FROM adoptopenjdk/openjdk11:jre-11.0.6_10-alpine
 ARG HOSTS
 ARG NETWORK
 ARG BG_TASK_JOBS

@@ -100,10 +100,6 @@ public class UserController {
     @ApiOperation("get code")
     @GetMapping("/code/")
     public JSONResult getCode(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
-        Long userId = getSession(address);
-        if (userId == null) {
-            return new JSONResult("401", "address not login");
-        }
         String code = CodeUtils.generateCode(6);
         codeCache().put(address + "::" + opt, code);
         return new JSONResult("200", "ok", code);

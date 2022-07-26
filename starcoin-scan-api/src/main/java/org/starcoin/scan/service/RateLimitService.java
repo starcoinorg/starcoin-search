@@ -51,8 +51,8 @@ public class RateLimitService {
         return userInfoRepository.updateAddress(newAddress, userId, old);
     }
 
-    public long destroyUser(long userId) {
-        return userInfoRepository.updateStatus(userId);
+    public void destroyUser(long userId) {
+        userInfoRepository.deleteById(userId);
     }
 
     public long updateUserInfo(long userId, String mobile, String email, String avatar, String twitter, String discord, String telegram, String domain, String blog, String profile) {

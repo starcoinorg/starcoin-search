@@ -1,6 +1,8 @@
 package org.starcoin.scan.controller;
 
+import com.hazelcast.cache.ICache;
 import com.hazelcast.core.HazelcastInstance;
+import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
 import com.novi.serde.SerializationError;
 import io.swagger.annotations.Api;
@@ -17,6 +19,10 @@ import org.starcoin.scan.utils.JSONResult;
 import org.starcoin.types.SignedMessage;
 import org.starcoin.utils.Hex;
 import org.starcoin.utils.SignatureUtils;
+
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -25,6 +31,11 @@ import java.util.concurrent.ConcurrentMap;
 @RequestMapping("v2/user")
 @Slf4j
 public class UserController {
+    private final String LOGIN_CODE_PREFIX = "STCSCAN_LOGIN_CODE:";
+    private final String UPDATE_CODE_PREFIX = "STCSCAN_UPDATE_ADDR_CODE:";
+    private final String DESTROY_CODE_PREFIX = "STCSCAN_DESTROY_ADDR_CODE:";
+
+    private static ExpiryPolicy codeExpiryPolicy = AccessedExpiryPolicy.factoryOf(Duration.FIVE_MINUTES).create();
     @Autowired
     private RateLimitService rateLimitService;
     @Qualifier("hazelcastInstance")
@@ -35,8 +46,12 @@ public class UserController {
         return hazelcastInstance.getMap("session");
     }
 
-    private ConcurrentMap<String, String> codeCache() {
-        return  hazelcastInstance.getMap("code");
+    private ICache<String, String> codeCache() {
+        ICache<String, String> cache = hazelcastInstance.getCacheManager().getCache("code_cache");
+        if(cache == null) {
+           log.error("cache not exist!");
+        }
+        return cache;
     }
 
     private Long getSession(String address) {
@@ -54,25 +69,17 @@ public class UserController {
             return new JSONResult<>("401", "address already log in.");
         }
         //verify sign
-        boolean checked = false;
         log.info("user login : {}, {}", address, sign);
-        try {
-            SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
-            if (!message.account.toString().equals(address)) {
-                return new JSONResult<>("401", "address information and signature do not match");
-            }
-            checked = SignatureUtils.signedMessageCheckSignature(message);
-        } catch (DeserializationError | SerializationError e) {
-            return new JSONResult<>("401", "incorrect signature message");
+        JSONResult result = verifyMessage(address, sign, 1);
+        if(result.getStatusCodeValue() != 200) {
+            return result;
         }
-        if (checked) {
-            //login
-            long uid = rateLimitService.logIn(address);
-            sessionMap().put(address, uid);
-            log.info("save session: {}, {}", address, uid);
-            return new JSONResult<>("200", "login success");
-        }
-        return new JSONResult<>("401", "signature message verification does not pass");
+        //login
+        long uid = rateLimitService.logIn(address);
+        sessionMap().put(address, uid);
+
+        log.info("save session: {}, {}", address, uid);
+        return new JSONResult<>("200", "login success");
     }
 
     @ApiOperation("logout")
@@ -100,8 +107,18 @@ public class UserController {
     @ApiOperation("get code")
     @GetMapping("/code/")
     public JSONResult getCode(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
+        if(opt < 1 || opt > 3) {
+            log.warn("get code opt err: {}, {}", address, opt);
+            return new JSONResult("401", "opt not allowed");
+        }
         String code = CodeUtils.generateCode(6);
-        codeCache().put(address + "::" + opt, code);
+        codeCache().put(address + "::" + opt, code, codeExpiryPolicy);
+        return new JSONResult("200", "ok", code);
+    }
+
+    @GetMapping("/code/get/")
+    public JSONResult getCodetest(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
+        String code = codeCache().get(address + "::"+ opt);
         return new JSONResult("200", "ok", code);
     }
 
@@ -112,6 +129,12 @@ public class UserController {
         if (userId == null) {
             return new JSONResult("401", "address not login");
         }
+        //verify code
+        JSONResult resultObj = verifyMessage(old, sign, 2);
+        if(resultObj.getStatusCodeValue() != 200) {
+            return resultObj;
+        }
+
         long result = rateLimitService.updateAddress(userId, address, old);
         if (result == 1) {
             //update ok, set session
@@ -150,8 +173,16 @@ public class UserController {
         if (userId == null) {
             return new JSONResult("401", "address not login");
         }
-        long code = rateLimitService.destroyUser(userId);
-        return new JSONResult("200", "address destroy ok, status:" + code);
+        //verify code
+        JSONResult resultObj = verifyMessage(address, sign, 3);
+        if(resultObj.getStatusCodeValue() != 200) {
+            return resultObj;
+        }
+
+        rateLimitService.destroyUser(userId);
+        //delete session
+        sessionMap().remove(address);
+        return new JSONResult("200", "address destroy ok.");
     }
 
     @ApiOperation("get user api keys")
@@ -188,5 +219,44 @@ public class UserController {
     public JSONResult updateAppName(@RequestParam(value = "app_key") String appKey) {
         long code = rateLimitService.remove(appKey);
         return new JSONResult("200", "remove api key ok, status:" + code);
+    }
+
+    private JSONResult verifyMessage(String address, String sign, int opt) {
+        try {
+            SignedMessage message = SignedMessage.bcsDeserialize(Hex.decode(sign));
+            if (!message.account.toString().equals(address)) {
+                log.warn("verify message not match: {}, {}, message account: {}", address, opt, message.account);
+                return new JSONResult<>("401", "address information and signature do not match");
+            }
+            //verify code
+            String code = codeCache().get(address + "::"+ opt);
+            Bytes msg2 = Bytes.fromList(message.message.value);
+            String verifying = new String(msg2.content());
+            String verifyMessage;
+            switch (opt) {
+                case 1:
+                    verifyMessage = LOGIN_CODE_PREFIX + code;
+                    break;
+                case 2:
+                    verifyMessage = UPDATE_CODE_PREFIX + code;
+                    break;
+                case 3:
+                    verifyMessage = DESTROY_CODE_PREFIX + code;
+                    break;
+                default:
+                    verifyMessage = "";
+            };
+            if(!verifyMessage.equals(verifying)) {
+                log.warn("verigy message code is invalid: {}, {}, {}, {} ", address, opt, verifyMessage, verifying);
+                return new JSONResult<>("401", "signature message code is invalid");
+            }
+            if(SignatureUtils.signedMessageCheckSignature(message)) {
+                return new JSONResult<>("200", "ok");
+            }else {
+                return new JSONResult<>("401", "signature message verification does not pass");
+            }
+        } catch (DeserializationError | SerializationError e) {
+            return new JSONResult<>("401", "incorrect signature message");
+        }
     }
 }

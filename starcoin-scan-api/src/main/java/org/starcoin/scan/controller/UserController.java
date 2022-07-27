@@ -34,6 +34,8 @@ public class UserController {
     private final String LOGIN_CODE_PREFIX = "STCSCAN_LOGIN_CODE:";
     private final String UPDATE_CODE_PREFIX = "STCSCAN_UPDATE_ADDR_CODE:";
     private final String DESTROY_CODE_PREFIX = "STCSCAN_DESTROY_ADDR_CODE:";
+    private final String DESTROY_APIKEY_CODE_PREFIX = "STCSCAN_DESTROY_APIKEY_CODE:";
+
 
     private static ExpiryPolicy codeExpiryPolicy = AccessedExpiryPolicy.factoryOf(Duration.FIVE_MINUTES).create();
     @Autowired
@@ -64,6 +66,7 @@ public class UserController {
     @ApiOperation("login by address")
     @GetMapping("/login/{address}/")
     public JSONResult login(@PathVariable(value = "address") String address, @RequestParam("sign") String sign) {
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId != null) {
             return new JSONResult<>("401", "address already log in.");
@@ -85,6 +88,7 @@ public class UserController {
     @ApiOperation("logout")
     @GetMapping("/logout/{address}/")
     public JSONResult logout(@PathVariable(value = "address") String address) {
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             log.warn("user not login: {}", address);
@@ -97,6 +101,7 @@ public class UserController {
     @ApiOperation("show user info")
     @GetMapping("/show/{address}")
     public JSONResult<UserInfo> showUser(@PathVariable(value = "address") String address){
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             log.warn("user show but not login: {}", address);
@@ -107,7 +112,8 @@ public class UserController {
     @ApiOperation("get code")
     @GetMapping("/code/")
     public JSONResult getCode(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
-        if(opt < 1 || opt > 3) {
+        address = address.toLowerCase();
+        if(opt < 1 || opt > 4) {
             log.warn("get code opt err: {}, {}", address, opt);
             return new JSONResult("401", "opt not allowed");
         }
@@ -116,15 +122,11 @@ public class UserController {
         return new JSONResult("200", "ok", code);
     }
 
-    @GetMapping("/code/get/")
-    public JSONResult getCodetest(@RequestParam(value = "opt") int opt, @RequestParam(value = "address") String address) {
-        String code = codeCache().get(address + "::"+ opt);
-        return new JSONResult("200", "ok", code);
-    }
-
     @ApiOperation("update wallet address")
     @GetMapping("/update/address/{new}")
     public JSONResult updateUserAddr(@PathVariable(value = "new") String address, @RequestParam(value = "old") String old, @RequestParam("sign") String sign){
+        address = address.toLowerCase();
+        old = old.toLowerCase();
         Long userId = getSession(old);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -158,6 +160,7 @@ public class UserController {
                                  @RequestParam(value = "blog", required = false) String blog,
                                  @RequestParam(value = "profile", required = false) String profile
     ) {
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -169,6 +172,7 @@ public class UserController {
     @ApiOperation("delete user")
     @GetMapping("/destroy/{address}")
     public JSONResult destroy(@PathVariable(value = "address") String address, @RequestParam("sign") String sign){
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -188,6 +192,7 @@ public class UserController {
     @ApiOperation("get user api keys")
     @GetMapping("/apikey/list/")
     public JSONResult<List<ApiKey>> getAppKeys(@RequestParam(value = "address") String address){
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -199,6 +204,7 @@ public class UserController {
     @ApiOperation("add api key of dapp")
     @GetMapping("/apikey/add/{app_name}")
     public JSONResult addAppKey(@RequestParam(value = "address") String address, @PathVariable(value = "app_name") String appName){
+        address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");
@@ -216,7 +222,17 @@ public class UserController {
 
     @ApiOperation("remove api key")
     @GetMapping("/apikey/remove")
-    public JSONResult updateAppName(@RequestParam(value = "app_key") String appKey) {
+    public JSONResult removeAppName(@RequestParam(value = "app_key") String appKey,  @RequestParam(value = "address") String address, @RequestParam("sign") String sign) {
+        address = address.toLowerCase();
+        Long userId = getSession(address);
+        if (userId == null) {
+            return new JSONResult("401", "address not login");
+        }
+        //verify code
+        JSONResult resultObj = verifyMessage(address, sign, 4);
+        if(resultObj.getStatusCodeValue() != 200) {
+            return resultObj;
+        }
         long code = rateLimitService.remove(appKey);
         return new JSONResult("200", "remove api key ok, status:" + code);
     }
@@ -242,6 +258,9 @@ public class UserController {
                     break;
                 case 3:
                     verifyMessage = DESTROY_CODE_PREFIX + code;
+                    break;
+                case 4:
+                    verifyMessage= DESTROY_APIKEY_CODE_PREFIX + code;
                     break;
                 default:
                     verifyMessage = "";

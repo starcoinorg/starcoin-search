@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: scan-test-api
-          image: starcoin/starcoin_scan:sha-2afcd33
+          image: starcoin/starcoin_scan:sha-5b7ff12
           ports:
             - containerPort: 8500
           env:
@@ -43,6 +43,8 @@ spec:
               value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=barnard"
             - name: HALLEY_DS_URL
               value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=halley"
+            - name: STARCOIN_USER_DS_URL
+              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=starcoin_user"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD

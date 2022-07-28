@@ -26,4 +26,7 @@ public class Constant {
     //frequently used token
     public static final String STC_TOKEN_OR_TAG = "0x00000000000000000000000000000001::STC::STC";
     public static final String STAR_TOKEN_OR_TAG = "0x8c109349c6bd91411d6bc962e080c4a3::STAR::STAR";
+
+    //user api key
+    public static final int MAX_KEYS_COUNT = 3;
 }

@@ -1,0 +1,13 @@
+hazelcast:
+  cluster-name: stcscan-hazelcast-cluster
+  cache:
+    code_cache:
+      statistics-enabled: true
+      eviction:
+        size: 1000
+        max-size-policy: ENTRY_COUNT
+        eviction-policy: LFU
+  network:
+    join:
+      multicast:
+        enabled: true

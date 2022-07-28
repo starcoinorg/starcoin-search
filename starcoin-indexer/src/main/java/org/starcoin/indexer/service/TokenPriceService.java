@@ -19,7 +19,8 @@ public class TokenPriceService {
     private TokenPriceStatRepository tokenPriceStatRepository;
 
     public void savePriceList(List<TokenPrice> tokenPriceList) {
-        tokenPriceRepository.saveAllAndFlush(tokenPriceList);
+        tokenPriceRepository.saveAll(tokenPriceList);
+        tokenPriceRepository.flush();
     }
 
     public void savePriceStat(TokenPriceStat tokenPriceStat) {

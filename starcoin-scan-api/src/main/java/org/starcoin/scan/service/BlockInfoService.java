@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.starcoin.bean.BlockInfoEntity;
 import org.starcoin.scan.repository.BlockInfoRepository;
 
+import java.util.Optional;
+
 @Service
 public class BlockInfoService {
     @Autowired
@@ -14,7 +16,10 @@ public class BlockInfoService {
 
         BlockInfoRepository repository = baseService.getBlockInfoRepository(network);
         if(repository != null) {
-            return repository.getById(hash);
+            Optional<BlockInfoEntity> entity = repository.findById(hash);
+            if(entity.isPresent()) {
+                return entity.get();
+            }
         }
         return null;
     }

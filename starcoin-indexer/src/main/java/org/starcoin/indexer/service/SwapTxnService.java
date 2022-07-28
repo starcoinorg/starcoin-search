@@ -58,7 +58,8 @@ public class SwapTxnService {
     }
 
     public void saveList(List<SwapTransaction> swapTransactionList) {
-        swapTransactionRepository.saveAllAndFlush(swapTransactionList);
+        swapTransactionRepository.saveAll(swapTransactionList);
+        swapTransactionRepository.flush();
     }
 
     public TokenStat getTokenVolume(String token, long startTime, long endTime) {

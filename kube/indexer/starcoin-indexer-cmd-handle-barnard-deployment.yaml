@@ -1,34 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-txn-deployment
-  namespace: starcoin-main
+  name: starcoin-indexer-cmd-handle-deployment
+  namespace: starcoin-barnard
   labels:
-    app: starcoin-indexer-txn
+    app: starcoin-indexer-cmd-handle
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer-txn
+      app: starcoin-indexer-cmd-handle
   template:
     metadata:
       labels:
-        app: starcoin-indexer-txn
+        app: starcoin-indexer-cmd-handle
     spec:
       containers:
-        - name: starcoin-indexer-txn
+        - name: starcoin-indexer-cmd-handle
           image: starcoin/starcoin_indexer:sha-ba00b10
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "main.seed.starcoin.org"
+              value: "barnard.seed.starcoin.org"
             - name: NETWORK
-              value: "main.0727"
+              value: "barnard.0727"
             - name: BG_TASK_JOBS
-              value: "txn_payload"
+              value: ""
             - name: TXN_OFFSET
-              value: "5217755"
+              value: "0"
             - name: BULK_SIZE
               value: "100"
             - name: STARCOIN_ES_PWD
@@ -58,6 +58,6 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "main"
+              value: "barnard"
             - name: PROGRAM_ARGS
-              value: ""
+              value: "migrate_holder"

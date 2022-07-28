@@ -52,6 +52,8 @@ public class RateLimitService {
     }
 
     public void destroyUser(long userId) {
+        //delete user's apikey
+        apiKeyRepository.deleteAllByUserId(userId);
         userInfoRepository.deleteById(userId);
     }
 
@@ -99,6 +101,10 @@ public class RateLimitService {
        Optional<UserInfo> userInfo = userInfoRepository.findById(userId);
        if(userInfo.isPresent()) return true;
        return false;
+    }
+
+    public ApiKey getApiKeyByNameAndUserId(long userId, String appName) {
+        return apiKeyRepository.getApiKeyByNameAndUserId(userId, appName);
     }
 
     public List<ApiKey> getApiKeys(long userId) {

@@ -136,7 +136,11 @@ public class UserController {
         if(resultObj.getStatusCodeValue() != 200) {
             return resultObj;
         }
-
+        //check new address exist
+        UserInfo newUserInfo = rateLimitService.getUser(address);
+        if(newUserInfo != null && newUserInfo.getId() > 0) {
+            return new JSONResult("401", "new address is exist, please try with other");
+        }
         long result = rateLimitService.updateAddress(userId, address, old);
         if (result == 1) {
             //update ok, set session
@@ -208,6 +212,11 @@ public class UserController {
         Long userId = getSession(address);
         if (userId == null) {
             return new JSONResult("401", "address not login");
+        }
+        //check app_name exist
+        ApiKey apiKey = rateLimitService.getApiKeyByNameAndUserId(userId, appName);
+        if(apiKey != null && apiKey.getId() > 0){
+            return new JSONResult("401", "app name is exist, please try other");
         }
         long code = rateLimitService.addApiKey(userId, appName);
         return new JSONResult("200", "app name add ok, status:" + code);

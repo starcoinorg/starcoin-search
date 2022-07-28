@@ -13,6 +13,14 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
     @Query(value = "select *  from {h-domain}api_keys where user_id = :user_id and is_valid = true"
             , nativeQuery = true)
     List<ApiKey> findApiKeyByUserId(@Param("user_id") long userId);
+    @Query(value = "select *  from {h-domain}api_keys where user_id = :user_id and app_name=:app_name"
+            , nativeQuery = true)
+    ApiKey getApiKeyByNameAndUserId(@Param("user_id") long userId, @Param("app_name")String appName);
+
+    @Modifying
+    @Transactional
+    @Query(value = "delete from {h-domain}api_keys where  user_id = :user_id", nativeQuery = true)
+    int deleteAllByUserId(@Param("user_id") long userId);
 
     @Modifying
     @Transactional

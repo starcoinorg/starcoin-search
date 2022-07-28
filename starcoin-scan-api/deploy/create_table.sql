@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS starcoin_user.user_info
     profile         character varying(200),
     create_time     DATE        NOT NULL DEFAULT now(),
     last_login      DATE,
-    CONSTRAINT user_info_pkey PRIMARY KEY (user_id)
+    CONSTRAINT user_info_pkey PRIMARY KEY (user_id),
+    CONSTRAINT user_info_unique UNIQUE (wallet_addr)
     );
 
 
@@ -67,7 +68,8 @@ CREATE TABLE IF NOT EXISTS starcoin_user.api_keys
     api_key     character varying(50) NOT NULL,
     is_valid    boolean NOT NULL,
     create_time DATE NOT NULL DEFAULT now(),
-    CONSTRAINT api_key_pkey PRIMARY KEY (key_id)
+    CONSTRAINT api_key_pkey PRIMARY KEY (key_id),
+    CONSTRAINT api_key_unique UNIQUE (api_key)
     );
 
 CREATE TABLE IF NOT EXISTS starcoin_user.rate_limit

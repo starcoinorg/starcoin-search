@@ -15,6 +15,4 @@ hazelcast:
         enabled: true
         namespace: default
         service-name: hazelcast-service
-        service-label-name: app
-        service-label-value: scan-hazelcast
 

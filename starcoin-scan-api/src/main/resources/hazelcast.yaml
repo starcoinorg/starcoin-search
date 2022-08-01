@@ -4,9 +4,15 @@ hazelcast:
     code_cache:
       statistics-enabled: true
       eviction:
-        size: 1000
+        size: 10000
         max-size-policy: ENTRY_COUNT
         eviction-policy: LFU
+    session:
+      statistics-enabled: true
+      eviction:
+        size: 50000
+        max-size-policy: ENTRY_COUNT
+        eviction-policy: LRU
   network:
     join:
       multicast:

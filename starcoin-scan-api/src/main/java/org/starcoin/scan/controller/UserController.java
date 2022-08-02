@@ -24,7 +24,7 @@ import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 @Api(tags = "user")
 @RestController
@@ -38,14 +38,16 @@ public class UserController {
 
 
     private static ExpiryPolicy codeExpiryPolicy = AccessedExpiryPolicy.factoryOf(Duration.FIVE_MINUTES).create();
+    private static ExpiryPolicy sessionExpiryPolicy = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.HOURS, 8)).create();
+
     @Autowired
     private RateLimitService rateLimitService;
     @Qualifier("hazelcastInstance")
     @Autowired
     private HazelcastInstance hazelcastInstance;
 
-    private ConcurrentMap<String, Long> sessionMap() {
-        return hazelcastInstance.getMap("session");
+    private ICache<String, Long> sessionMap() {
+        return hazelcastInstance.getCacheManager().getCache("session");
     }
 
     private ICache<String, String> codeCache() {
@@ -69,7 +71,9 @@ public class UserController {
         address = address.toLowerCase();
         Long userId = getSession(address);
         if (userId != null) {
-            return new JSONResult<>("401", "address already log in.");
+            //already log in, reset the session
+            sessionMap().put(address, userId, sessionExpiryPolicy);
+            return new JSONResult<>("200", "address already log in.");
         }
         //verify sign
         log.info("user login : {}, {}", address, sign);
@@ -79,7 +83,7 @@ public class UserController {
         }
         //login
         long uid = rateLimitService.logIn(address);
-        sessionMap().put(address, uid);
+        sessionMap().put(address, uid, sessionExpiryPolicy);
 
         log.info("save session: {}, {}", address, uid);
         return new JSONResult<>("200", "login success");
@@ -145,7 +149,7 @@ public class UserController {
         if (result == 1) {
             //update ok, set session
             sessionMap().remove(old);
-            sessionMap().put(address, userId);
+            sessionMap().put(address, userId, sessionExpiryPolicy);
             return new JSONResult("200", "address update ok");
         }
         return new JSONResult("500", "address update failure, status:" + result);

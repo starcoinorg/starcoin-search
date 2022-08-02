@@ -16,9 +16,12 @@ spec:
     spec:
       containers:
         - name: scan-test-api
-          image: starcoin/starcoin_scan:sha-5b7ff12
+          image: starcoin/starcoin_scan:sha-c12f628
           ports:
-            - containerPort: 8500
+            - name: http
+              containerPort: 8500
+            - name: multicast
+              containerPort: 5701
           env:
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"

@@ -24,6 +24,7 @@ import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Api(tags = "user")
 @RestController
@@ -37,7 +38,7 @@ public class UserController {
 
 
     private static ExpiryPolicy codeExpiryPolicy = AccessedExpiryPolicy.factoryOf(Duration.FIVE_MINUTES).create();
-    private static ExpiryPolicy sessionExpiryPolicy = AccessedExpiryPolicy.factoryOf(Duration.TEN_MINUTES).create();
+    private static ExpiryPolicy sessionExpiryPolicy = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.HOURS, 8)).create();
 
     @Autowired
     private RateLimitService rateLimitService;

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: scan-api
-          image: starcoin/starcoin_scan:sha-c12f628
+          image: starcoin/starcoin_scan:sha-3af1c2a
           ports:
             - name: http
               containerPort: 8500

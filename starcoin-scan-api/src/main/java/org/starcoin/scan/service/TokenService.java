@@ -453,18 +453,21 @@ public class TokenService extends BaseService {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.ADDRESS_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(count);
-        //begin offset
+        //set offset
+        boolean shouldAfter = true;
         int offset = 0;
         if (page > 1) {
             offset = (page - 1) * count;
             if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-                searchSourceBuilder.from(0);
-            } else {
-                searchSourceBuilder.from(offset);
+                shouldAfter = true;
             }
         }
-        searchSourceBuilder.from(offset);
+        if(shouldAfter) {
+            searchSourceBuilder.from(0);
+            searchSourceBuilder.searchAfter(new Object[]{offset});
+        }else {
+            searchSourceBuilder.from(offset);
+        }
 
         TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("type_tag.keyword", tokenType);
 

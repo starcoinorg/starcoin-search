@@ -22,7 +22,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: starcoin/starcoin_indexer,ghcr.io/starcoinorg/starcoin_indexer
+          images: starcoin/starcoin_indexer
           tag-sha: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1.6.0
@@ -33,12 +33,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GIT_PACKAGE_TOKEN }}
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v18
         with:

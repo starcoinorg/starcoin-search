@@ -22,7 +22,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: starcoin/starcoin_scan,ghcr.io/starcoinorg/starcoin_scan
+          images: starcoin/starcoin_scan
           tag-sha: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1.6.0

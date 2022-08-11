@@ -97,17 +97,9 @@ public class BlockService extends BaseService {
         searchSourceBuilder.query(QueryBuilders.matchAllQuery());
         //page size
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS && start_height > 0) {
-                offset = start_height - (page - 1) * count;
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
+        //set offset
+        TransactionService.setBlockSearchBuildFrom(page, count, start_height, searchSourceBuilder);
+
         searchSourceBuilder.sort("header.number", SortOrder.DESC);
         searchSourceBuilder.trackTotalHits(true);
         searchRequest.source(searchSourceBuilder);
@@ -207,17 +199,9 @@ public class BlockService extends BaseService {
         searchSourceBuilder.query(QueryBuilders.matchAllQuery());
         //page size
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS && start_height > 0) {
-                offset = start_height - (page - 1) * count;
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
+        //set offset
+        TransactionService.setBlockSearchBuildFrom(page, count, start_height, searchSourceBuilder);
+
         searchSourceBuilder.sort("uncle_block_number", SortOrder.DESC);
         searchSourceBuilder.trackTotalHits(true);
         searchRequest.source(searchSourceBuilder);

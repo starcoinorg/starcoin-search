@@ -3,6 +3,7 @@ package org.starcoin.scan.service;
 import com.alibaba.fastjson.JSON;
 import com.beust.jcommander.internal.Lists;
 import com.novi.serde.DeserializationError;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchRequest;
@@ -101,7 +102,13 @@ public class TransactionService extends BaseService {
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
-        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        SearchResponse searchResponse = null;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException e) {
+            logger.error("get txn err:", e);
+            return  Result.EmptyResult;
+        }
         return ServiceUtils.getSearchResult(searchResponse, TransactionWithEvent.class);
     }
 

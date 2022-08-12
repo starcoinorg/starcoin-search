@@ -27,7 +27,7 @@ public class TokenController {
     @ApiOperation("get token aggregate stat list")
     @GetMapping("/{network}/stats/{page}")
     public Result<TokenStatisticView> getAggregate(@PathVariable("network") String network, @PathVariable("page") int page,
-                                               @RequestParam(value = "count", required = false, defaultValue = "50") int count) {
+                                               @RequestParam(value = "count", required = false, defaultValue = "10") int count) {
         return tokenService.tokenAggregateList(network, page, count);
     }
 

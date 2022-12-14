@@ -75,7 +75,7 @@ public class TokenService extends BaseService {
         Result<TokenStatistic> volumes = tokenVolumeList(network, page, count);
         Map<String, Long> volumeMap = getVolumeMap(network, volumes);
         //get market cap
-        Result<TokenStatistic> market = tokenMarketCap(network, page, ELASTICSEARCH_MAX_HITS);
+        Result<TokenStatistic> market = tokenMarketCap(network, 1, ELASTICSEARCH_MAX_HITS);
         Map<String, Double> marketMap = getMarketMap(market);
         List<TokenStatisticView> viewList = new ArrayList<>();
         for (TokenStatistic tokenStatistic : holderContents) {
@@ -94,7 +94,7 @@ public class TokenService extends BaseService {
             viewList.add(view);
         }
         result.setContents(viewList);
-        result.setTotal(holders.getTotal());
+        result.setTotal(market.getTotal());
         return result;
     }
 
@@ -270,8 +270,8 @@ public class TokenService extends BaseService {
         searchSourceBuilder.query(QueryBuilders.matchAllQuery());
         TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms("holders")
                 .field("type_tag.keyword")
+                .size(ELASTICSEARCH_MAX_HITS)
                 .order(BucketOrder.aggregation("address_holders", false))
-//                .size(count)
                 .subAggregation(AggregationBuilders.count("address_holders").field("address.keyword"))
                 .subAggregation(new BucketSortPipelineAggregationBuilder("bucket_field", null).from(offset).size(count));
 
@@ -297,16 +297,8 @@ public class TokenService extends BaseService {
                 .must(QueryBuilders.matchAllQuery());
         searchSourceBuilder.query(queryBuilder);
         //page size
-        int offset = 0;
         searchSourceBuilder.size(count);
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            }
-        }
-        //begin offset
-        searchSourceBuilder.from(offset);
+        TransactionService.setSearchBuildFrom(page, count, searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.timeout(new TimeValue(20, TimeUnit.SECONDS));
@@ -368,7 +360,6 @@ public class TokenService extends BaseService {
             logger.error("get token volume error:", e);
             return null;
         }
-
     }
 
     public void loadTokenInfo(String network) {
@@ -446,6 +437,7 @@ public class TokenService extends BaseService {
             }
         }
         result.setContents(statistics);
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
         return result;
     }
 
@@ -453,18 +445,21 @@ public class TokenService extends BaseService {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.ADDRESS_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(count);
-        //begin offset
+        //set offset
+        boolean shouldAfter = false;
         int offset = 0;
         if (page > 1) {
             offset = (page - 1) * count;
             if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-                searchSourceBuilder.from(0);
-            } else {
-                searchSourceBuilder.from(offset);
+                shouldAfter = true;
             }
         }
-        searchSourceBuilder.from(offset);
+        if(shouldAfter) {
+            searchSourceBuilder.from(0);
+            searchSourceBuilder.searchAfter(new Object[]{offset});
+        }else {
+            searchSourceBuilder.from(offset);
+        }
 
         TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("type_tag.keyword", tokenType);
 

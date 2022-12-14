@@ -5,7 +5,7 @@ metadata:
   labels:
     app: scan-api
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: scan-api
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: scan-api
-          image: starcoin/starcoin_scan:sha-3af1c2a
+          image: starcoin/starcoin_scan:sha-1223fc3
           ports:
             - name: http
               containerPort: 8500
@@ -39,15 +39,15 @@ spec:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: MAIN_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=main"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=main"
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: BARNARD_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=barnard"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=barnard"
             - name: HALLEY_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=halley"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=halley"
             - name: STARCOIN_USER_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=starcoin_user"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=starcoin_user"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD

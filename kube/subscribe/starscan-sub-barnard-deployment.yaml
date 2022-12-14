@@ -45,7 +45,7 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD

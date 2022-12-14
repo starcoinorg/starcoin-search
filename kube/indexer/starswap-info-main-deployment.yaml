@@ -1,36 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-cmd-handle-deployment
-  namespace: starcoin-barnard
+  name: starswap-info-deployment
+  namespace: starcoin-main
   labels:
-    app: starcoin-indexer-cmd-handle
+    app: starswap-info
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer-cmd-handle
+      app: starswap-info
   template:
     metadata:
       labels:
-        app: starcoin-indexer-cmd-handle
+        app: starswap-info
     spec:
       containers:
-        - name: starcoin-indexer-cmd-handle
-          image: starcoin/starcoin_indexer:sha-ba00b10
+        - name: starswap-info
+          image: starcoin/starcoin_indexer:sha-a66e9ab
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "barnard.seed.starcoin.org"
+              value: "main.seed.starcoin.org"
             - name: NETWORK
-              value: "barnard.0727"
+              value: "main.0727"
             - name: BG_TASK_JOBS
-              value: ""
+              value: "swap_stats,price_hour,price_stat,swap_pool_fee_stat"
             - name: TXN_OFFSET
               value: "0"
-            - name: BULK_SIZE
-              value: "100"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
@@ -42,14 +40,14 @@ spec:
               value: "https"
             - name: STARCOIN_ES_PORT
               value: "443"
-            - name: STARCOIN_ES_USER
-              value: elastic
+            - name: BULK_SIZE
+              value: "100"
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
               value: "0x8c109349c6bd91411d6bc962e080c4a3"
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://database-swap.czftx6muneg7.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD
@@ -58,6 +56,6 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "barnard"
+              value: "main"
             - name: PROGRAM_ARGS
-              value: "migrate_holder"
+              value: ""

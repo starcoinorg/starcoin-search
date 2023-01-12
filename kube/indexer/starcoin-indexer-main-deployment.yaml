@@ -26,7 +26,7 @@ spec:
             - name: NETWORK
               value: "main.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap"
+              value: "indexer,secondary,market_cap,txn_payload"
             - name: TXN_OFFSET
               value: "0"
             - name: BULK_SIZE
@@ -49,7 +49,7 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: "0x8c109349c6bd91411d6bc962e080c4a3"
             - name: DS_URL
-              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://database-1.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD

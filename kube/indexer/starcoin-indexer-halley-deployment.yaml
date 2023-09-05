@@ -61,5 +61,4 @@ spec:
               value: "halley"
             - name: PROGRAM_ARGS
               value: ""
-          valume:
-
+          #valume:

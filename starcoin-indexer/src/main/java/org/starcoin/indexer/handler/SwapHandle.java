@@ -1,7 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +16,7 @@ import org.starcoin.utils.NumberUtils;
 import org.starcoin.utils.StructTagUtil;
 import org.starcoin.utils.SwapApiClient;
 import org.starcoin.types.TypeTag;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.io.IOException;
 import java.math.BigDecimal;

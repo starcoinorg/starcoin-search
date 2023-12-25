@@ -1,10 +1,10 @@
 package org.starcoin.indexer.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.bouncycastle.util.Arrays;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.DocWriteResponse;
@@ -62,6 +62,7 @@ import org.starcoin.types.event.DepositEvent;
 import org.starcoin.types.event.WithdrawEvent;
 import org.starcoin.utils.Hex;
 import org.starcoin.utils.StructTagUtil;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -378,7 +379,7 @@ public class ElasticSearchHandler {
                     addTokenInfo(tokenInfo, codeStr);
                     //add to cache
                     tokenCache.put(codeStr, tokenInfo);
-                } catch (JSONRPC2SessionException e) {
+                } catch (JSONRPC2SessionException | JsonProcessingException e) {
                     logger.error("flush token error:", e);
                 }
             }

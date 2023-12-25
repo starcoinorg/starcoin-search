@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +15,10 @@ import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
 import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.utils.SwapApiClient;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Calendar;
 import java.util.List;
 
 import static org.starcoin.utils.DateTimeUtils.getTimeStamp;

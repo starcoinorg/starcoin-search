@@ -33,4 +33,4 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Maven Compile
         run: |
-          mvn compile --errors
+          mvn compile --quiet

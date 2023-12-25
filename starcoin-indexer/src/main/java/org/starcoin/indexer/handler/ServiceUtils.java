@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.bcs.BcsDeserializer;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -29,6 +28,7 @@ import org.starcoin.types.ScriptFunction;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.*;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -180,7 +180,7 @@ public class ServiceUtils {
                 if (tokenInfo != null) {
                     tokenCache.put(tokenCode, tokenInfo);
                 }
-            } catch (JSONRPC2SessionException e) {
+            } catch (JSONRPC2SessionException | JsonProcessingException e) {
                 logger.error("get token info error:", e);
             }
         }

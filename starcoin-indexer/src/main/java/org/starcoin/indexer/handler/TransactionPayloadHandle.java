@@ -3,7 +3,6 @@ package org.starcoin.indexer.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.serde.DeserializationError;
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
@@ -22,6 +21,7 @@ import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.types.TypeTag;
 import org.starcoin.utils.*;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;

@@ -1,6 +1,6 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

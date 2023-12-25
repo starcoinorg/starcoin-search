@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import io.reactivex.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +8,7 @@ import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.PendingTransaction;
 import org.starcoin.bean.PendingTransactionNotification;
 import org.web3j.protocol.websocket.WebSocketService;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.net.ConnectException;
 import java.net.MalformedURLException;

@@ -105,16 +105,16 @@ public class RepairHandle {
                 }
                 continue;
             }
-            if (!block.getHeader().getBlockHash().equals(esBlock.getHeader().getBlockHash())) {
-                // fork block
-                try {
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
-                } catch (JSONRPC2SessionException e) {
-                    logger.error("add fix block err:", e);
-                }
-            } else {
-                logger.info("normal block: {}", block.getHeader().getHeight());
+           // if (!block.getHeader().getBlockHash().equals(esBlock.getHeader().getBlockHash())) {
+            // fork block
+            try {
+                ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+            } catch (JSONRPC2SessionException e) {
+                logger.error("add fix block err:", e);
             }
+            //  } else {
+         //     logger.info("normal block: {}", block.getHeader().getHeight());
+         //}
             newStartNumber = block.getHeader().getHeight();
         }
         if (!blockList.isEmpty()) {

@@ -204,6 +204,22 @@ public class QuartzConfig {
     }
 
     @Bean
+    public JobDetail monitorJob() {
+        return JobBuilder.newJob(MonitorTipHandler.class).withIdentity("monitor_tip").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger monitorTipTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInMinutes(10)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(priceStatJob())
+                .withIdentity("monitor_tip")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
         try {
@@ -281,6 +297,8 @@ public class QuartzConfig {
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, priceStatTrigger());
         }
+        job = monitorJob();
+
 
         scheduler.start();
         return scheduler;

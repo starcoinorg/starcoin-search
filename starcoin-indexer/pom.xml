@@ -24,6 +24,12 @@
             <artifactId>starcoin-commons</artifactId>
             <version>1.1</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-ses -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ses</artifactId>
+            <version>1.12.640</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

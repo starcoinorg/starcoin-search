@@ -103,7 +103,7 @@ public class MonitorTipHandler extends QuartzJobBean {
             // Choose the AWS region of the Amazon SES endpoint you want to connect to. Note that your production
             // access status, sending limits, and Amazon SES identity-related settings are specific to a given
             // AWS region, so be sure to select an AWS region in which you set up Amazon SES. Here, we are using
-            // the US West (Oregon) region. For a complete list, see http://docs.aws.amazon.com/ses/latest/DeveloperGuide/regions.html
+            // the Asia Pacific (Tokyo) region. For a complete list, see http://docs.aws.amazon.com/ses/latest/DeveloperGuide/regions.html
             AmazonSimpleEmailService client =
                     AmazonSimpleEmailServiceClientBuilder.standard()
                             .withCredentials(new AWSStaticCredentialsProvider(credentials))

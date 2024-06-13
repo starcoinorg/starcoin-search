@@ -6,7 +6,7 @@ import org.starcoin.api.Result;
 import org.starcoin.bean.Event;
 import org.starcoin.bean.PendingTransaction;
 import org.starcoin.scan.service.TransactionService;
-import org.starcoin.scan.service.TransactionWithEvent;
+import org.starcoin.scan.service.vo.TransactionWithEvent;
 
 import java.io.IOException;
 

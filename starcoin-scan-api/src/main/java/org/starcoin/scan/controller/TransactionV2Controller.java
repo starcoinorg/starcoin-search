@@ -10,7 +10,7 @@ import org.starcoin.bean.PendingTransaction;
 import org.starcoin.bean.TokenTransfer;
 import org.starcoin.bean.Transfer;
 import org.starcoin.scan.service.TransactionService;
-import org.starcoin.scan.service.TransactionWithEvent;
+import org.starcoin.scan.service.vo.TransactionWithEvent;
 
 import java.io.IOException;
 

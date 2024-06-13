@@ -15,6 +15,9 @@ public class Constant {
     public static final String MARKET_CAP_INDEX = "market_cap";
     public static final String PAYLOAD_INDEX = "txn_payloads";
     public static final String TOKEN_INFO_INDEX = "token_info";
+    public static final String DAG_INSPECTOR_NODE = "dag_inspector_node";
+    public static final String DAG_INSPECTOR_EDGE = "dag_inspector_edge";
+    public static final String DAG_INSPECT_HEIGHT_GROUP = "dag_inspector_height_group";
 
 
     public static final String EVENT_FILTER_ADDRESS = "0x00000000000000000000000000000001";

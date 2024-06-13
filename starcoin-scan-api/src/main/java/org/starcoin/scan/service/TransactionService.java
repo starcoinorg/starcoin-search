@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
+import org.starcoin.scan.service.vo.TransactionWithEvent;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.event.ProposalCreatedEvent;
 import org.starcoin.utils.ByteUtils;

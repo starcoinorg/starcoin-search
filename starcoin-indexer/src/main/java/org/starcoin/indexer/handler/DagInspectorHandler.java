@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.BlockRPCClient;
+import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
 import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
@@ -110,12 +111,14 @@ public class DagInspectorHandler {
             }
         });
 
-        List<DagInspectorBlock> inspectorBlockList =  new ArrayList<>(inspBlockMap.values());
-        List<DagInspectorEdge> edgeList = buildEdgeDataFromNodeData(inspectorBlockList);
 
         // Save all data into storage
+        List<DagInspectorBlock> inspectorBlockList =  new ArrayList<>(inspBlockMap.values());
         bulkRequest.add(buildSaveInspectorBlockRequest(inspectorBlockList));
+
+        List<DagInspectorEdge> edgeList = buildEdgeDataFromNodeData(inspectorBlockList);
         bulkRequest.add(buildSaveEdgeRequest(edgeList));
+
         bulkRequest.add(buildSaveHeightGroupRequest(inspHeightGroupList));
 
         // Bulk save
@@ -271,6 +274,13 @@ public class DagInspectorHandler {
         return request;
     }
 
+    /**
+     * Get the size of the group at the specified height, or return the default size if the group does not exist.
+     * @param groupList
+     * @param height
+     * @param defaultSize
+     * @return
+     */
     Integer getHeightGroupSizeOrDefault(List<DagInspectorHeightGroup> groupList, Long height, Integer defaultSize) {
         if (groupList.isEmpty()) {
             return defaultSize;
@@ -291,51 +301,6 @@ public class DagInspectorHandler {
             }
         }
     }
-//    /**
-//     * Build edge field from block, include from_block_id, to_block_id, from_height, to_height, etc.
-//     *
-//     * @param builder
-//     * @param currentBlock
-//     * @param blockList
-//     * @throws IOException
-//     */
-//    private void buildEdgeFieldFromBlock(XContentBuilder builder, Block currentBlock, List<Block> blockList) throws IOException {
-//        BlockHeader currentBlockHeader = currentBlock.getHeader();
-//
-//        String parentHash = currentBlockHeader.getParentHash();
-//        Block parentBlock = blockList
-//                .stream()
-//                .filter(b -> b.getHeader().getBlockHash().equalsIgnoreCase(parentHash))
-//                .findFirst()
-//                .orElse(null);
-//        if (parentBlock == null) {
-//            // TODO(BobOng): Get parent block from chain data
-//            logger.info("Need to getting the parent block from chain data, parent hash: {}", parentHash);
-//        }
-//        buildEdgeFieldFromBlockPair(builder, currentBlock, parentBlock);
-//
-//        if (currentBlockHeader.getParentsHash().isEmpty()) {
-//            return;
-//        }
-//
-//        List<String> filteredParents = currentBlockHeader
-//                .getParentsHash()
-//                .stream()
-//                .filter(h -> h.equalsIgnoreCase(parentHash))
-//                .collect(Collectors.toList());
-//
-//        if (filteredParents.isEmpty()) {
-//            return;
-//        }
-//
-//        List<Block> parentBlocks = blockList
-//                .stream()
-//                .filter(b -> filteredParents.contains(b.getHeader().getBlockHash()))
-//                .collect(Collectors.toList());
-//        for (Block parentBLock : parentBlocks) {
-//            buildEdgeFieldFromBlockPair(builder, currentBlock, parentBLock);
-//        }
-//    }
 
     private IndexRequest buildHeightGroup(Block block, Integer blockHeightIndex) {
         IndexRequest request = new IndexRequest(dagInspectHeightGroupIndex);
@@ -358,13 +323,17 @@ public class DagInspectorHandler {
 
 
     private List<DagInspectorHeightGroup> getGroupHeightSizeFromStorage(List<Long> heights) throws IOException {
-//        SearchRequest searchRequest = new SearchRequest(dagInspectHeightGroupIndex);
-//        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("height", height);
-//        searchRequest.source(new SearchSourceBuilder().query(termQueryBuilder));
-//        SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-//        JSONObject obj = JSONObject.parseObject(ServiceUtils.getJsonString(response));
-//        return obj.getInteger("size");
-        return new ArrayList<>();
+        List<DagInspectorHeightGroup> groupList = new ArrayList<>();
+        if (heights.isEmpty()) {
+            return groupList;
+        }
+
+        SearchRequest searchRequest = new SearchRequest(dagInspectHeightGroupIndex);
+        TermsQueryBuilder termQueryBuilder = QueryBuilders.termsQuery("height", heights);
+        searchRequest.source(new SearchSourceBuilder().query(termQueryBuilder));
+        SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+        Result<DagInspectorHeightGroup> result = ServiceUtils.getSearchResult(response, DagInspectorHeightGroup.class);
+        return result.getContents();
     }
 
 }

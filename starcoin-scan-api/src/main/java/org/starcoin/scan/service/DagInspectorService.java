@@ -7,6 +7,8 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.metrics.Max;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -14,7 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
-import org.starcoin.bean.Block;
+import org.starcoin.bean.DagInspectorBlock;
+import org.starcoin.bean.DagInspectorEdge;
+import org.starcoin.bean.DagInspectorHeightGroup;
 import org.starcoin.constant.Constant;
 import org.starcoin.scan.service.vo.*;
 
@@ -33,55 +37,61 @@ public class DagInspectorService extends BaseService {
     @Autowired
     private RestHighLevelClient client;
 
-    public DIBlocksAndEdgesAndHeightGroups getBlocksBetweenHeights(String network, Integer startHeight, Integer endHeight) {
-        List<Block> blockList = blockService.getBlocksBetweenHeights(network, startHeight, endHeight);
 
-        DIBlocksAndEdgesAndHeightGroups groups = new DIBlocksAndEdgesAndHeightGroups();
-        groups.setBlocks(blockList.stream().map(block -> {
-            DIBlock diBlock = new DIBlock();
-            diBlock.setBlockHash(block.getHeader().getBlockHash());
-            diBlock.setHeight(block.getHeader().getHeight());
-            diBlock.setColor("blue");
-            diBlock.setInVirtualSelectedParentChain(false);
-            diBlock.setParentIds(block.getHeader().getParentsHash());
+    public DIBlocksAndEdgesAndHeightGroupsVo getBlocksAndEdgesAndHeightGroups(String network, Long startHeight, Long endHeight) {
+        DIBlocksAndEdgesAndHeightGroupsVo groups = new DIBlocksAndEdgesAndHeightGroupsVo();
 
-            // TODO(BobOng): Get selected parent id from chain data
-            // diBlock.setSelectedParentHash();
-            // diBlock.setHeightGroupIndex();
-            // diBlock.setDaaScore();
-            return diBlock;
-        }).collect(Collectors.toList()));
-
+        List<DagInspectorBlock> blockList = getBlockList(network, startHeight, endHeight);
+        groups.setBlocks(blockList);
         groups.setEdges(getEdgeList(network, startHeight, endHeight));
 
-        List<Long> heights = blockList
-                .stream()
-                .map(block -> block.getHeader().getHeight())
-                .collect(Collectors.toList());
-
-        List<DIHeightGroup> diHeightGroup = getHeightGroup(network, heights);
-        groups.setHeightGroups(diHeightGroup);
+        groups.setHeightGroups(getHeightGroup(
+                network,
+                blockList.stream()
+                        .map(DagInspectorBlock::getHeight)
+                        .collect(Collectors.toList()))
+        );
 
         return groups;
     }
 
-    public DIBlocksAndEdgesAndHeightGroups getBlockHash(String targetHash, Integer heightDifference) {
-        return new DIBlocksAndEdgesAndHeightGroups();
+    public DIBlocksAndEdgesAndHeightGroupsVo getBlockHash(String network, String targetHash, Integer heightDifference) {
+        DagInspectorBlock block = getBlockWithHashFromStorage(network, targetHash);
+        Long endHeight = block.getHeight();
+        long startHeight = block.getHeight() - heightDifference;
+        if (startHeight < 0L) {
+            startHeight = 0L;
+        }
+        return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
-    public DIBlocksAndEdgesAndHeightGroups getBlockDAAScore(Integer targetDAAScore, Integer heightDifference) {
-        return new DIBlocksAndEdgesAndHeightGroups();
+    public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(String network, Integer targetDAAScore, Integer heightDifference) {
+        return new DIBlocksAndEdgesAndHeightGroupsVo();
     }
 
-    public DIBlocksAndEdgesAndHeightGroups getHead(Integer heightDifference) {
-        return new DIBlocksAndEdgesAndHeightGroups();
+    public DIBlocksAndEdgesAndHeightGroupsVo getHead(String network, Long heightDifference) {
+        long endHeight = getMaxHeightFromStorage();
+        long startHeight = endHeight - heightDifference;
+        if (startHeight < 0L) {
+            startHeight = 0L;
+        }
+        return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
-    List<DIEdge> getEdgeList(String network, Integer startHeight, Integer endHeight) {
+    /**
+     * Get block height from Elastic search storage
+     *
+     * @param network
+     * @param startHeight
+     * @param endHeight
+     * @return
+     */
+    List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE));
-        RangeQueryBuilder fromHeightQuery = QueryBuilders.rangeQuery("from_height").gte(startHeight);
-        RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").lte(endHeight);
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.boolQuery().must(fromHeightQuery).must(toHeightQuery)).sort("to_height", SortOrder.ASC);
+        RangeQueryBuilder heightQuery = QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
+                .query(QueryBuilders.boolQuery().must(heightQuery))
+                .sort("height", SortOrder.ASC);
         searchRequest.source(sourceBuilder);
         SearchResponse searchResponse;
         try {
@@ -90,11 +100,43 @@ public class DagInspectorService extends BaseService {
             logger.error("getEdgeList failed, startHeight: {}, endHeight: {}", startHeight, endHeight, e);
             return null;
         }
-        Result<DIEdge> result = ServiceUtils.getSearchResult(searchResponse, DIEdge.class);
+        Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
         return result.getContents();
     }
 
-    List<DIHeightGroup> getHeightGroup(String network, List<Long> heights) {
+    /**
+     * Get Edge list from ElasticSearch storage
+     * @param network
+     * @param startHeight
+     * @param endHeight
+     * @return
+     */
+    List<DagInspectorEdge> getEdgeList(String network, Long startHeight, Long endHeight) {
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE));
+        RangeQueryBuilder fromHeightQuery = QueryBuilders.rangeQuery("from_height").gte(startHeight);
+        RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").lte(endHeight);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
+                .query(QueryBuilders.boolQuery().must(fromHeightQuery).must(toHeightQuery))
+                .sort("to_height", SortOrder.ASC);
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("getEdgeList failed, startHeight: {}, endHeight: {}", startHeight, endHeight, e);
+            return null;
+        }
+        Result<DagInspectorEdge> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorEdge.class);
+        return result.getContents();
+    }
+
+    /**
+     * Get heights
+     * @param network
+     * @param heights
+     * @return
+     */
+    List<DagInspectorHeightGroup> getHeightGroup(String network, List<Long> heights) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         for (Long height : heights) {
@@ -109,12 +151,55 @@ public class DagInspectorService extends BaseService {
             logger.error("getHeightGroup failed, heights: {}", heights, e);
             return null;
         }
-        Result<DIHeightGroup> result = ServiceUtils.getSearchResult(searchResponse, DIHeightGroup.class);
+        Result<DagInspectorHeightGroup> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorHeightGroup.class);
         return result.getContents();
     }
 
-    public DIAppConfig getAppConfig() {
-        return new DIAppConfig();
+    public DIAppConfigVo getAppConfig() {
+        return new DIAppConfigVo();
+    }
+
+    Long getMaxHeightFromStorage() {
+        final String MAX_HEIGHT_FIELD = "max_height";
+        final String HEIGHT_FIELD = "height";
+
+        try {
+            SearchRequest searchRequest = new SearchRequest(Constant.DAG_INSPECTOR_NODE);
+
+            // Build the SearchSourceBuilder with max aggregation
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+            sourceBuilder.aggregation(AggregationBuilders.max(MAX_HEIGHT_FIELD).field(HEIGHT_FIELD));
+            searchRequest.source(sourceBuilder);
+
+            // Execute the search request
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+
+            // Handle the response
+            Max maxHeight = searchResponse.getAggregations().get("max_height");
+            return (long)maxHeight.getValue();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0L;
+    }
+
+    DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.should(QueryBuilders.termQuery("block_hash", blockHash));
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(boolQueryBuilder);
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("getBlockWithHashFromStorage failed, blockHash: {}", blockHash, e);
+            return null;
+        }
+        Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
+        return result.getContents().get(0);
     }
 
 }

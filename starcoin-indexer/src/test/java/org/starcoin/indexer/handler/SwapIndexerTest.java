@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +14,7 @@ import org.starcoin.indexer.IndexerApplication;
 import org.starcoin.bean.SwapTransaction;
 import org.starcoin.bean.SwapType;
 import org.starcoin.indexer.service.SwapTxnService;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 import org.starcoin.utils.SwapApiClient;
 
 import java.io.IOException;

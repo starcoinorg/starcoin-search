@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +8,7 @@ import org.starcoin.api.ContractRPCClient;
 import org.starcoin.bean.ContractCall;
 import org.starcoin.bean.TokenPairTvl;
 import org.starcoin.bean.TokenTvlAmount;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

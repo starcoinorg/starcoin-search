@@ -1,10 +1,10 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.junit.Test;
 import org.starcoin.api.ContractRPCClient;
 import org.starcoin.api.StateRPCClient;
 import org.starcoin.bean.ContractCall;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.net.MalformedURLException;
 import java.net.URL;

@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -20,6 +19,7 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TokenContractRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;

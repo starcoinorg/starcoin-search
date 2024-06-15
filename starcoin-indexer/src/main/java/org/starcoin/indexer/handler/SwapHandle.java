@@ -1,6 +1,5 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +13,7 @@ import org.starcoin.indexer.service.SwapPoolStatService;
 import org.starcoin.indexer.service.SwapStatService;
 import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.indexer.service.TokenStatService;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 import org.starcoin.utils.NumberUtils;
 import org.starcoin.utils.StructTagUtil;
 import org.starcoin.utils.SwapApiClient;

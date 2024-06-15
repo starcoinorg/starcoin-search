@@ -1,6 +1,6 @@
 package org.starcoin.indexer.handler;
 
-import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +10,7 @@ import org.starcoin.api.Result;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
+import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,7 +66,7 @@ public class RepairHandle {
                 logger.info("repair too fast: {}", startNumber);
                 return false;
             }
-        } catch (JSONRPC2SessionException e) {
+        } catch (JSONRPC2SessionException | JsonProcessingException e) {
             logger.error("get master error: ", e);
             return false;
         }

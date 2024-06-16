@@ -66,7 +66,13 @@ public class DagInspectorService extends BaseService {
     }
 
     public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(String network, Integer targetDAAScore, Integer heightDifference) {
-        return new DIBlocksAndEdgesAndHeightGroupsVo();
+        DagInspectorBlock block = getHeightWithDAAScoreFromStorage(network, targetDAAScore);
+        Long endHeight = block.getHeight();
+        long startHeight = block.getHeight() - heightDifference;
+        if (startHeight < 0L) {
+            startHeight = 0L;
+        }
+        return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
     public DIBlocksAndEdgesAndHeightGroupsVo getHead(String network, Long heightDifference) {
@@ -106,6 +112,7 @@ public class DagInspectorService extends BaseService {
 
     /**
      * Get Edge list from ElasticSearch storage
+     *
      * @param network
      * @param startHeight
      * @param endHeight
@@ -132,6 +139,7 @@ public class DagInspectorService extends BaseService {
 
     /**
      * Get heights
+     *
      * @param network
      * @param heights
      * @return
@@ -176,7 +184,7 @@ public class DagInspectorService extends BaseService {
 
             // Handle the response
             Max maxHeight = searchResponse.getAggregations().get("max_height");
-            return (long)maxHeight.getValue();
+            return (long) maxHeight.getValue();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -185,7 +193,7 @@ public class DagInspectorService extends BaseService {
     }
 
     DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("block_hash", blockHash));
 
@@ -196,6 +204,24 @@ public class DagInspectorService extends BaseService {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
             logger.error("getBlockWithHashFromStorage failed, blockHash: {}", blockHash, e);
+            return null;
+        }
+        Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
+        return result.getContents().get(0);
+    }
+
+    DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Integer daaScore) {
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.should(QueryBuilders.termQuery("daa_score", daaScore));
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(boolQueryBuilder);
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("getBlockWithHashFromStorage failed, blockHash: {}", daaScore, e);
             return null;
         }
         Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);

@@ -42,6 +42,10 @@ public class DagInspectorService extends BaseService {
         DIBlocksAndEdgesAndHeightGroupsVo groups = new DIBlocksAndEdgesAndHeightGroupsVo();
 
         List<DagInspectorBlock> blockList = getBlockList(network, startHeight, endHeight);
+        if (blockList == null || blockList.isEmpty()) {
+            return groups;
+        }
+
         groups.setBlocks(blockList);
         groups.setEdges(getEdgeList(network, startHeight, endHeight));
 
@@ -92,7 +96,7 @@ public class DagInspectorService extends BaseService {
      * @param endHeight
      * @return
      */
-    List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) {
+    private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE));
         RangeQueryBuilder heightQuery = QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
@@ -167,7 +171,7 @@ public class DagInspectorService extends BaseService {
         return new DIAppConfigVo();
     }
 
-    Long getMaxHeightFromStorage() {
+    private Long getMaxHeightFromStorage() {
         final String MAX_HEIGHT_FIELD = "max_height";
         final String HEIGHT_FIELD = "height";
 
@@ -192,7 +196,7 @@ public class DagInspectorService extends BaseService {
         return 0L;
     }
 
-    DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
+    private DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("block_hash", blockHash));
@@ -210,7 +214,7 @@ public class DagInspectorService extends BaseService {
         return result.getContents().get(0);
     }
 
-    DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Integer daaScore) {
+    private DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Integer daaScore) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("daa_score", daaScore));

@@ -204,6 +204,22 @@ public class QuartzConfig {
     }
 
     @Bean
+    public JobDetail dagInspectorJob() {
+        return JobBuilder.newJob(DagInspectorIndexer.class).withIdentity("dag_inspector").storeDurably().build();
+    }
+
+    @Bean
+    public Trigger dagInspectorTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(15)
+                .repeatForever();
+        return TriggerBuilder.newTrigger().forJob(dagInspectorJob())
+                .withIdentity("dag_inspector")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    @Bean
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
         try {
@@ -215,6 +231,7 @@ public class QuartzConfig {
         }
         return schedulerFactoryBean;
     }
+
 
     private Properties quartzProperties() {
         Properties prop = new Properties();
@@ -280,6 +297,10 @@ public class QuartzConfig {
         job = priceStatJob();
         if (jobSet.contains(job.getKey().getName())) {
             scheduler.scheduleJob(job, priceStatTrigger());
+        }
+        job = dagInspectorJob();
+        if (jobSet.contains(job.getKey().getName())) {
+            scheduler.scheduleJob(job, dagInspectorTrigger());
         }
 
         scheduler.start();

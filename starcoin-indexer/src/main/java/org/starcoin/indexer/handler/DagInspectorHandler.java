@@ -118,7 +118,6 @@ public class DagInspectorHandler {
 
         List<DagInspectorEdge> edgeList = buildEdgeDataFromNodeData(inspectorBlockList);
         bulkRequest.add(buildSaveEdgeRequest(edgeList));
-
         bulkRequest.add(buildSaveHeightGroupRequest(inspHeightGroupList));
 
         // Bulk save
@@ -226,7 +225,7 @@ public class DagInspectorHandler {
         return request;
     }
 
-    IndexRequest buildSaveEdgeRequest(List<DagInspectorEdge> edgeList) {
+    private IndexRequest buildSaveEdgeRequest(List<DagInspectorEdge> edgeList) {
         IndexRequest request = new IndexRequest(dagInspectEdgeIndex);
         if (edgeList.isEmpty()) {
             return request;

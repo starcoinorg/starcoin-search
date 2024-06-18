@@ -1,15 +1,6 @@
 package org.starcoin.indexer.handler;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.quartz.JobDetail;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.Trigger;
-import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
@@ -19,19 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import static org.quartz.JobBuilder.newJob;
-import static org.quartz.TriggerBuilder.newTrigger;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 
 
 public class DagInspectorTest extends IndexerLogicBaseTest {
     @Autowired
     private DagInspectorHandler dagInspectorHandler;
-
-    public CountDownLatch latch;
-    private Scheduler scheduler;
 
     Block new_test_block(String block_hash, Long height, String parent_hash, List<String> parents_hash) {
         Block block = new Block();

@@ -301,25 +301,6 @@ public class DagInspectorHandler {
         }
     }
 
-    private IndexRequest buildHeightGroup(Block block, Integer blockHeightIndex) {
-        IndexRequest request = new IndexRequest(dagInspectHeightGroupIndex);
-        XContentBuilder builder = null;
-        try {
-            builder = XContentFactory.jsonBuilder();
-            builder.startObject();
-
-            builder.field("height", block.getHeader().getHeight());
-            builder.field("size", blockHeightIndex + 1);
-
-            builder.endObject();
-
-        } catch (Exception e) {
-            logger.error("build block error:", e);
-        }
-        request.source(builder);
-        return request;
-    }
-
 
     private List<DagInspectorHeightGroup> getGroupHeightSizeFromStorage(List<Long> heights) throws IOException {
         List<DagInspectorHeightGroup> groupList = new ArrayList<>();

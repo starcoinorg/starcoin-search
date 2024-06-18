@@ -11,20 +11,19 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.query.TermsQueryBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
 import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import org.starcoin.utils.ExceptionWrap;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -113,12 +112,13 @@ public class DagInspectorHandler {
 
 
         // Save all data into storage
-        List<DagInspectorBlock> inspectorBlockList =  new ArrayList<>(inspBlockMap.values());
-        bulkRequest.add(buildSaveInspectorBlockRequest(inspectorBlockList));
-
-        List<DagInspectorEdge> edgeList = buildEdgeDataFromNodeData(inspectorBlockList);
-        bulkRequest.add(buildSaveEdgeRequest(edgeList));
-        bulkRequest.add(buildSaveHeightGroupRequest(inspHeightGroupList));
+        buildSaveInspectorBlockRequest(
+                new ArrayList<>(inspBlockMap.values())).forEach(bulkRequest::add);
+        buildSaveEdgeRequest(
+                buildEdgeDataFromNodeData(new ArrayList<>(inspBlockMap.values()))
+        ).forEach(bulkRequest::add);
+        buildSaveHeightGroupRequest(inspHeightGroupList)
+                .forEach(bulkRequest::add);
 
         // Bulk save
         try {
@@ -194,87 +194,75 @@ public class DagInspectorHandler {
         return inspBlockMap;
     }
 
-    IndexRequest buildSaveInspectorBlockRequest(List<DagInspectorBlock> blockList) {
-        IndexRequest request = new IndexRequest(dagInspectNodeIndex);
+    List<IndexRequest> buildSaveInspectorBlockRequest(List<DagInspectorBlock> blockList) {
         if (blockList.isEmpty()) {
-            return request;
+            return new ArrayList<>();
         }
-        blockList.forEach(block -> {
-            XContentBuilder builder;
-            try {
-                builder = XContentFactory.jsonBuilder();
-                builder.startObject();
-                {
-                    builder.field("block_hash", block.getBlockHash());
-                    builder.field("height", block.getHeight());
-                    builder.field("timestamp", block.getTimestamp());
-                    builder.field("selected_parent_hash", block.getSelectedParentHash());
-                    builder.field("parent_ids", block.getParentIds());
-                    builder.field("daa_score", block.getDaaScore());
-                    builder.field("height_group_index", block.getHeightGroupIndex());
-                    builder.field("in_virtual_selected_parent_chain", block.getInVirtualSelectedParentChain());
-                    builder.field("mergeset_blue_ids", block.getMergeSetBlueIds());
-                    builder.field("mergeset_red_ids", block.getMergeSetRedIds());
-                    builder.field("color", block.getColor());
-                }
-                builder.endObject();
-            } catch (Exception e) {
-                logger.error("build block error:", e);
+        return blockList.stream().map(ExceptionWrap.wrap(block -> {
+            IndexRequest request = new IndexRequest(dagInspectNodeIndex);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            {
+                builder.field("block_hash", block.getBlockHash());
+                builder.field("height", block.getHeight());
+                builder.field("timestamp", block.getTimestamp());
+                builder.field("selected_parent_hash", block.getSelectedParentHash());
+                builder.field("parent_ids", block.getParentIds());
+                builder.field("daa_score", block.getDaaScore());
+                builder.field("height_group_index", block.getHeightGroupIndex());
+                builder.field("in_virtual_selected_parent_chain", block.getInVirtualSelectedParentChain());
+                builder.field("mergeset_blue_ids", block.getMergeSetBlueIds());
+                builder.field("mergeset_red_ids", block.getMergeSetRedIds());
+                builder.field("color", block.getColor());
             }
-        });
-        return request;
+            builder.endObject();
+            request.source(builder).id(block.getBlockHash());
+            return request;
+        })).collect(Collectors.toList());
     }
 
-    private IndexRequest buildSaveEdgeRequest(List<DagInspectorEdge> edgeList) {
-        IndexRequest request = new IndexRequest(dagInspectEdgeIndex);
+    private List<IndexRequest> buildSaveEdgeRequest(List<DagInspectorEdge> edgeList) throws IOException {
         if (edgeList.isEmpty()) {
-            return request;
+            return new ArrayList<>();
         }
-        edgeList.forEach(edge -> {
-            XContentBuilder builder;
-            try {
-                builder = XContentFactory.jsonBuilder();
-                builder.startObject();
-                {
-                    builder.field("from_block_hash", edge.getFromBlockHash());
-                    builder.field("to_block_hash", edge.getToBlockHash());
-                    builder.field("from_height", edge.getFromHeight());
-                    builder.field("to_height", edge.getToHeight());
-                    builder.field("from_group_index", edge.getFromHeightGroupIndex());
-                    builder.field("to_group_index", edge.getToHeightGroupIndex());
-                }
-                builder.endObject();
-            } catch (Exception e) {
-                logger.error("build block error:", e);
+        return edgeList.stream().map(ExceptionWrap.wrap(edge -> {
+            IndexRequest request = new IndexRequest(dagInspectEdgeIndex);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            {
+                builder.field("from_block_hash", edge.getFromBlockHash());
+                builder.field("to_block_hash", edge.getToBlockHash());
+                builder.field("from_height", edge.getFromHeight());
+                builder.field("to_height", edge.getToHeight());
+                builder.field("from_group_index", edge.getFromHeightGroupIndex());
+                builder.field("to_group_index", edge.getToHeightGroupIndex());
             }
-        });
-        return request;
+            builder.endObject();
+            request.source(builder).id(String.format("%s_%s", edge.getFromBlockHash(), edge.getToBlockHash()));
+            return request;
+        })).collect(Collectors.toList());
     }
 
-    IndexRequest buildSaveHeightGroupRequest(List<DagInspectorHeightGroup> heightGroupList) {
-        IndexRequest request = new IndexRequest(dagInspectHeightGroupIndex);
+    List<IndexRequest> buildSaveHeightGroupRequest(List<DagInspectorHeightGroup> heightGroupList) throws IOException {
         if (heightGroupList.isEmpty()) {
-            return request;
+            return new ArrayList<>();
         }
-        heightGroupList.forEach(heightGroup -> {
-            XContentBuilder builder;
-            try {
-                builder = XContentFactory.jsonBuilder();
-                builder.startObject();
-                {
-                    builder.field("height", heightGroup.getHeight());
-                    builder.field("size", heightGroup.getSize());
-                }
-                builder.endObject();
-            } catch (Exception e) {
-                logger.error("build block error:", e);
-            }
-        });
-        return request;
+        return heightGroupList.stream().map(ExceptionWrap.wrap(dagInspectorHeightGroup -> {
+            IndexRequest request = new IndexRequest(dagInspectHeightGroupIndex);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+            builder.field("height", dagInspectorHeightGroup.getHeight());
+            builder.field("size", dagInspectorHeightGroup.getSize());
+            builder.endObject();
+            request.id(String.valueOf(dagInspectorHeightGroup.getHeight())).source(builder);
+            return request;
+        })).collect(Collectors.toList());
     }
 
     /**
      * Get the size of the group at the specified height, or return the default size if the group does not exist.
+     *
      * @param groupList
      * @param height
      * @param defaultSize

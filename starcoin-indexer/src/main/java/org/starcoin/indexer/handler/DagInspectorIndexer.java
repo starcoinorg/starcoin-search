@@ -23,7 +23,7 @@ public class DagInspectorIndexer extends QuartzJobBean {
     private static final Logger logger = LoggerFactory.getLogger(DagInspectorIndexer.class);
 
     @Autowired
-    private DagInspectorHandler inspectorHandler;
+    private DagInspectorIndexerHandler inspectorHandler;
 
     @Autowired
     private ElasticSearchHandler elasticSearchHandler;

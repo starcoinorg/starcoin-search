@@ -31,9 +31,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class DagInspectorHandler {
+public class DagInspectorIndexerHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(DagInspectorHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(DagInspectorIndexerHandler.class);
 
     private static final String NODE_COLOR_GRAY = "gray";
     private static final String NODE_COLOR_RED = "red";

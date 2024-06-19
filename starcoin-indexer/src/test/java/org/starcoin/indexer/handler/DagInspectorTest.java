@@ -10,13 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import java.util.concurrent.CountDownLatch;
-
-
 
 public class DagInspectorTest extends IndexerLogicBaseTest {
     @Autowired
-    private DagInspectorHandler dagInspectorHandler;
+    private DagInspectorIndexerHandler dagInspectorHandler;
 
     Block new_test_block(String block_hash, Long height, String parent_hash, List<String> parents_hash) {
         Block block = new Block();

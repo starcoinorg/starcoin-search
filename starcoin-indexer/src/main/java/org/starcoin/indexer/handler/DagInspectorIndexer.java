@@ -14,9 +14,7 @@ import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DagInspectorIndexer extends QuartzJobBean {
 
@@ -81,42 +79,27 @@ public class DagInspectorIndexer extends QuartzJobBean {
             return;
         }
 
-        //read head
+        // Read chain header
         try {
             BlockHeader chainHeader = blockRPCClient.getChainHeader();
+
             // Calculate bulk size
             long headHeight = chainHeader.getHeight();
             long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
             int index = 1;
             Map<String, Block> blockMap = new HashMap<>();
             while (index <= bulkNumber) {
-                long readNumber = localBlockOffset.getBlockHeight() + index;
+                long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
 
-                logger.info("Start Get block number: {}", index);
-                Block block = blockRPCClient.getBlockByHeight(readNumber);
+                logger.info("Start Get block number: {}, currentBlockHeight: {}", index, currentBlockHeight);
+                Block block = blockRPCClient.getBlockByHeight(currentBlockHeight);
                 if (block == null) {
-                    logger.warn("get block null: {}", readNumber);
+                    logger.warn("get block null: {}", currentBlockHeight);
                     return;
                 }
 
-                logger.info("Block number is: {}, block hash is: {}", readNumber, block.getHeader().getBlockHash());
+                blockMap.put(block.getHeader().getBlockHash(), block);
 
-                for (String parentHash : block.getHeader().getParentsHash()) {
-                    logger.info(
-                            "Start get block hash : {}, parent hash: {}",
-                            block.getHeader().getBlockHash(),
-                            parentHash
-                    );
-
-                    if (!blockMap.containsKey(parentHash)) {
-                        Block parentBlock = blockRPCClient.getBlockByHash(parentHash);
-                        if (parentBlock == null) {
-                            logger.warn("get parent block null: {}", parentHash);
-                            continue;
-                        }
-                        blockMap.put(parentHash, parentBlock);
-                    }
-                }
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;

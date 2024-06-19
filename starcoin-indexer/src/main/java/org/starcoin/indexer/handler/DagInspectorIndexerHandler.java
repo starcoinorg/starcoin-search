@@ -1,5 +1,6 @@
 package org.starcoin.indexer.handler;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -59,21 +60,21 @@ public class DagInspectorIndexerHandler {
         dagInspectHeightGroupIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECT_HEIGHT_GROUP);
     }
 
-    public void upsertDagInfoFromBlocks(List<Block> blockList) throws IOException {
+    public void upsertDagInfoFromBlocks(List<Block> blockList) throws IOException, JSONRPC2SessionException {
         if (blockList.isEmpty()) {
             logger.warn("block list is empty");
             return;
         }
         BulkRequest bulkRequest = new BulkRequest();
 
-        // Handle blockGhostdagDataCache
-        Map<String, DagInspectorBlock> inspBlockMap = bulkLoadInspectorBlock(
+        // Handle blockGhostdag Data Cache
+        Map<String, DagInspectorBlock> dagBlockMap = bulkLoadDagBlock(
                 blockList.stream()
                         .map(block -> block.getHeader().getBlockHash())
                         .collect(Collectors.toList())
         );
 
-        List<DagInspectorHeightGroup> inspHeightGroupList = getGroupHeightSizeFromStorage(
+        List<DagInspectorHeightGroup> heightGroupList = getGroupHeightSizeFromStorage(
                 blockList.stream()
                         .map(block -> block.getHeader().getHeight())
                         .distinct()
@@ -83,24 +84,26 @@ public class DagInspectorIndexerHandler {
         // Build block node data
         blockList.forEach(blockInfo -> {
             String currentBlockHash = blockInfo.getHeader().getBlockHash();
-            DagInspectorBlock inspecBlock = inspBlockMap.get(currentBlockHash);
-            if (inspecBlock == null) {
+            DagInspectorBlock dagBlock = dagBlockMap.get(currentBlockHash);
+            if (dagBlock == null) {
                 try {
                     BlockGhostdagData ghostdagData = blockRPCClient.getBlockGhostdagData(currentBlockHash);
-                    inspecBlock = new DagInspectorBlock();
-                    inspecBlock.setBlockHash(currentBlockHash);
-                    inspecBlock.setTimestamp(blockInfo.getHeader().getTimestamp());
-                    inspecBlock.setColor(NODE_COLOR_GRAY);
-                    inspecBlock.setDaaScore(ghostdagData.getBlueScore());
-                    inspecBlock.setHeight(blockInfo.getHeader().getHeight());
-                    inspecBlock.setSelectedParentHash(ghostdagData.getSelectedParent());
-                    inspecBlock.setParentIds(blockInfo.getHeader().getParentsHash());
+                    dagBlock = new DagInspectorBlock();
+                    dagBlock.setBlockHash(currentBlockHash);
+                    dagBlock.setTimestamp(blockInfo.getHeader().getTimestamp());
+                    dagBlock.setColor(NODE_COLOR_GRAY);
+                    dagBlock.setDaaScore(ghostdagData.getBlueScore());
+                    dagBlock.setHeight(blockInfo.getHeader().getHeight());
+                    dagBlock.setSelectedParentHash(ghostdagData.getSelectedParent());
+                    dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
+                    // Block is the virtual selected parent chain because the list read from block height
+                    dagBlock.setInVirtualSelectedParentChain(true);
 
-                    Integer groupSize = getHeightGroupSizeOrDefault(inspHeightGroupList, inspecBlock.getHeight(), 0);
-                    inspecBlock.setHeightGroupIndex(groupSize);
-                    updateGroupSize(inspHeightGroupList, inspecBlock.getHeight(), groupSize + 1);
+                    Integer groupSize = getHeightGroupSizeOrDefault(heightGroupList, dagBlock.getHeight(), 0);
+                    dagBlock.setHeightGroupIndex(groupSize);
+                    updateGroupSize(heightGroupList, dagBlock.getHeight(), groupSize + 1);
 
-                    inspBlockMap.put(currentBlockHash, inspecBlock);
+                    dagBlockMap.put(currentBlockHash, dagBlock);
 
                 } catch (JSONRPC2SessionException e) {
                     throw new RuntimeException(e);
@@ -110,15 +113,12 @@ public class DagInspectorIndexerHandler {
             }
         });
 
+        buildSaveDagEdgeRequest(buildEdgeDataFromDagBlockDataMaybeUpate(dagBlockMap, heightGroupList)).forEach(bulkRequest::add);
+        buildSaveDagHeightGroupRequest(heightGroupList).forEach(bulkRequest::add);
 
         // Save all data into storage
-        buildSaveInspectorBlockRequest(
-                new ArrayList<>(inspBlockMap.values())).forEach(bulkRequest::add);
-        buildSaveEdgeRequest(
-                buildEdgeDataFromNodeData(new ArrayList<>(inspBlockMap.values()))
-        ).forEach(bulkRequest::add);
-        buildSaveHeightGroupRequest(inspHeightGroupList)
-                .forEach(bulkRequest::add);
+        buildSaveDagBlockRequest(new ArrayList<>(dagBlockMap.values())).forEach(bulkRequest::add);
+
 
         // Bulk save
         try {
@@ -129,42 +129,47 @@ public class DagInspectorIndexerHandler {
         }
     }
 
-    List<DagInspectorEdge> buildEdgeDataFromNodeData(List<DagInspectorBlock> inspecBlockList) {
+    List<DagInspectorEdge> buildEdgeDataFromDagBlockDataMaybeUpate(
+            Map<String, DagInspectorBlock> dagBlockMap,
+            List<DagInspectorHeightGroup> heightGroupList
+    ) throws JSONRPC2SessionException {
         List<DagInspectorEdge> edgeList = new ArrayList<>();
-        if (inspecBlockList.isEmpty()) {
+        if (dagBlockMap.isEmpty()) {
             return edgeList;
         }
 
-        for (DagInspectorBlock block : inspecBlockList) {
+        List<DagInspectorBlock> newDagBlocks = new ArrayList<>();
+        for (DagInspectorBlock block : dagBlockMap.values()) {
             if (block.getParentIds().isEmpty()) {
                 continue;
             }
 
-            block.getParentIds().forEach(parentHash -> {
-                DagInspectorBlock parentBlock = inspecBlockList
-                        .stream()
-                        .filter(b -> b.getBlockHash().equalsIgnoreCase(parentHash))
-                        .findFirst()
-                        .orElse(null);
-                if (parentBlock == null) {
-                    logger.info("Parent block {} not found", parentHash);
-                    return;
+            for (String parentHash : block.getParentIds()) {
+                DagInspectorBlock parentDagBlock = dagBlockMap.get(parentHash);
+                if (parentDagBlock == null) {
+                    logger.info("Parent block not found: {} ", parentHash);
+                    parentDagBlock = getDagInspectorBlockInfoFromHash(parentHash, heightGroupList);
+
+                    // Put into buffer list
+                    newDagBlocks.add(parentDagBlock);
                 }
                 DagInspectorEdge edge = new DagInspectorEdge();
                 edge.setFromBlockHash(block.getBlockHash());
-                edge.setToBlockHash(parentBlock.getBlockHash());
+                edge.setToBlockHash(parentDagBlock.getBlockHash());
                 edge.setFromHeight(block.getHeight());
-                edge.setToHeight(parentBlock.getHeight());
+                edge.setToHeight(parentDagBlock.getHeight());
                 edge.setFromHeightGroupIndex(block.getHeightGroupIndex());
-                edge.setToHeightGroupIndex(parentBlock.getHeightGroupIndex());
+                edge.setToHeightGroupIndex(parentDagBlock.getHeightGroupIndex());
                 edgeList.add(edge);
-            });
+            }
         }
+        // Put into map
+        newDagBlocks.forEach(dagBlock -> dagBlockMap.put(dagBlock.getBlockHash(), dagBlock));
         return edgeList;
     }
 
-    public Map<String, DagInspectorBlock> bulkLoadInspectorBlock(List<String> blockHashList) {
-        Map<String, DagInspectorBlock> inspBlockMap = new HashMap<>();
+    public Map<String, DagInspectorBlock> bulkLoadDagBlock(List<String> blockHashList) {
+        Map<String, DagInspectorBlock> dagBlockMap = new HashMap<>();
         SearchRequest searchRequest = new SearchRequest(dagInspectNodeIndex);
         TermsQueryBuilder termQueryBuilder = QueryBuilders.termsQuery("block_hash", blockHashList);
         searchRequest.source(new SearchSourceBuilder().query(termQueryBuilder));
@@ -173,7 +178,7 @@ public class DagInspectorIndexerHandler {
             JSONObject obj = JSONObject.parseObject(ServiceUtils.getJsonString(response));
             List<JSONObject> hits = obj.getJSONObject("hits").getJSONArray("hits").toJavaList(JSONObject.class);
             hits.forEach(hit -> {
-                JSONObject source = hit.getJSONObject("_source");
+                JSONObject source = hit.getJSONObject("sourceAsMap");
                 DagInspectorBlock block = new DagInspectorBlock();
                 block.setBlockHash(source.getString("block_hash"));
                 block.setTimestamp(source.getLong("timestamp"));
@@ -182,19 +187,28 @@ public class DagInspectorIndexerHandler {
                 block.setHeight(source.getLong("height"));
                 block.setHeightGroupIndex(source.getInteger("height_group_index"));
                 block.setSelectedParentHash(source.getString("selected_parent_hash"));
-                block.setParentIds(source.getJSONArray("parent_ids").toJavaList(String.class));
-                block.setInVirtualSelectedParentChain(source.getBoolean("in_virtual_selected_parent_chain"));
-                block.setMergeSetRedIds(source.getJSONArray("mergeset_red_ids").toJavaList(String.class));
-                block.setMergeSetBlueIds(source.getJSONArray("mergeset_blue_ids").toJavaList(String.class));
-                inspBlockMap.put(block.getBlockHash(), block);
+
+                JSONArray parentIds = source.getJSONArray("parent_ids");
+                block.setParentIds(parentIds != null ? parentIds.toJavaList(String.class) : new ArrayList<>());
+
+                Boolean virtual_selected = source.getBoolean("in_virtual_selected_parent_chain");
+                block.setInVirtualSelectedParentChain(virtual_selected != null ? virtual_selected : false);
+
+                JSONArray redIds = source.getJSONArray("mergeset_red_ids");
+                block.setMergeSetRedIds(redIds != null ? redIds.toJavaList(String.class) : new ArrayList<>());
+
+                JSONArray blueIds = source.getJSONArray("mergeset_blue_ids");
+                block.setMergeSetBlueIds(blueIds != null ? blueIds.toJavaList(String.class) : new ArrayList<>());
+
+                dagBlockMap.put(block.getBlockHash(), block);
             });
         } catch (IOException e) {
             logger.error("bulkLoadInspectorBlock error:", e);
         }
-        return inspBlockMap;
+        return dagBlockMap;
     }
 
-    List<IndexRequest> buildSaveInspectorBlockRequest(List<DagInspectorBlock> blockList) {
+    List<IndexRequest> buildSaveDagBlockRequest(List<DagInspectorBlock> blockList) {
         if (blockList.isEmpty()) {
             return new ArrayList<>();
         }
@@ -221,7 +235,7 @@ public class DagInspectorIndexerHandler {
         })).collect(Collectors.toList());
     }
 
-    private List<IndexRequest> buildSaveEdgeRequest(List<DagInspectorEdge> edgeList) throws IOException {
+    private List<IndexRequest> buildSaveDagEdgeRequest(List<DagInspectorEdge> edgeList) throws IOException {
         if (edgeList.isEmpty()) {
             return new ArrayList<>();
         }
@@ -243,7 +257,7 @@ public class DagInspectorIndexerHandler {
         })).collect(Collectors.toList());
     }
 
-    List<IndexRequest> buildSaveHeightGroupRequest(List<DagInspectorHeightGroup> heightGroupList) throws IOException {
+    List<IndexRequest> buildSaveDagHeightGroupRequest(List<DagInspectorHeightGroup> heightGroupList) {
         if (heightGroupList.isEmpty()) {
             return new ArrayList<>();
         }
@@ -284,7 +298,7 @@ public class DagInspectorIndexerHandler {
         for (DagInspectorHeightGroup group : groupList) {
             if (group.getHeight().longValue() == height) {
                 group.setSize(newSize);
-                return ;
+                return;
             }
         }
         DagInspectorHeightGroup group = new DagInspectorHeightGroup();
@@ -308,4 +322,37 @@ public class DagInspectorIndexerHandler {
         return result.getContents();
     }
 
+
+    protected DagInspectorBlock getDagInspectorBlockInfoFromHash(
+            String blockHash,
+            List<DagInspectorHeightGroup> heightGroupList
+    ) throws JSONRPC2SessionException {
+
+        Block blockInfo = blockRPCClient.getBlockByHash(blockHash);
+        BlockGhostdagData blockGhostdagData = blockRPCClient.getBlockGhostdagData(blockHash);
+        DagInspectorBlock dagBlock = new DagInspectorBlock();
+
+        Long blockHeight = blockInfo.getHeader().getHeight();
+
+        dagBlock.setBlockHash(blockHash);
+        dagBlock.setTimestamp(blockInfo.getHeader().getTimestamp());
+        dagBlock.setColor(NODE_COLOR_GRAY);
+        dagBlock.setDaaScore(blockGhostdagData.getBlueScore());
+        dagBlock.setHeight(blockInfo.getHeader().getHeight());
+        dagBlock.setSelectedParentHash(blockGhostdagData.getSelectedParent());
+        dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
+        dagBlock.setInVirtualSelectedParentChain(false);
+
+        // Height group list index
+        Integer groupSize = getHeightGroupSizeOrDefault(heightGroupList, blockHeight, 0);
+        dagBlock.setHeightGroupIndex(groupSize);
+        updateGroupSize(heightGroupList, blockHeight, groupSize + 1);
+
+        logger.info("Get block info from hash: {}, height: {}, heightGroupIndex: {}",
+                blockHash,
+                blockInfo.getHeader().getHeight(),
+                dagBlock.getHeightGroupIndex()
+        );
+        return dagBlock;
+    }
 }

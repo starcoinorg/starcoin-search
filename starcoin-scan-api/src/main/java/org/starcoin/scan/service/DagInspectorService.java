@@ -49,18 +49,20 @@ public class DagInspectorService extends BaseService {
         groups.setBlocks(blockList);
         groups.setEdges(getEdgeList(network, startHeight, endHeight));
 
-        groups.setHeightGroups(getHeightGroup(
-                network,
+        List<Long> heightList =
                 blockList.stream()
                         .map(DagInspectorBlock::getHeight)
-                        .collect(Collectors.toList()))
-        );
+                        .collect(Collectors.toList());
+        groups.setHeightGroups(getHeightGroup(network, heightList));
 
         return groups;
     }
 
     public DIBlocksAndEdgesAndHeightGroupsVo getBlockHash(String network, String targetHash, Integer heightDifference) {
         DagInspectorBlock block = getBlockWithHashFromStorage(network, targetHash);
+        if (block == null) {
+            throw new RuntimeException("Cannot find block by block hash");
+        }
         Long endHeight = block.getHeight();
         long startHeight = block.getHeight() - heightDifference;
         if (startHeight < 0L) {
@@ -71,6 +73,9 @@ public class DagInspectorService extends BaseService {
 
     public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(String network, Integer targetDAAScore, Integer heightDifference) {
         DagInspectorBlock block = getHeightWithDAAScoreFromStorage(network, targetDAAScore);
+        if (block == null) {
+            throw new RuntimeException("Cannot find block by block hash");
+        }
         Long endHeight = block.getHeight();
         long startHeight = block.getHeight() - heightDifference;
         if (startHeight < 0L) {
@@ -97,11 +102,10 @@ public class DagInspectorService extends BaseService {
      * @return
      */
     private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE));
-        RangeQueryBuilder heightQuery = QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight);
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
-                .query(QueryBuilders.boolQuery().must(heightQuery))
-                .sort("height", SortOrder.ASC);
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight)));
+        sourceBuilder .sort("height", SortOrder.ASC);
         searchRequest.source(sourceBuilder);
         SearchResponse searchResponse;
         try {

@@ -284,9 +284,13 @@ public class DagInspectorHandler {
         for (DagInspectorHeightGroup group : groupList) {
             if (group.getHeight().longValue() == height) {
                 group.setSize(newSize);
-                break;
+                return ;
             }
         }
+        DagInspectorHeightGroup group = new DagInspectorHeightGroup();
+        group.setHeight(height);
+        group.setSize(newSize);
+        groupList.add(group);
     }
 
 

@@ -82,20 +82,20 @@ public class DagInspectorIndexerHandler {
         );
 
         // Build block node data
-        blockList.forEach(blockInfo -> {
-            String currentBlockHash = blockInfo.getHeader().getBlockHash();
+        blockList.forEach(block -> {
+            String currentBlockHash = block.getHeader().getBlockHash();
             DagInspectorBlock dagBlock = dagBlockMap.get(currentBlockHash);
             if (dagBlock == null) {
                 try {
                     BlockGhostdagData ghostdagData = blockRPCClient.getBlockGhostdagData(currentBlockHash);
                     dagBlock = new DagInspectorBlock();
                     dagBlock.setBlockHash(currentBlockHash);
-                    dagBlock.setTimestamp(blockInfo.getHeader().getTimestamp());
+                    dagBlock.setTimestamp(block.getHeader().getTimestamp());
                     dagBlock.setColor(NODE_COLOR_GRAY);
                     dagBlock.setDaaScore(ghostdagData.getBlueScore());
-                    dagBlock.setHeight(blockInfo.getHeader().getHeight());
+                    dagBlock.setHeight(block.getHeader().getHeight());
                     dagBlock.setSelectedParentHash(ghostdagData.getSelectedParent());
-                    dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
+                    dagBlock.setParentIds(block.getHeader().getParentsHash());
                     // Block is the virtual selected parent chain because the list read from block height
                     dagBlock.setInVirtualSelectedParentChain(true);
 
@@ -148,7 +148,7 @@ public class DagInspectorIndexerHandler {
                 DagInspectorBlock parentDagBlock = dagBlockMap.get(parentHash);
                 if (parentDagBlock == null) {
                     logger.info("Parent block not found: {} ", parentHash);
-                    parentDagBlock = getDagInspectorBlockInfoFromHash(parentHash, heightGroupList);
+                    parentDagBlock = getDagInspectorBlockFromHash(parentHash, heightGroupList);
 
                     // Put into buffer list
                     newDagBlocks.add(parentDagBlock);
@@ -323,24 +323,24 @@ public class DagInspectorIndexerHandler {
     }
 
 
-    protected DagInspectorBlock getDagInspectorBlockInfoFromHash(
+    protected DagInspectorBlock getDagInspectorBlockFromHash(
             String blockHash,
             List<DagInspectorHeightGroup> heightGroupList
     ) throws JSONRPC2SessionException {
 
-        Block blockInfo = blockRPCClient.getBlockByHash(blockHash);
+        Block block = blockRPCClient.getBlockByHash(blockHash);
         BlockGhostdagData blockGhostdagData = blockRPCClient.getBlockGhostdagData(blockHash);
         DagInspectorBlock dagBlock = new DagInspectorBlock();
 
-        Long blockHeight = blockInfo.getHeader().getHeight();
+        Long blockHeight = block.getHeader().getHeight();
 
         dagBlock.setBlockHash(blockHash);
-        dagBlock.setTimestamp(blockInfo.getHeader().getTimestamp());
+        dagBlock.setTimestamp(block.getHeader().getTimestamp());
         dagBlock.setColor(NODE_COLOR_GRAY);
         dagBlock.setDaaScore(blockGhostdagData.getBlueScore());
-        dagBlock.setHeight(blockInfo.getHeader().getHeight());
+        dagBlock.setHeight(block.getHeader().getHeight());
         dagBlock.setSelectedParentHash(blockGhostdagData.getSelectedParent());
-        dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
+        dagBlock.setParentIds(block.getHeader().getParentsHash());
         dagBlock.setInVirtualSelectedParentChain(false);
 
         // Height group list index
@@ -350,7 +350,7 @@ public class DagInspectorIndexerHandler {
 
         logger.info("Get block info from hash: {}, height: {}, heightGroupIndex: {}",
                 blockHash,
-                blockInfo.getHeader().getHeight(),
+                block.getHeader().getHeight(),
                 dagBlock.getHeightGroupIndex()
         );
         return dagBlock;

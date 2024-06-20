@@ -87,7 +87,7 @@ public class DagInspectorIndexer extends QuartzJobBean {
             long headHeight = chainHeader.getHeight();
             long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
             int index = 1;
-            Map<String, Block> blockMap = new HashMap<>();
+            List<Block> blockList = new ArrayList<>();
             while (index <= bulkNumber) {
                 long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
 
@@ -98,14 +98,14 @@ public class DagInspectorIndexer extends QuartzJobBean {
                     return;
                 }
 
-                blockMap.put(block.getHeader().getBlockHash(), block);
+                blockList.add(block);
 
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;
                 logger.info("add block: {}", block.getHeader());
             }
-            inspectorHandler.upsertDagInfoFromBlocks(new ArrayList<>(blockMap.values()));
+            inspectorHandler.upsertDagInfoFromBlocks(blockList);
 
             // Update offset
             localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());

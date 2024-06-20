@@ -1,3 +1,4 @@
+# This composer file is used to configure the local environment for debugging
 version: '3.8'
 
 services:
@@ -18,6 +19,25 @@ services:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
+
+  hazelcast:
+    image: hazelcast/hazelcast:latest
+    container_name: hazelcast
+    ports:
+      - "5701:5701"
+    environment:
+      - HZ_CLUSTERNAME=stcscan-hazelcast-cluster
+      - HZ_NETWORK_JOIN_MULTICAST_ENABLED=false
+      - HZ_NETWORK_JOIN_TCPIP_ENABLED=true
+      - HZ_NETWORK_JOIN_TCPIP_MEMBERS=hazelcast
+      - HZ_CACHE_CODE_CACHE_STATISTICS_ENABLED=true
+      - HZ_CACHE_CODE_CACHE_EVICTION_SIZE=10000
+      - HZ_CACHE_CODE_CACHE_EVICTION_MAX_SIZE_POLICY=ENTRY_COUNT
+      - HZ_CACHE_CODE_CACHE_EVICTION_EVICTION_POLICY=LFU
+      - HZ_CACHE_SESSION_STATISTICS_ENABLED=true
+      - HZ_CACHE_SESSION_EVICTION_SIZE=50000
+      - HZ_CACHE_SESSION_EVICTION_MAX_SIZE_POLICY=ENTRY_COUNT
+      - HZ_CACHE_SESSION_EVICTION_EVICTION_POLICY=LRU
 
 volumes:
   esdata:

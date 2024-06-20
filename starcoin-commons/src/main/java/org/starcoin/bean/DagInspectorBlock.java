@@ -1,7 +1,6 @@
 package org.starcoin.bean;
 
 import java.util.List;
-import java.util.List;
 
 public class DagInspectorBlock {
     String blockHash;
@@ -102,5 +101,22 @@ public class DagInspectorBlock {
 
     public void setMergeSetBlueIds(List<String> mergeSetBlueIds) {
         this.mergeSetBlueIds = mergeSetBlueIds;
+    }
+
+    @Override
+    public String toString() {
+        return "DagInspectorBlock{" +
+                "blockHash='" + blockHash + '\'' +
+                ", timestamp=" + timestamp +
+                ", parentIds=" + parentIds +
+                ", height=" + height +
+                ", daaScore=" + daaScore +
+                ", heightGroupIndex=" + heightGroupIndex +
+                ", selectedParentHash='" + selectedParentHash + '\'' +
+                ", color='" + color + '\'' +
+                ", isInVirtualSelectedParentChain=" + isInVirtualSelectedParentChain +
+                ", mergeSetRedIds=" + mergeSetRedIds +
+                ", mergeSetBlueIds=" + mergeSetBlueIds +
+                '}';
     }
 }

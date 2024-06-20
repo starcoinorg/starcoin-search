@@ -55,4 +55,16 @@ public class DagInspectorEdge {
     public void setToHeightGroupIndex(Integer toHeightGroupIndex) {
         this.toHeightGroupIndex = toHeightGroupIndex;
     }
+
+    @Override
+    public String toString() {
+        return "DagInspectorEdge{" +
+                "fromBlockHash='" + fromBlockHash + '\'' +
+                ", toBlockHash='" + toBlockHash + '\'' +
+                ", fromHeight=" + fromHeight +
+                ", toHeight=" + toHeight +
+                ", fromHeightGroupIndex=" + fromHeightGroupIndex +
+                ", toHeightGroupIndex=" + toHeightGroupIndex +
+                '}';
+    }
 }

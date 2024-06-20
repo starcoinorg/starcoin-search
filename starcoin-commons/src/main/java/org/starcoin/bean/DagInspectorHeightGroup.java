@@ -19,4 +19,12 @@ public class DagInspectorHeightGroup {
     public void setSize(Integer size) {
         this.size = size;
     }
+
+    @Override
+    public String toString() {
+        return "DagInspectorHeightGroup{" +
+                "height=" + height +
+                ", size=" + size +
+                '}';
+    }
 }

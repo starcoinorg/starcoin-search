@@ -139,12 +139,12 @@ public class DagInspectorIndexerHandler {
         }
 
         List<DagInspectorBlock> newDagBlocks = new ArrayList<>();
-        for (DagInspectorBlock block : dagBlockMap.values()) {
-            if (block.getParentIds().isEmpty()) {
+        for (DagInspectorBlock dagBlock : dagBlockMap.values()) {
+            if (dagBlock.getParentIds().isEmpty()) {
                 continue;
             }
 
-            for (String parentHash : block.getParentIds()) {
+            for (String parentHash : dagBlock.getParentIds()) {
                 DagInspectorBlock parentDagBlock = dagBlockMap.get(parentHash);
                 if (parentDagBlock == null) {
                     logger.info("Parent block not found: {} ", parentHash);
@@ -154,12 +154,12 @@ public class DagInspectorIndexerHandler {
                     newDagBlocks.add(parentDagBlock);
                 }
                 DagInspectorEdge edge = new DagInspectorEdge();
-                edge.setFromBlockHash(block.getBlockHash());
+                edge.setFromBlockHash(dagBlock.getBlockHash());
                 edge.setToBlockHash(parentDagBlock.getBlockHash());
-                edge.setFromHeight(block.getHeight());
+                edge.setFromHeight(dagBlock.getHeight());
                 edge.setToHeight(parentDagBlock.getHeight());
-                edge.setFromHeightGroupIndex(block.getHeightGroupIndex());
-                edge.setToHeightGroupIndex(parentDagBlock.getHeightGroupIndex());
+                edge.setFromHeightGroupIndex(dagBlock.getHeightGroupIndex() == null ? 0 : dagBlock.getHeightGroupIndex());
+                edge.setToHeightGroupIndex(parentDagBlock.getHeightGroupIndex() == null ? 0 :parentDagBlock.getHeightGroupIndex());
                 edgeList.add(edge);
             }
         }

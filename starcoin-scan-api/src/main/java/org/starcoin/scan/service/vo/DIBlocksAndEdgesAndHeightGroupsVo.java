@@ -37,4 +37,13 @@ public class DIBlocksAndEdgesAndHeightGroupsVo {
     public void setHeightGroups(List<DagInspectorHeightGroup> heightGroups) {
         this.heightGroups = heightGroups;
     }
+
+    @Override
+    public String toString() {
+        return "DIBlocksAndEdgesAndHeightGroupsVo{" +
+                "blocks=" + blocks +
+                ", edges=" + edges +
+                ", heightGroups=" + heightGroups +
+                '}';
+    }
 }

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer-repair
-          image: starcoin/starcoin_indexer:sha-3af1c2a
+          image: starcoin/starcoin_indexer:halley_fix_db_1
           ports:
             - containerPort: 8300
           env:
@@ -37,7 +37,7 @@ spec:
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: TXN_OFFSET
-              value: "451993"
+              value: "0"
             - name: STARCOIN_ES_PROTOCOL
               value: "https"
             - name: STARCOIN_ES_PORT

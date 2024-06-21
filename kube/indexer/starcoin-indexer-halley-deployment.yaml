@@ -17,14 +17,14 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-3af1c2a
+          image: starcoin/starcoin_indexer:halley_fix_db_1
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
               value: "halley.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.0727"
+              value: "halley.20240621"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
             - name: BULK_SIZE
@@ -37,7 +37,7 @@ spec:
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
             - name: TXN_OFFSET
-              value: "451993"
+              value: "0"
             - name: STARCOIN_ES_PROTOCOL
               value: "https"
             - name: STARCOIN_ES_PORT

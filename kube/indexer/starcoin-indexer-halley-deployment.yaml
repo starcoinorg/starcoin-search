@@ -24,7 +24,7 @@ spec:
             - name: HOSTS
               value: "halley.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.20240621"
+              value: "halley.0727"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
             - name: BULK_SIZE

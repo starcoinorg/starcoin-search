@@ -24,7 +24,7 @@ spec:
             - name: HOSTS
               value: "vega.seed.starcoin.org"
             - name: NETWORK
-              value: "vega.20240622"
+              value: "vega.0727"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
             - name: BULK_SIZE

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-deployment
+  name: starcoin-indexer-repair-deployment
   namespace: starcoin-halley
   labels:
-    app: starcoin-indexer
+    app: starcoin-indexer-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer
+      app: starcoin-indexer-repair
   template:
     metadata:
       labels:
-        app: starcoin-indexer
+        app: starcoin-indexer-repair
     spec:
       containers:
-        - name: starcoin-indexer
+        - name: starcoin-indexer-repair
           image: starcoin/starcoin_indexer:halley_fix_db_1
           ports:
             - containerPort: 8300
@@ -26,7 +26,7 @@ spec:
             - name: NETWORK
               value: "halley.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
+              value: "indexer,secondary,market_cap,txn_payload"
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_PWD
@@ -60,5 +60,5 @@ spec:
             - name: DB_SCHEMA
               value: "halley"
             - name: PROGRAM_ARGS
-              value: ""
+              value: "auto_repair 1"
           #valume:

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcoin-indexer-deployment
-  namespace: starcoin-halley
+  namespace: starcoin-vega
   labels:
     app: starcoin-indexer
 spec:
@@ -17,14 +17,14 @@ spec:
     spec:
       containers:
         - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:halley_fix_db_1
+          image: starcoin/starcoin_indexer:halley_fix_db_2
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "halley.seed.starcoin.org"
+              value: "vega.seed.starcoin.org"
             - name: NETWORK
-              value: "halley.0727"
+              value: "vega.0727"
             - name: BG_TASK_JOBS
               value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
             - name: BULK_SIZE
@@ -58,7 +58,7 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "halley"
+              value: "vega"
             - name: PROGRAM_ARGS
               value: ""
           #valume:

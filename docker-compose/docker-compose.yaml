@@ -39,6 +39,17 @@ services:
       - HZ_CACHE_SESSION_EVICTION_MAX_SIZE_POLICY=ENTRY_COUNT
       - HZ_CACHE_SESSION_EVICTION_EVICTION_POLICY=LRU
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.2
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
 volumes:
   esdata:
     driver: local

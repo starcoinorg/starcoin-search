@@ -271,6 +271,9 @@
               },
               "sequence_number" : {
                 "type" : "long"
+              },
+              "decoded_payload":  {
+                "type" : "text"
               }
             }
           },
@@ -282,9 +285,6 @@
                 "ignore_above" : 256
               }
             }
-          },
-          "decoded_payload":  {
-            "type" : "text"
           }
         }
       }

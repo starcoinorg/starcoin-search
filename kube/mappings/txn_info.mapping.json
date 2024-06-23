@@ -282,6 +282,9 @@
                 "ignore_above" : 256
               }
             }
+          },
+          "decoded_payload":  {
+            "type" : "text"
           }
         }
       }

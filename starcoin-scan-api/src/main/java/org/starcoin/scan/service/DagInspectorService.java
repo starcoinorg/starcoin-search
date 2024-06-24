@@ -74,10 +74,7 @@ public class DagInspectorService extends BaseService {
             throw new RuntimeException("Cannot find block by block hash");
         }
         Long endHeight = block.getHeight();
-        long startHeight = block.getHeight() - heightDifference;
-        if (startHeight < 0L) {
-            startHeight = 0L;
-        }
+        long startHeight = Math.max(block.getHeight() - heightDifference, 0L);
         return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
@@ -87,19 +84,13 @@ public class DagInspectorService extends BaseService {
             throw new RuntimeException("Cannot find block by block hash");
         }
         Long endHeight = block.getHeight();
-        long startHeight = block.getHeight() - heightDifference;
-        if (startHeight < 0L) {
-            startHeight = 0L;
-        }
+        long startHeight = Math.max(block.getHeight() - heightDifference, 0L);
         return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
     public DIBlocksAndEdgesAndHeightGroupsVo getHead(String network, Integer heightDifference) throws IOException {
         long endHeight = getMaxHeightFromStorage(network);
-        long startHeight = endHeight - heightDifference;
-        if (startHeight < 0L) {
-            startHeight = 0L;
-        }
+        long startHeight = Math.max(endHeight - heightDifference, 0L);
         return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 

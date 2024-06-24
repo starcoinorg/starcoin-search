@@ -107,6 +107,27 @@ PUT _component_template/block-mappings
         # copy market_cap.mapping.json to here.
       }
     }
+
+    PUT _component_template/dag_inspector_block-mappings
+    {
+      "template": {
+        # copy dag_inspector_block.mapping.json to here.
+      }
+    }
+
+    PUT _component_template/dag_inspector_edge-mappings
+    {
+      "template": {
+        # copy dag_inspector_edge.mapping.json to here.
+      }
+    }
+
+    PUT _component_template/dag_inspector_edge-mappings
+    {
+      "template": {
+        # copy dag_inspector_edge.mapping.json to here.
+      }
+    }
 4.
   PUT _index_template/blocks-template
   {
@@ -189,4 +210,25 @@ PUT _component_template/block-mappings
       "index_patterns": ["*.market_cap"],
       "priority": 500,
       "composed_of": ["market_cap-mappings"]
+    }
+
+    PUT _index_template/dag_inspector_block-template
+    {
+      "index_patterns": ["*.dag_inspector_block"],
+      "priority": 500,
+      "composed_of": ["dag_inspector_block-mappings"]
+    }
+
+    PUT _index_template/dag_inspector_edge-template
+    {
+      "index_patterns": ["*.dag_inspector_edge"],
+      "priority": 500,
+      "composed_of": ["dag_inspector_edge-mappings"]
+    }
+
+    PUT _index_template/dag_inspector_height_group-template
+    {
+      "index_patterns": ["*.dag_inspector_height_group"],
+      "priority": 500,
+      "composed_of": ["dag_inspector_height_group-mappings"]
     }

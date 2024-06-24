@@ -1,0 +1,36 @@
+{
+  "mappings" : {
+    "properties" : {
+      "from_block_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "from_group_index" : {
+        "type" : "long"
+      },
+      "from_height" : {
+        "type" : "long"
+      },
+      "to_block_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "to_group_index" : {
+        "type" : "long"
+      },
+      "to_height" : {
+        "type" : "long"
+      }
+    }
+  }
+}

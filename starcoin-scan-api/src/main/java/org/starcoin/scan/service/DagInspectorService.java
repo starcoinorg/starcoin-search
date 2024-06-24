@@ -10,7 +10,6 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.Max;
 import org.elasticsearch.search.aggregations.metrics.TopHits;
 import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -112,7 +111,7 @@ public class DagInspectorService extends BaseService {
      * @return
      */
     private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight)));
         sourceBuilder.sort("height", SortOrder.ASC);
@@ -179,7 +178,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private Long getMaxHeightFromStorage(String network) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
 
         // Build the SearchSourceBuilder with max aggregation
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -212,7 +211,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("block_hash", blockHash));
 
@@ -230,7 +229,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Integer daaScore) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_NODE));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("daa_score", daaScore));
 

@@ -21,7 +21,8 @@ public class DagInspectServiceTest {
 
     @Test
     public void testGetBlocksAndEdgesAndHeightGroups() throws IOException {
-        DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getBlocksAndEdgesAndHeightGroups(TEST_NETWORK, 10000L, 10050L);
+        DIBlocksAndEdgesAndHeightGroupsVo vo =
+                dagInspectorService.getBlocksAndEdgesAndHeightGroups(TEST_NETWORK, 10000L, 10050L);
         Assertions.assertNotEquals(0, vo.getBlocks().size());
         Assertions.assertNotEquals(0, vo.getEdges().size());
         Assertions.assertNotEquals(0, vo.getHeightGroups().size());
@@ -32,7 +33,7 @@ public class DagInspectServiceTest {
         DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getBlockHash(
                 TEST_NETWORK,
                 "0x93a4fc71929be2e435efe682d02260f8dd46824fe90e926e3b3ea5839f31e67c",
-                10
+                10L
         );
         Assertions.assertNotEquals(0, vo.getBlocks().size());
         Assertions.assertNotEquals(0, vo.getEdges().size());
@@ -42,7 +43,11 @@ public class DagInspectServiceTest {
 
     @Test
     public void testGetBlockDAAScore() throws IOException {
-        DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getBlockDAAScore(TEST_NETWORK, 10409, 1);
+        DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getBlockDAAScore(
+                TEST_NETWORK,
+                10409L,
+                1L
+        );
         Assertions.assertNotEquals(0, vo.getBlocks().size());
         Assertions.assertNotEquals(0, vo.getEdges().size());
         Assertions.assertNotEquals(0, vo.getHeightGroups().size());
@@ -52,7 +57,7 @@ public class DagInspectServiceTest {
 
     @Test
     public void testGetHead() throws IOException {
-        DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getHead(TEST_NETWORK, 100);
+        DIBlocksAndEdgesAndHeightGroupsVo vo = dagInspectorService.getHead(TEST_NETWORK, 100L);
         Assertions.assertNotEquals(0, vo.getBlocks().size());
         Assertions.assertNotEquals(0, vo.getEdges().size());
         Assertions.assertNotEquals(0, vo.getHeightGroups().size());

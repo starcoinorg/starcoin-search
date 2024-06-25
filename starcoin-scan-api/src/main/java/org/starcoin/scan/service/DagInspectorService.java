@@ -66,7 +66,7 @@ public class DagInspectorService extends BaseService {
     public DIBlocksAndEdgesAndHeightGroupsVo getBlockHash(
             String network,
             String targetHash,
-            Integer heightDifference
+            Long heightDifference
     ) throws IOException {
         DagInspectorBlock block = getBlockWithHashFromStorage(network, targetHash);
         if (block == null) {
@@ -80,7 +80,11 @@ public class DagInspectorService extends BaseService {
         return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
-    public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(String network, Integer targetDAAScore, Integer heightDifference) throws IOException {
+    public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(
+            String network,
+            Long targetDAAScore,
+            Long heightDifference
+    ) throws IOException {
         DagInspectorBlock block = getHeightWithDAAScoreFromStorage(network, targetDAAScore);
         if (block == null) {
             throw new RuntimeException("Cannot find block by block hash");
@@ -93,7 +97,7 @@ public class DagInspectorService extends BaseService {
         return getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
-    public DIBlocksAndEdgesAndHeightGroupsVo getHead(String network, Integer heightDifference) throws IOException {
+    public DIBlocksAndEdgesAndHeightGroupsVo getHead(String network, Long heightDifference) throws IOException {
         long endHeight = getMaxHeightFromStorage(network);
         long startHeight = endHeight - heightDifference;
         if (startHeight < 0L) {
@@ -156,7 +160,7 @@ public class DagInspectorService extends BaseService {
      * @param heights
      * @return
      */
-    List<DagInspectorHeightGroup> getHeightGroup(String network, Set<Long> heights) {
+    protected List<DagInspectorHeightGroup> getHeightGroup(String network, Set<Long> heights) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(QueryBuilders.termsQuery("height", heights));
@@ -173,7 +177,7 @@ public class DagInspectorService extends BaseService {
         return result.getContents();
     }
 
-    public DIAppConfigVo getAppConfig() {
+    public DIAppConfigVo getAppConfig(String network) {
         return new DIAppConfigVo();
     }
 
@@ -228,7 +232,7 @@ public class DagInspectorService extends BaseService {
         return result.getContents().get(0);
     }
 
-    private DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Integer daaScore) {
+    private DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Long daaScore) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("daa_score", daaScore));
@@ -244,6 +248,24 @@ public class DagInspectorService extends BaseService {
         }
         Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
         return result.getContents().get(0);
+    }
+
+    public List<DagInspectorBlock> getBlocksByHeight(String network, Long height) {
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.should(QueryBuilders.termQuery("height", height));
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(boolQueryBuilder);
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            logger.error("getBlocksByHeight failed, blockHash: {}", height, e);
+            return null;
+        }
+        Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
+        return result.getContents();
     }
 
 }

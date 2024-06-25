@@ -216,19 +216,4 @@ public class BlockService extends BaseService {
         }
         return ServiceUtils.getSearchResult(searchResponse, UncleBlock.class);
     }
-
-//    public List<Block> getBlocksBetweenHeights(String network, Integer startHeight, Integer endHeight) {
-//        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.BLOCK_CONTENT_INDEX));
-//        RangeQueryBuilder termQueryBuilder = QueryBuilders.rangeQuery("header.number").gte(startHeight).lte(endHeight);
-//        searchRequest.source(new SearchSourceBuilder().query(termQueryBuilder).sort("header.number", SortOrder.ASC));
-//        SearchResponse searchResponse;
-//        try {
-//            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-//        } catch (IOException e) {
-//            logger.error("getBlocksBetweenHeights failed, startHeight: {}, endHeight: {}", startHeight, endHeight, e);
-//            return null;
-//        }
-//        Result<Block> result = ServiceUtils.getSearchResult(searchResponse, Block.class);
-//        return result.getContents();
-//    }
 }

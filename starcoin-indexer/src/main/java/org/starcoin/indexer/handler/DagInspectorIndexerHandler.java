@@ -97,7 +97,7 @@ public class DagInspectorIndexerHandler {
                     dagBlock.setSelectedParentHash(ghostdagData.getSelectedParent());
                     dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
                     // Block is the virtual selected parent chain because the list read from block height
-                    dagBlock.setInVirtualSelectedParentChain(ghostdagData.getMergesetBlues().contains(currentBlockHash));
+                    dagBlock.setInVirtualSelectedParentChain(true);
 
                     Integer groupSize = getHeightGroupSizeOrDefault(heightGroupList, dagBlock.getHeight(), 0);
                     dagBlock.setHeightGroupIndex(groupSize);

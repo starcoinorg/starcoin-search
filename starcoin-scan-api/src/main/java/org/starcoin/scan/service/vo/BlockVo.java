@@ -8,11 +8,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BlockVo extends Block {
+
+    @JSONField(name = "daa_score")
+    @JsonProperty("daa_score")
     private Long daaScore;
 
-    private Integer heightGroupIndex;
+    @JSONField(name = "heightgroup_index")
+    @JsonProperty("heightgroup_index")
+    private Integer heightgroupIndex;
 
-    List<String> mergeSetBlueIds;
+    @JSONField(name = "merged_blueset")
+    @JsonProperty("merged_blueset")
+    List<String> mergedBlueset;
 
     public Long getDaaScore() {
         return daaScore;
@@ -22,20 +29,20 @@ public class BlockVo extends Block {
         this.daaScore = daaScore;
     }
 
-    public Integer getHeightGroupIndex() {
-        return heightGroupIndex;
+    public Integer getHeightgroupIndex() {
+        return heightgroupIndex;
     }
 
-    public void setHeightGroupIndex(Integer heightGroupIndex) {
-        this.heightGroupIndex = heightGroupIndex;
+    public void setHeightgroupIndex(Integer heightgroupIndex) {
+        this.heightgroupIndex = heightgroupIndex;
     }
 
-    public List<String> getMergeSetBlueIds() {
-        return mergeSetBlueIds;
+    public List<String> getMergedBlueset() {
+        return mergedBlueset;
     }
 
-    public void setMergeSetBlueIds(List<String> mergeSetBlueIds) {
-        this.mergeSetBlueIds = mergeSetBlueIds;
+    public void setMergedBlueset(List<String> mergedBlueset) {
+        this.mergedBlueset = mergedBlueset;
     }
 
     public static BlockVo from(Block block) {
@@ -49,8 +56,8 @@ public class BlockVo extends Block {
         blockVo.setBody(block.getBody());
 
         blockVo.setDaaScore(0L);
-        blockVo.setHeightGroupIndex(0);
-        blockVo.setMergeSetBlueIds(new ArrayList<>());
+        blockVo.setHeightgroupIndex(0);
+        blockVo.setMergedBlueset(new ArrayList<>());
 
         return blockVo;
     }

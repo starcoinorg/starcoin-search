@@ -62,7 +62,11 @@ public class BlockV2Controller {
             @PathVariable("network") String network,
             @PathVariable("height") long height
     ) {
-        BlockVo blockVo = BlockVo.from(blockService.getBlockByHeight(network, height));
+        Block block = blockService.getBlockByHeight(network, height);
+        if (block == null) {
+            return new BlockVo();
+        }
+        BlockVo blockVo = BlockVo.from(block);
         List<DagInspectorBlock> dagBlocks = dagInspectorService.getBlocksByHeight(network, height);
         if (dagBlocks == null || dagBlocks.isEmpty()) {
             return blockVo;
@@ -71,8 +75,8 @@ public class BlockV2Controller {
                 .filter(dagBlock -> dagBlock.getBlockHash().equals(blockVo.getId()))
                 .findFirst().ifPresent(dagBlock -> {
                     blockVo.setDaaScore(dagBlock.getDaaScore());
-                    blockVo.setMergeSetBlueIds(dagBlock.getMergeSetBlueIds());
-                    blockVo.setHeightGroupIndex(dagBlock.getHeightGroupIndex());
+                    blockVo.setMergedBlueset(dagBlock.getMergeSetBlueIds());
+                    blockVo.setHeightgroupIndex(dagBlock.getHeightGroupIndex());
                 });
         return blockVo;
     }

@@ -147,7 +147,7 @@ public class DagInspectorIndexerHandler {
                 DagInspectorBlock parentDagBlock = dagBlockMap.get(parentHash);
                 if (parentDagBlock == null) {
                     logger.info("Parent block not found: {} ", parentHash);
-                    parentDagBlock = getDagInspectorBlockInfoFromHash(parentHash, heightGroupList);
+                    parentDagBlock = getDagInspectorBlockInfoFromHash(parentHash, heightGroupList, false);
 
                     // Put into buffer list
                     newDagBlocks.add(parentDagBlock);
@@ -324,7 +324,8 @@ public class DagInspectorIndexerHandler {
 
     protected DagInspectorBlock getDagInspectorBlockInfoFromHash(
             String blockHash,
-            List<DagInspectorHeightGroup> heightGroupList
+            List<DagInspectorHeightGroup> heightGroupList,
+            boolean isSelectedParentChain
     ) throws JSONRPC2SessionException {
 
         Block blockInfo = blockRPCClient.getBlockByHash(blockHash);
@@ -340,7 +341,7 @@ public class DagInspectorIndexerHandler {
         dagBlock.setHeight(blockInfo.getHeader().getHeight());
         dagBlock.setSelectedParentHash(blockGhostdagData.getSelectedParent());
         dagBlock.setParentIds(blockInfo.getHeader().getParentsHash());
-        dagBlock.setInVirtualSelectedParentChain(false);
+        dagBlock.setInVirtualSelectedParentChain(isSelectedParentChain);
 
         // Height group list index
         Integer groupSize = getHeightGroupSizeOrDefault(heightGroupList, blockHeight, 0);

@@ -15,6 +15,8 @@ import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.LongStream;
 
 public class DagInspectorIndexer extends QuartzJobBean {
 
@@ -79,6 +81,63 @@ public class DagInspectorIndexer extends QuartzJobBean {
             return;
         }
 
+        // fetchAndProcessBlockSequel();
+        fetchAndProcessBlocksParallel();
+    }
+
+    public void fetchAndProcessBlocksParallel() {
+        logger.info("Entered");
+        try {
+            // Read chain header
+            BlockHeader chainHeader = blockRPCClient.getChainHeader();
+
+            // Calculate bulk size
+            long headHeight = chainHeader.getHeight();
+            long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
+
+            ConcurrentHashMap<String, Block> blockMap = new ConcurrentHashMap<>();
+
+            LongStream.rangeClosed(1, bulkNumber).parallel().forEach(index -> {
+                long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
+
+                logger.info("Start Get block number: {}, currentBlockHeight: {}", index, currentBlockHeight);
+                Block block;
+                try {
+                    block = blockRPCClient.getBlockByHeight(currentBlockHeight);
+                    if (block == null) {
+                        logger.warn("get block null: {}", currentBlockHeight);
+                        return;
+                    }
+
+                    blockMap.put(block.getHeader().getBlockHash(), block);
+
+                    logger.info("add block: {}", block.getHeader());
+                } catch (Exception e) {
+                    logger.error("Error getting block at height {}: ", currentBlockHeight, e);
+                }
+            });
+
+            // Process the collected blocks
+            inspectorHandler.upsertDagInfoFromBlocks(new ArrayList<>(blockMap.values()));
+
+            // Update offset with the last processed block
+            BlockHeader lastBlockHeader = blockMap.values().stream()
+                    .map(Block::getHeader)
+                    .max(Comparator.comparingLong(BlockHeader::getHeight)).orElseThrow();
+
+            localBlockOffset.setBlockHeight(lastBlockHeader.getHeight());
+            localBlockOffset.setBlockHash(lastBlockHeader.getBlockHash());
+            elasticSearchHandler.setRemoteOffset(localBlockOffset);
+            logger.info("indexer update success: {}", localBlockOffset);
+        } catch (JSONRPC2SessionException | IOException e) {
+            logger.error("chain header error:", e);
+        } finally {
+            logger.info("Exited");
+        }
+
+    }
+
+    public void fetchAndProcessBlockSequel() {
         // Read chain header
         try {
             BlockHeader chainHeader = blockRPCClient.getChainHeader();
@@ -116,4 +175,6 @@ public class DagInspectorIndexer extends QuartzJobBean {
             logger.error("chain header error:", e);
         }
     }
+
 }
+

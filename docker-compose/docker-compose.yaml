@@ -50,6 +50,18 @@ services:
     depends_on:
       - elasticsearch
 
+  postgresql:
+    image: postgres:13.2
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: starcoin
+      POSTGRES_PASSWORD: starcoin
+      POSTGRES_DB: starcoin
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
 volumes:
   esdata:
     driver: local

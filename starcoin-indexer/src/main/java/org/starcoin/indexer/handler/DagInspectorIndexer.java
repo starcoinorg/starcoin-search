@@ -146,7 +146,10 @@ public class DagInspectorIndexer extends QuartzJobBean {
             long headHeight = chainHeader.getHeight();
             long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
             int index = 1;
-            Map<String, Block> blockMap = new HashMap<>();
+            List<Block> blockList = new ArrayList<>();
+            long minHeight = localBlockOffset.getBlockHeight();
+            Set<String> visit = new HashSet<>();
+            Deque<Block> deque = new ArrayDeque<>();
             while (index <= bulkNumber) {
                 long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
 
@@ -156,15 +159,22 @@ public class DagInspectorIndexer extends QuartzJobBean {
                     logger.warn("get block null: {}", currentBlockHeight);
                     return;
                 }
-
-                blockMap.put(block.getHeader().getBlockHash(), block);
-
+                visit.add(block.getHeader().getBlockHash());
+                fetchParentsBlock(block, visit, deque, blockList, minHeight);
+                while (!deque.isEmpty()) {
+                    int size = deque.size();
+                    for (int i = 0; i < size; i++) {
+                        Block block_parent = deque.removeFirst();
+                        fetchParentsBlock(block_parent, visit, deque, blockList, minHeight);
+                    }
+                }
+                blockList.add(block);
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;
                 logger.info("add block: {}", block.getHeader());
             }
-            inspectorHandler.upsertDagInfoFromBlocks(new ArrayList<>(blockMap.values()));
+            inspectorHandler.upsertDagInfoFromBlocks(blockList);
 
             // Update offset
             localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
@@ -176,5 +186,19 @@ public class DagInspectorIndexer extends QuartzJobBean {
         }
     }
 
+    void fetchParentsBlock(Block block, Set<String> visit, Deque<Block> deque, List<Block> blockList, long minHeight) throws JSONRPC2SessionException {
+        for (String parent : block.getBlockMetadata().getParentsHash()) {
+            if (!visit.contains(parent)) {
+                visit.add(parent);
+                Block block_parent = elasticSearchHandler.getBlockContent(parent);
+                if (block_parent == null) {
+                    block_parent = blockRPCClient.getBlockByHash(parent);
+                    if (block_parent.getHeader().getHeight() >= minHeight) {
+                        deque.addLast(block_parent);
+                        blockList.add(block_parent);
+                    }
+                }
+            }
+        }
+    }
 }
-

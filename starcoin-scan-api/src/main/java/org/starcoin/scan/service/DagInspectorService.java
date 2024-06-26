@@ -1,6 +1,7 @@
 package org.starcoin.scan.service;
 
 import com.alibaba.fastjson.JSONObject;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -105,7 +106,7 @@ public class DagInspectorService extends BaseService {
      * @param endHeight
      * @return
      */
-    private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) throws IOException {
+    private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) throws ElasticsearchException, IOException {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight)));
@@ -251,7 +252,7 @@ public class DagInspectorService extends BaseService {
         SearchResponse searchResponse;
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
+        } catch (IOException | org.elasticsearch.ElasticsearchStatusException e) {
             logger.error("getBlocksByHeight failed, blockHash: {}", height, e);
             return null;
         }

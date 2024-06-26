@@ -81,8 +81,8 @@ public class DagInspectorIndexer extends QuartzJobBean {
             return;
         }
 
-        // fetchAndProcessBlockSequel();
-        fetchAndProcessBlocksParallel();
+        fetchAndProcessBlockSequel();
+        // fetchAndProcessBlocksParallel();
     }
 
     public void fetchAndProcessBlocksParallel() {
@@ -186,8 +186,14 @@ public class DagInspectorIndexer extends QuartzJobBean {
         }
     }
 
-    void fetchParentsBlock(Block block, Set<String> visit, Deque<Block> deque, List<Block> blockList, long minHeight) throws JSONRPC2SessionException {
-        for (String parent : block.getBlockMetadata().getParentsHash()) {
+    void fetchParentsBlock(
+            Block block,
+            Set<String> visit,
+            Deque<Block> deque,
+            List<Block> blockList,
+            long minHeight
+    ) throws JSONRPC2SessionException {
+        for (String parent : block.getHeader().getParentsHash()) {
             if (!visit.contains(parent)) {
                 visit.add(parent);
                 Block block_parent = elasticSearchHandler.getBlockContent(parent);

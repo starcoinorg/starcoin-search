@@ -122,10 +122,10 @@ PUT _component_template/block-mappings
       }
     }
 
-    PUT _component_template/dag_inspector_edge-mappings
+    PUT _component_template/dag_inspector_height_group-mappings
     {
       "template": {
-        # copy dag_inspector_edge.mapping.json to here.
+        # copy dag_inspector_height_group.mapping.json to here.
       }
     }
 4.

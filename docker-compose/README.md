@@ -37,6 +37,9 @@ Following file: [[es_pipeline.scripts](..%2Fkube%2Fmappings%2Fes_pipeline.script
 2. Navigate to 'Dev Tools'
 3. Follow the instructions in the file of giving above to add the template to ES
 
+### Add SQL tables for network
+[IMPORTANT!!] Add the [tables](../starcoin-indexer/deploy/create_table.sql) for the network you want to scan, including main, barnard, halley, etc.
+
 ## 4. Start starcoin-scan-api project
 
 ### Config the startup enviroment variable
@@ -55,3 +58,6 @@ STARCOIN_USER_DS_URL="jdbc:postgresql://localhost/starcoin?currentSchema=starcoi
 DB_USER_NAME=starcoin
 DB_PWD=starcoin
 ```
+
+### Add SQL tables for network
+[IMPORTANT!!] Add the [tables](../starcoin-scan-api/deploy/create_table.sql) for the network you want to scan, including main, barnard, halley, etc.

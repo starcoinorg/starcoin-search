@@ -1,34 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starswap-info-deployment
-  namespace: starcoin-main
+  name: starcoin-indexer-repair-deployment
+  namespace: starcoin-halley
   labels:
-    app: starswap-info
+    app: starcoin-indexer-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starswap-info
+      app: starcoin-indexer-repair
   template:
     metadata:
       labels:
-        app: starswap-info
+        app: starcoin-indexer-repair
     spec:
       containers:
-        - name: starswap-info
-          image: starcoin/starcoin_indexer:sha-a66e9ab
+        - name: starcoin-indexer-repair
+          image: starcoin/starcoin_indexer:halley_fix_db_1
           ports:
             - containerPort: 8300
           env:
             - name: HOSTS
-              value: "main.seed.starcoin.org"
+              value: "halley.seed.starcoin.org"
             - name: NETWORK
-              value: "main.0727"
+              value: "halley.0727"
             - name: BG_TASK_JOBS
-              value: "swap_stats,price_hour,price_stat,swap_pool_fee_stat"
-            - name: TXN_OFFSET
-              value: "0"
+              value: "indexer,secondary,market_cap,txn_payload"
+            - name: BULK_SIZE
+              value: "80"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
@@ -36,16 +36,18 @@ spec:
                   key: password
             - name: STARCOIN_ES_URL
               value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+            - name: TXN_OFFSET
+              value: "0"
             - name: STARCOIN_ES_PROTOCOL
               value: "https"
             - name: STARCOIN_ES_PORT
               value: "443"
-            - name: BULK_SIZE
-              value: "100"
+            - name: STARCOIN_ES_USER
+              value: elastic
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
-              value: "0x8c109349c6bd91411d6bc962e080c4a3"
+              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
               value: "jdbc:postgresql://database-1.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
             - name: DB_USER_NAME
@@ -56,6 +58,7 @@ spec:
                   name: postgresql-starcoin-yu
                   key: password
             - name: DB_SCHEMA
-              value: "main"
+              value: "halley"
             - name: PROGRAM_ARGS
-              value: ""
+              value: "auto_repair 1"
+          #valume:

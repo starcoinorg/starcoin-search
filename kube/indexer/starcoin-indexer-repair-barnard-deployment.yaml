@@ -60,4 +60,4 @@ spec:
             - name: DB_SCHEMA
               value: "barnard"
             - name: PROGRAM_ARGS
-              value: "auto_repair 4040020"
+               value: "auto_repair 16057420"

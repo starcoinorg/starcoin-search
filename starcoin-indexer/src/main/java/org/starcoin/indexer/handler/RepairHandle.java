@@ -100,7 +100,8 @@ public class RepairHandle {
             if (esBlock == null) {
                 logger.warn("es block not exist: {}", block.getHeader().getHeight());
                 try {
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                    blockList.add(block);
                 } catch (JSONRPC2SessionException e) {
                     logger.error("add block err:", e);
                 }
@@ -109,7 +110,8 @@ public class RepairHandle {
             if (!block.getHeader().getBlockHash().equals(esBlock.getHeader().getBlockHash())) {
                 // fork block
                 try {
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                    blockList.add(block);
                 } catch (JSONRPC2SessionException e) {
                     logger.error("add fix block err:", e);
                 }
@@ -141,7 +143,8 @@ public class RepairHandle {
                 if (!blockOnChain.getHeader().getBlockHash().equals(blockOnEs.getHeader().getBlockHash())) {
 //                update block
                     List<Block> blockList = new ArrayList<>();
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, blockOnChain);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, blockOnChain);
+                    blockList.add(blockOnChain);
                     elasticSearchHandler.updateBlock(blockList);
                     logger.info("repair ok: {}", blockNumber);
                 } else {

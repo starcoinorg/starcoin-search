@@ -151,8 +151,11 @@ public class IndexerHandle extends QuartzJobBean {
                     logger.info("rollback handle ok: {}", localBlockOffset);
                     return; //退出当前任务，重新添加从分叉点之后的block
                 }
+
                 //set event
-                ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                blockList.add(block);
+
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;

@@ -220,11 +220,19 @@ public class ServiceUtils {
         return poolReserves;
     }
 
-    static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {
-        List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
-        if (transactionList == null) {
+    public static void fetchTransactionsForBlock(TransactionRPCClient transactionRPCClient, Block block) throws JSONRPC2SessionException {
+        List<Transaction> transactionList;
+        try {
+            transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
+        } catch (JSONRPC2SessionException e) {
+            logger.error("get block txn error:", e);
             return;
         }
+
+        if (transactionList == null || transactionList.isEmpty()) {
+            return;
+        }
+
         for (Transaction transaction : transactionList) {
             BlockMetadata metadata;
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
@@ -268,6 +276,6 @@ public class ServiceUtils {
             }
         }
         block.setTransactionList(transactionList);
-        blockList.add(block);
+        // blockList.add(block);
     }
 }

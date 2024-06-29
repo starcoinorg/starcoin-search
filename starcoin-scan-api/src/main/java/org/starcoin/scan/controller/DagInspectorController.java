@@ -7,8 +7,6 @@ import org.starcoin.scan.service.DagInspectorService;
 import org.starcoin.scan.service.vo.DIAppConfigVo;
 import org.starcoin.scan.service.vo.DIBlocksAndEdgesAndHeightGroupsVo;
 
-import java.util.List;
-
 @Api(tags = "dag-inspector")
 @RestController
 @RequestMapping("v2/dag-inspector")
@@ -26,12 +24,12 @@ public class DagInspectorController {
         return dagInspectorService.getBlocksAndEdgesAndHeightGroups(network, startHeight, endHeight);
     }
 
-    @GetMapping("/{network}/header")
-    public DIBlocksAndEdgesAndHeightGroupsVo header(
+    @GetMapping("/{network}/head")
+    public DIBlocksAndEdgesAndHeightGroupsVo head(
             @PathVariable("network") String network,
-            @RequestParam Long heightDifferent
+            @RequestParam Long heightDifference
     ) throws Exception {
-        return dagInspectorService.getHead(network, heightDifferent);
+        return dagInspectorService.getHead(network, heightDifference);
     }
 
     @GetMapping("/{network}/blockHash")
@@ -46,10 +44,10 @@ public class DagInspectorController {
     @GetMapping("/{network}/blockDAAScore")
     public DIBlocksAndEdgesAndHeightGroupsVo getBlockDAAScore(
             @PathVariable("network") String network,
-            @RequestParam Long daaScore,
+            @RequestParam Long blockDAAScore,
             @RequestParam Long heightDifference
     ) throws Exception {
-        return dagInspectorService.getBlockDAAScore(network, daaScore, heightDifference);
+        return dagInspectorService.getBlockDAAScore(network, blockDAAScore, heightDifference);
     }
 
     @GetMapping("/{network}/appConfig")

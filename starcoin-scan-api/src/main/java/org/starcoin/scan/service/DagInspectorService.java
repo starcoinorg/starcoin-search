@@ -28,6 +28,7 @@ import org.starcoin.constant.Constant;
 import org.starcoin.scan.service.vo.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -53,12 +54,26 @@ public class DagInspectorService extends BaseService {
         }
 
         groups.setBlocks(blockList);
-        groups.setEdges(getEdgeList(network, startHeight, endHeight));
+
+        List<DagInspectorEdge> blockEdges = getEdgeList(network, startHeight, endHeight);
+        groups.setEdges(blockEdges);
 
         Set<Long> heightList =
                 blockList.stream()
                         .map(DagInspectorBlock::getHeight)
                         .collect(Collectors.toSet());
+
+        // Add edges FromHeight and ToHeight
+        heightList.addAll(
+                blockEdges.stream()
+                        .map(DagInspectorEdge::getFromHeight)
+                        .collect(Collectors.toSet())
+        );
+        heightList.addAll(
+                blockEdges.stream()
+                        .map(DagInspectorEdge::getToHeight)
+                        .collect(Collectors.toSet())
+        );
         groups.setHeightGroups(getHeightGroup(network, heightList));
 
         return groups;
@@ -111,11 +126,20 @@ public class DagInspectorService extends BaseService {
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight)));
         sourceBuilder.sort("height", SortOrder.ASC);
-        sourceBuilder.size(endHeight.intValue() - startHeight.intValue());
+        //sourceBuilder.size(endHeight.intValue() - startHeight.intValue());
+        sourceBuilder.size(1000);
         searchRequest.source(sourceBuilder);
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
-        return result.getContents();
+        return result.getContents().stream().peek(block -> {
+            if (block.getMergeSetBlueIds() == null) {
+                block.setMergeSetBlueIds(new ArrayList<>());
+            }
+
+            if (block.getMergeSetRedIds() == null) {
+                block.setMergeSetRedIds(new ArrayList<>());
+            }
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -132,7 +156,9 @@ public class DagInspectorService extends BaseService {
         RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").lte(endHeight);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(QueryBuilders.boolQuery().must(fromHeightQuery).must(toHeightQuery))
-                .sort("to_height", SortOrder.ASC);
+                .sort("to_height", SortOrder.ASC)
+                .size(100);
+
         searchRequest.source(sourceBuilder);
         SearchResponse searchResponse;
         try {
@@ -156,7 +182,8 @@ public class DagInspectorService extends BaseService {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(QueryBuilders.termsQuery("height", heights));
-        sourceBuilder.size(heights.size());
+        //sourceBuilder.size(heights.size());
+        sourceBuilder.size(1000);
         searchRequest.source(sourceBuilder);
         SearchResponse searchResponse;
         try {
@@ -170,7 +197,13 @@ public class DagInspectorService extends BaseService {
     }
 
     public DIAppConfigVo getAppConfig(String network) {
-        return new DIAppConfigVo();
+        DIAppConfigVo configVo = new DIAppConfigVo();
+        configVo.setApiVersion("2.0.0");
+        configVo.setNetwork(network);
+        configVo.setProcessingVersion("0.0.1");
+        configVo.setWebVersion("0.0.1");
+        configVo.setStarcoinVersion("2.0.0");
+        return configVo;
     }
 
     private Long getMaxHeightFromStorage(String network) throws IOException {

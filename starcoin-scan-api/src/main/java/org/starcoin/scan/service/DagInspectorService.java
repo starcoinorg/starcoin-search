@@ -122,7 +122,7 @@ public class DagInspectorService extends BaseService {
      * @return
      */
     private List<DagInspectorBlock> getBlockList(String network, Long startHeight, Long endHeight) throws ElasticsearchException, IOException {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("height").gte(startHeight).lte(endHeight)));
         sourceBuilder.sort("height", SortOrder.ASC);
@@ -151,7 +151,7 @@ public class DagInspectorService extends BaseService {
      * @return
      */
     List<DagInspectorEdge> getEdgeList(String network, Long startHeight, Long endHeight) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE_INDEX));
         RangeQueryBuilder fromHeightQuery = QueryBuilders.rangeQuery("from_height").gte(startHeight);
         RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").lte(endHeight);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
@@ -179,7 +179,7 @@ public class DagInspectorService extends BaseService {
      * @return
      */
     protected List<DagInspectorHeightGroup> getHeightGroup(String network, Set<Long> heights) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECT_HEIGHT_GROUP_INDEX));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(QueryBuilders.termsQuery("height", heights));
         //sourceBuilder.size(heights.size());
@@ -207,7 +207,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private Long getMaxHeightFromStorage(String network) throws IOException {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
 
         // Build the SearchSourceBuilder with max aggregation
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -240,7 +240,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private DagInspectorBlock getBlockWithHashFromStorage(String network, String blockHash) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("block_hash", blockHash));
 
@@ -258,7 +258,7 @@ public class DagInspectorService extends BaseService {
     }
 
     private DagInspectorBlock getHeightWithDAAScoreFromStorage(String network, Long daaScore) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("daa_score", daaScore));
 
@@ -276,7 +276,7 @@ public class DagInspectorService extends BaseService {
     }
 
     public List<DagInspectorBlock> getBlocksByHeight(String network, Long height) {
-        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK));
+        SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         boolQueryBuilder.should(QueryBuilders.termQuery("height", height));
 

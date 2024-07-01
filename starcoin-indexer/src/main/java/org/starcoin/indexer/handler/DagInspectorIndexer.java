@@ -1,5 +1,6 @@
 package org.starcoin.indexer.handler;
 
+import org.elasticsearch.client.RestHighLevelClient;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.LongStream;
 
+import static org.starcoin.constant.Constant.DAG_INSPECTOR_BLOCK_INDEX;
+
 public class DagInspectorIndexer extends QuartzJobBean {
 
     private static final Logger logger = LoggerFactory.getLogger(DagInspectorIndexer.class);
@@ -25,58 +28,44 @@ public class DagInspectorIndexer extends QuartzJobBean {
     @Autowired
     private DagInspectorIndexerHandler inspectorHandler;
 
-    @Autowired
-    private ElasticSearchHandler elasticSearchHandler;
+    private BlockIndexerOffset blockIndexerOffset;
 
     @Autowired
     private BlockRPCClient blockRPCClient;
 
+    @Autowired
+    private RestHighLevelClient esClient;
+
     @Value("${starcoin.indexer.bulk_size}")
     private long bulkSize;
 
-    private BlockOffset localBlockOffset;
-
-    private BlockHeader currentHandleHeader;
+    @Value("${starcoin.network}")
+    private String network;
 
     @PostConstruct
     public void initOffset() {
-        localBlockOffset = elasticSearchHandler.getRemoteOffset();
-        //update current handle header
-        try {
-            if (localBlockOffset != null) {
-                Block block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
-                if (block != null) {
-                    currentHandleHeader = block.getHeader();
-                } else {
-                    logger.error("init offset block not exist on chain: {}", localBlockOffset);
-                }
-
-            } else {
-                logger.warn("offset is null,init reset to genesis");
-                currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
-                localBlockOffset = new BlockOffset(0, currentHandleHeader.getBlockHash());
-                elasticSearchHandler.setRemoteOffset(localBlockOffset);
-                logger.info("init offset ok: {}", localBlockOffset);
-            }
-        } catch (JSONRPC2SessionException e) {
-            logger.error("set current header error:", e);
-        }
+        blockIndexerOffset = new BlockIndexerOffset(
+                ServiceUtils.getIndex(network, DAG_INSPECTOR_BLOCK_INDEX),
+                blockRPCClient,
+                esClient
+        );
+        blockIndexerOffset.initRemoteOffset();
     }
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
         //read current offset
-        if (localBlockOffset == null || currentHandleHeader == null) {
+        if (blockIndexerOffset == null) {
             initOffset();
         }
-        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
+        BlockOffset remoteBlockOffset = blockIndexerOffset.getRemoteOffset();
         logger.info("current remote offset: {}", remoteBlockOffset);
         if (remoteBlockOffset == null) {
             logger.warn("offset must not null, please check blocks.mapping!!");
             return;
         }
 
-        if (remoteBlockOffset.getBlockHeight() > localBlockOffset.getBlockHeight()) {
+        if (remoteBlockOffset.getBlockHeight() > blockIndexerOffset.getLocalBlockOffsetHeight()) {
             logger.info("indexer equalize chain blocks.");
             return;
         }
@@ -93,12 +82,12 @@ public class DagInspectorIndexer extends QuartzJobBean {
 
             // Calculate bulk size
             long headHeight = chainHeader.getHeight();
-            long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
+            long bulkNumber = Math.min(headHeight - blockIndexerOffset.getLocalBlockOffsetHeight(), bulkSize);
 
             ConcurrentHashMap<String, Block> blockMap = new ConcurrentHashMap<>();
 
             LongStream.rangeClosed(1, bulkNumber).parallel().forEach(index -> {
-                long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
+                long currentBlockHeight = blockIndexerOffset.getLocalBlockOffsetHeight() + index;
 
                 logger.info("Start Get block number: {}, currentBlockHeight: {}", index, currentBlockHeight);
                 Block block;
@@ -125,10 +114,10 @@ public class DagInspectorIndexer extends QuartzJobBean {
                     .map(Block::getHeader)
                     .max(Comparator.comparingLong(BlockHeader::getHeight)).orElseThrow();
 
-            localBlockOffset.setBlockHeight(lastBlockHeader.getHeight());
-            localBlockOffset.setBlockHash(lastBlockHeader.getBlockHash());
-            elasticSearchHandler.setRemoteOffset(localBlockOffset);
-            logger.info("indexer update success: {}", localBlockOffset);
+            blockIndexerOffset.updateBlockOffset(lastBlockHeader.getHeight(), lastBlockHeader.getBlockHash());
+
+            logger.info("Index update success: {}", blockIndexerOffset);
+
         } catch (JSONRPC2SessionException | IOException e) {
             logger.error("chain header error:", e);
         } finally {
@@ -140,18 +129,18 @@ public class DagInspectorIndexer extends QuartzJobBean {
     public void fetchAndProcessBlockSequel() {
         // Read chain header
         try {
-            BlockHeader chainHeader = blockRPCClient.getChainHeader();
-
-            // Calculate bulk size
-            long headHeight = chainHeader.getHeight();
-            long bulkNumber = Math.min(headHeight - localBlockOffset.getBlockHeight(), bulkSize);
+            long bulkNumber = Math.min(blockRPCClient.getChainHeader().getHeight() - blockIndexerOffset.getLocalBlockOffsetHeight(), bulkSize);
             int index = 1;
             List<Block> blockList = new ArrayList<>();
-            long minHeight = localBlockOffset.getBlockHeight();
+            long minHeight =  blockIndexerOffset.getLocalBlockOffsetHeight();
+            String currentBlockHash = blockIndexerOffset.getLocalOffsetBlockHash();
             Set<String> visit = new HashSet<>();
             Deque<Block> deque = new ArrayDeque<>();
+
+            long currentBlockHeight = minHeight;
+
             while (index <= bulkNumber) {
-                long currentBlockHeight = localBlockOffset.getBlockHeight() + index;
+                currentBlockHeight = minHeight + index;
 
                 logger.info("Start Get block number: {}, currentBlockHeight: {}", index, currentBlockHeight);
                 Block block = blockRPCClient.getBlockByHeight(currentBlockHeight);
@@ -169,18 +158,18 @@ public class DagInspectorIndexer extends QuartzJobBean {
                     }
                 }
                 blockList.add(block);
-                //update current header
-                currentHandleHeader = block.getHeader();
                 index++;
+
+                currentBlockHash = block.getHeader().getBlockHash();
+
                 logger.info("add block: {}", block.getHeader());
             }
             inspectorHandler.upsertDagInfoFromBlocks(blockList);
 
             // Update offset
-            localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
-            localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
-            elasticSearchHandler.setRemoteOffset(localBlockOffset);
-            logger.info("indexer update success: {}", localBlockOffset);
+            blockIndexerOffset.updateBlockOffset(currentBlockHeight, currentBlockHash);
+
+            logger.info("indexer update success: {}", blockIndexerOffset);
         } catch (JSONRPC2SessionException | IOException e) {
             logger.error("chain header error:", e);
         }
@@ -193,17 +182,30 @@ public class DagInspectorIndexer extends QuartzJobBean {
             List<Block> blockList,
             long minHeight
     ) throws JSONRPC2SessionException {
+        List<String> parents = block.getHeader().getParentsHash();
+        if (parents == null || parents.isEmpty()) {
+            return ;
+        }
+
         for (String parent : block.getHeader().getParentsHash()) {
-            if (!visit.contains(parent)) {
-                visit.add(parent);
-                Block block_parent = elasticSearchHandler.getBlockContent(parent);
-                if (block_parent == null) {
-                    block_parent = blockRPCClient.getBlockByHash(parent);
-                    if (block_parent.getHeader().getHeight() >= minHeight) {
-                        deque.addLast(block_parent);
-                        blockList.add(block_parent);
-                    }
-                }
+            if (visit.contains(parent)) {
+                continue;
+            }
+            visit.add(parent);
+            Block block_parent = blockList
+                    .stream()
+                    .filter(b -> b.getHeader().getBlockHash().compareToIgnoreCase(parent) == 0)
+                    .findAny()
+                    .orElse(null);
+
+            if (block_parent != null) {
+                continue;
+            }
+
+            block_parent = blockRPCClient.getBlockByHash(parent);
+            if (block_parent.getHeader().getHeight() >= minHeight) {
+                deque.addLast(block_parent);
+                blockList.add(block_parent);
             }
         }
     }

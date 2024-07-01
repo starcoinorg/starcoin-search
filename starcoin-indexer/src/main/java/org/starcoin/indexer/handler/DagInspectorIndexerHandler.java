@@ -55,9 +55,9 @@ public class DagInspectorIndexerHandler {
 
     @PostConstruct
     public void initIndexs() throws IOException {
-        dagInspectNodeIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECTOR_BLOCK);
-        dagInspectEdgeIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECTOR_EDGE);
-        dagInspectHeightGroupIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECT_HEIGHT_GROUP);
+        dagInspectNodeIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECTOR_BLOCK_INDEX);
+        dagInspectEdgeIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECTOR_EDGE_INDEX);
+        dagInspectHeightGroupIndex = ServiceUtils.createIndexIfNotExist(client, network, Constant.DAG_INSPECT_HEIGHT_GROUP_INDEX);
     }
 
     public void upsertDagInfoFromBlocks(List<Block> blockList) throws IOException, JSONRPC2SessionException {
@@ -139,11 +139,12 @@ public class DagInspectorIndexerHandler {
 
         List<DagInspectorBlock> newDagBlocks = new ArrayList<>();
         for (DagInspectorBlock dagBlock : dagBlockMap.values()) {
-            if (dagBlock.getParentIds().isEmpty()) {
+            List<String> parentIds = dagBlock.getParentIds();
+            if (parentIds == null || parentIds.isEmpty()) {
                 continue;
             }
 
-            for (String parentHash : dagBlock.getParentIds()) {
+            for (String parentHash : parentIds) {
                 DagInspectorBlock parentDagBlock = dagBlockMap.get(parentHash);
                 if (parentDagBlock == null) {
                     logger.info("Parent block not found: {} ", parentHash);

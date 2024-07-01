@@ -145,8 +145,8 @@ public class DagInspectorService extends BaseService {
      */
     List<DagInspectorEdge> getEdgeList(String network, Long startHeight, Long endHeight) {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_EDGE_INDEX));
-        RangeQueryBuilder fromHeightQuery = QueryBuilders.rangeQuery("from_height").gte(startHeight);
-        RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").lte(endHeight);
+        RangeQueryBuilder fromHeightQuery = QueryBuilders.rangeQuery("from_height").gte(startHeight).lte(endHeight);
+        RangeQueryBuilder toHeightQuery = QueryBuilders.rangeQuery("to_height").gte(startHeight).lte(endHeight);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(QueryBuilders.boolQuery().must(fromHeightQuery).must(toHeightQuery))
                 .sort("to_height", SortOrder.ASC)

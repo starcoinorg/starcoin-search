@@ -54,7 +54,7 @@ import org.starcoin.bean.TransactionPayloadInfo;
 import org.starcoin.constant.Constant;
 import org.starcoin.indexer.service.AddressHolderService;
 import org.starcoin.indexer.service.TransactionPayloadService;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TokenCode;
@@ -379,7 +379,7 @@ public class ElasticSearchHandler {
                     addTokenInfo(tokenInfo, codeStr);
                     //add to cache
                     tokenCache.put(codeStr, tokenInfo);
-                } catch (JSONRPC2SessionException | JsonProcessingException e) {
+                } catch (JSONRPC2SessionException e) {
                     logger.error("flush token error:", e);
                 }
             }

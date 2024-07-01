@@ -13,7 +13,7 @@ import org.starcoin.indexer.service.SwapPoolStatService;
 import org.starcoin.indexer.service.SwapStatService;
 import org.starcoin.indexer.service.SwapTxnService;
 import org.starcoin.indexer.service.TokenStatService;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.starcoin.utils.NumberUtils;
 import org.starcoin.utils.StructTagUtil;
 import org.starcoin.utils.SwapApiClient;

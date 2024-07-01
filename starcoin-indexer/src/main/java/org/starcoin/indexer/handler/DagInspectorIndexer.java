@@ -10,7 +10,7 @@ import org.starcoin.api.BlockRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
 import org.starcoin.bean.BlockOffset;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;

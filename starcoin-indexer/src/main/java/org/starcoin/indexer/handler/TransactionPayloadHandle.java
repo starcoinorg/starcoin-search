@@ -16,7 +16,7 @@ import org.starcoin.bean.Transaction;
 import org.starcoin.constant.Constant;
 import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.service.SwapTxnService;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.starcoin.types.*;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;

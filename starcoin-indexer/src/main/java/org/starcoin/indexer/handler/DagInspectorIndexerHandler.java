@@ -23,7 +23,7 @@ import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.starcoin.utils.ExceptionWrap;
 
 import javax.annotation.PostConstruct;

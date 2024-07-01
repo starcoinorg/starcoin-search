@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.bcs.BcsDeserializer;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -22,7 +23,6 @@ import org.starcoin.api.StateRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.*;
 import org.starcoin.bean.TransferOffset;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 import org.starcoin.utils.ResultWithId;
 import org.starcoin.types.ModuleId;
 import org.starcoin.types.ScriptFunction;
@@ -180,7 +180,7 @@ public class ServiceUtils {
                 if (tokenInfo != null) {
                     tokenCache.put(tokenCode, tokenInfo);
                 }
-            } catch (JSONRPC2SessionException | JsonProcessingException e) {
+            } catch (JSONRPC2SessionException e) {
                 logger.error("get token info error:", e);
             }
         }
@@ -198,7 +198,11 @@ public class ServiceUtils {
         return actualValue;
     }
 
-    public static Map<String[], Long[]> getTokenReserveFromState(StateRPCClient stateRPCClient, String contractAddress, String stateRoot) throws JSONRPC2SessionException {
+    public static Map<String[], Long[]> getTokenReserveFromState(
+            StateRPCClient stateRPCClient,
+            String contractAddress,
+            String stateRoot
+    ) throws JSONRPC2SessionException {
         ListResource resource = stateRPCClient.getState(contractAddress, true, stateRoot);
 //        System.out.println(resource);
         Map<String[], Long[]> poolReserves = new HashMap<>();

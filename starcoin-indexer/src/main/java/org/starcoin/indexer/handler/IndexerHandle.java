@@ -11,7 +11,7 @@ import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
 import org.starcoin.bean.BlockOffset;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -169,7 +169,7 @@ public class IndexerHandle extends QuartzJobBean {
             localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
             elasticSearchHandler.setRemoteOffset(localBlockOffset);
             logger.info("indexer update success: {}", localBlockOffset);
-        } catch (JSONRPC2SessionException | JsonProcessingException e) {
+        } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);
         }
     }

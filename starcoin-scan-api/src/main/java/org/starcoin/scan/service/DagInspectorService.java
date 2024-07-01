@@ -1,6 +1,4 @@
 package org.starcoin.scan.service;
-
-import com.alibaba.fastjson.JSONObject;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -9,12 +7,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.TopHits;
-import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -208,33 +201,17 @@ public class DagInspectorService extends BaseService {
 
     private Long getMaxHeightFromStorage(String network) throws IOException {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.DAG_INSPECTOR_BLOCK_INDEX));
-
-        // Build the SearchSourceBuilder with max aggregation
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        TermsAggregationBuilder maxHeightAgg = AggregationBuilders
-                .terms("max_height_agg")
-                .field("height")
-                .size(1);
-        TopHitsAggregationBuilder topHitsAgg = AggregationBuilders
-                .topHits("top_hits")
-                .size(1);
-
-        maxHeightAgg.subAggregation(topHitsAgg);
-        searchSourceBuilder.aggregation(maxHeightAgg);
+        searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+        searchSourceBuilder.sort("height", SortOrder.DESC);
+        searchSourceBuilder.size(1); // We only need the top 1 result
         searchRequest.source(searchSourceBuilder);
 
-        // Execute the search request
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-        Terms maxHeightTerms = searchResponse.getAggregations().get("max_height_agg");
-        if (maxHeightTerms.getBuckets().size() > 0) {
-            Terms.Bucket bucket = maxHeightTerms.getBuckets().get(0);
-            TopHits topHits = bucket.getAggregations().get("top_hits");
-            if (topHits.getHits().getHits().length > 0) {
-                String topHitsJson = topHits.getHits().getHits()[0].getSourceAsString();
-                logger.info("Object with the max height: " + topHitsJson);
-                DagInspectorBlock block = JSONObject.parseObject(topHitsJson, DagInspectorBlock.class);
-                return block.getHeight();
-            }
+        Result<DagInspectorBlock> result = ServiceUtils.getSearchResult(searchResponse, DagInspectorBlock.class);
+        List<DagInspectorBlock> contents = result.getContents();
+        if (!contents.isEmpty()) {
+            return contents.get(0).getHeight();
         }
         return 0L;
     }

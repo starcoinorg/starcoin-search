@@ -91,11 +91,15 @@ public class DagInspectorIndexerHandler {
                     dagBlock = new DagInspectorBlock();
                     dagBlock.setBlockHash(currentBlockHash);
                     dagBlock.setTimestamp(block.getHeader().getTimestamp());
-                    dagBlock.setColor(NODE_COLOR_GRAY);
+                    // TODO(bobong): Check color
+                    dagBlock.setColor(NODE_COLOR_BLUE);
                     dagBlock.setDaaScore(ghostdagData.getBlueScore());
                     dagBlock.setHeight(block.getHeader().getHeight());
                     dagBlock.setSelectedParentHash(ghostdagData.getSelectedParent());
-                    dagBlock.setParentIds(block.getHeader().getParentsHash());
+                    dagBlock.setParentIds(block.getHeader().getParentsHash() != null ? block.getHeader().getParentsHash() : new ArrayList<>());
+                    dagBlock.setMergeSetRedIds(ghostdagData.getMergesetReds() != null ? ghostdagData.getMergesetReds() : new ArrayList<>());
+                    dagBlock.setMergeSetBlueIds(ghostdagData.getMergesetBlues() != null ? ghostdagData.getMergesetBlues() : new ArrayList<>());
+
                     // Block is the virtual selected parent chain because the list read from block height
                     dagBlock.setInVirtualSelectedParentChain(true);
 
@@ -149,7 +153,6 @@ public class DagInspectorIndexerHandler {
                 if (parentDagBlock == null) {
                     logger.info("Parent block not found: {} ", parentHash);
                     parentDagBlock = getDagInspectorBlockFromHash(parentHash, heightGroupList, false);
-
                     // Put into buffer list
                     newDagBlocks.add(parentDagBlock);
                 }
@@ -337,12 +340,15 @@ public class DagInspectorIndexerHandler {
 
         dagBlock.setBlockHash(blockHash);
         dagBlock.setTimestamp(block.getHeader().getTimestamp());
-        dagBlock.setColor(NODE_COLOR_GRAY);
-        dagBlock.setDaaScore(blockGhostdagData.getBlueScore());
+        // TODO: Check color
+        dagBlock.setColor(NODE_COLOR_BLUE);
+        dagBlock.setDaaScore(blockGhostdagData.getBlueScore() != null ? blockGhostdagData.getBlueScore() : 0);
         dagBlock.setHeight(block.getHeader().getHeight());
         dagBlock.setSelectedParentHash(blockGhostdagData.getSelectedParent());
-        dagBlock.setParentIds(block.getHeader().getParentsHash());
+        dagBlock.setParentIds(block.getHeader().getParentsHash() != null ? block.getHeader().getParentsHash() : new ArrayList<>());
         dagBlock.setInVirtualSelectedParentChain(isSelectedParentChain);
+        dagBlock.setMergeSetBlueIds(blockGhostdagData.getMergesetBlues() != null ? blockGhostdagData.getMergesetBlues() : new ArrayList<>());
+        dagBlock.setMergeSetRedIds(blockGhostdagData.getMergesetReds() != null ? blockGhostdagData.getMergesetReds() : new ArrayList<>());
 
         // Height group list index
         Integer groupSize = getHeightGroupSizeOrDefault(heightGroupList, blockHeight, 0);

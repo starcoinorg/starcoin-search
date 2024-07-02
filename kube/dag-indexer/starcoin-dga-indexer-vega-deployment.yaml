@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-deployment
+  name: starcoin-dag-indexer-deployment
   namespace: starcoin-vega
   labels:
-    app: starcoin-indexer
+    app: starcoin-dag-indexer
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer
+      app: starcoin-dag-indexer
   template:
     metadata:
       labels:
-        app: starcoin-indexer
+        app: starcoin-dag-indexer
     spec:
       containers:
-        - name: starcoin-indexer
+        - name: starcoin-dag-indexer
           image: starcoin/starcoin_indexer:dag_inspector_vega_6
           ports:
             - containerPort: 8300
@@ -26,9 +26,9 @@ spec:
             - name: NETWORK
               value: "vega.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
+              value: "dag_inspector"
             - name: BULK_SIZE
-              value: "80"
+              value: "10"
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

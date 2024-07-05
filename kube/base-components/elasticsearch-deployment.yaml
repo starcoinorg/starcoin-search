@@ -58,7 +58,7 @@ spec:
         - name: es-data
           persistentVolumeClaim:
             claimName: es-pvc
-        - name: elasticsearch-config
+        - name: elasticsearch-,.ujv config
           configMap:
             name: elasticsearch-config
 ---
@@ -97,7 +97,6 @@ spec:
   resources:
     requests:
       storage: 80Gi
-
 ---
 # Elasticsearch Service
 apiVersion: v1

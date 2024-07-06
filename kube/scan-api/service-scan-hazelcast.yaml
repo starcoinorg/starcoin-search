@@ -4,6 +4,7 @@ metadata:
   labels:
     app: scan-api
   name: hazelcast-service
+  namespace: starcoin-api
 spec:
   selector:
     app: scan-api

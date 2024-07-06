@@ -29,33 +29,33 @@ spec:
               value: "dag_inspector"
             - name: BULK_SIZE
               value: "10"
+            - name: STARCOIN_ES_USER
+              value: elastic
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-pw-elastic
+                  name: elasticsearch
                   key: password
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "elasticsearch.default.svc.cluster.local"
             - name: TXN_OFFSET
               value: "0"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
-            - name: STARCOIN_ES_USER
-              value: elastic
+              value: "9200"
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://database-1.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
               value: "starcoin"
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql
                   key: password
             - name: DB_SCHEMA
               value: "vega"

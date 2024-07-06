@@ -33,7 +33,7 @@ PUT _component_template/block-mappings
  PUT _component_template/block_ids-mappings
    {
      "template": {
-       # copy block.mapping.json to here.
+       # copy block.mapping_ids.json to here.
      }
    }
 

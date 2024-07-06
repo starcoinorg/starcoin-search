@@ -31,14 +31,17 @@ spec:
             - name: STARCOIN_ES_PORT
               value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
-            - name: STARCOIN_ES_INDEX_VERSION
-              value: ".0727"
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
+            - name: STARCOIN_ES_INDEX_VERSION
+              value: ".0727"
             - name: DS_URL
               value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
@@ -51,4 +54,13 @@ spec:
                 secretKeyRef:
                   name: postgresql
                   key: password
+            # Maybe useless variables
+            - name: MAIN_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=main"
+            - name: BARNARD_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=barnard"
+            - name: HALLEY_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=halley"
+            - name: STARCOIN_USER_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=starcoin_user"
 

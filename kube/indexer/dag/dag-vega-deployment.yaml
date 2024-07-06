@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-dag-indexer-deployment
+  name: starcoin-indexer-dag-deployment
   namespace: starcoin-vega
   labels:
-    app: starcoin-dag-indexer
+    app: starcoin-indexer-dag
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-dag-indexer
+      app: starcoin-indexer-dag
   template:
     metadata:
       labels:
-        app: starcoin-dag-indexer
+        app: starcoin-indexer-dag
     spec:
       containers:
-        - name: starcoin-dag-indexer
+        - name: starcoin-indexer-dag
           image: starcoin/starcoin_indexer:dag_inspector_vega_6
           ports:
             - containerPort: 8300

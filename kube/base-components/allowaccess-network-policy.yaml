@@ -70,3 +70,23 @@ spec:
       - namespaceSelector:
          matchLabels:
           name: starcoin-api
+
+---
+# Default namespace access for elasticsearch
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-elasticsearch
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: elasticsearch
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 9200

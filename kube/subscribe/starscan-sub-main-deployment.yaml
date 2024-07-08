@@ -33,11 +33,11 @@ spec:
                   name: elasticsearch-pw-elastic
                   key: password
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
+              value: "9200"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: SWAP_API_URL
@@ -45,13 +45,16 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: "jdbc:postgresql://scan-db.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql
                   key: password
             - name: PROGRAM_ARGS
               value: "subscribe"

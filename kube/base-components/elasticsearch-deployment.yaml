@@ -58,7 +58,7 @@ spec:
         - name: es-data
           persistentVolumeClaim:
             claimName: es-pvc
-        - name: elasticsearch-,.ujv config
+        - name: elasticsearch-config
           configMap:
             name: elasticsearch-config
 ---
@@ -72,19 +72,7 @@ data:
     xpack.security.enabled: true
     xpack.license.self_generated.type: basic
     network.host: 0.0.0.0
----
-# Elasticsearch Persistent Volume
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: es-pv
-spec:
-  capacity:
-    storage: 80Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: /mnt/data/es
+
 ---
 # Elasticsearch Persistent Volume Claim
 apiVersion: v1
@@ -96,7 +84,9 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 80Gi
+      storage: 100Gi
+  storageClassName: do-block-storage-retain
+
 ---
 # Elasticsearch Service
 apiVersion: v1

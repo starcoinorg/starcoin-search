@@ -28,7 +28,7 @@ spec:
             - name: BG_TASK_JOBS
               value: "dag_inspector"
             - name: BULK_SIZE
-              value: "10"
+              value: "500"
             - name: STARCOIN_ES_USER
               value: elastic
             - name: STARCOIN_ES_PWD

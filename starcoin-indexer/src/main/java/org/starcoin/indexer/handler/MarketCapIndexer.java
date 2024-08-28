@@ -13,8 +13,10 @@ import java.util.List;
 
 public class MarketCapIndexer extends QuartzJobBean {
     private static final Logger logger = LoggerFactory.getLogger(MarketCapIndexer.class);
+
     @Autowired
     private MarketCapHandle handle;
+
     @Autowired
     private AddressHolderService addressHolderService;
 

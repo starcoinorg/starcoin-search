@@ -45,6 +45,8 @@ spec:
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               subPath: elasticsearch.yml
+#            - name: s3-mount-point
+#              mountPath: /mnt/s3_mount
           env:
             - name: discovery.type
               value: single-node
@@ -58,6 +60,29 @@ spec:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
+            # S3 配置
+            - name: S3_CLIENT_DEFAULT_REGION
+              value: "ap-northeast-1"
+            - name: S3_CLIENT_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key
+            - name: S3_CLIENT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-key
+          lifecycle:
+              postStart:
+                exec:
+                  command:
+                    - "sh"
+                    - "-c"
+                    - |
+                      echo ${S3_CLIENT_ACCESS_KEY} | /usr/share/elasticsearch/bin/elasticsearch-keystore add s3.client.default.access_key --stdin
+                      echo ${S3_CLIENT_SECRET_KEY} | /usr/share/elasticsearch/bin/elasticsearch-keystore add s3.client.default.secret_key --stdin 
+                      /usr/share/elasticsearch/bin/elasticsearch-plugin list | grep -q repository-s3 || /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch repository-s3
       volumes:
         - name: es-data
           persistentVolumeClaim:
@@ -68,6 +93,9 @@ spec:
         - name: elasticsearch-config
           configMap:
             name: elasticsearch-config
+#        - name: s3-mount-point
+#          emptyDir: {}
+
 ---
 # Elasticsearch Configuration
 apiVersion: v1
@@ -80,7 +108,11 @@ data:
     xpack.license.self_generated.type: basic
     network.host: 0.0.0.0
     path.repo: ["/data/es_snapshot_repository"]
-
+    s3.client.default.endpoint: "s3.ap-northeast-1.amazonaws.com"
+    s3.client.default.protocol: https
+    s3.client.default.read_timeout: 50s
+    s3.client.default.max_retries: 3
+    s3.client.default.use_throttle_retries: true
 ---
 # Elasticsearch Persistent Volume Claim
 apiVersion: v1

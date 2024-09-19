@@ -38,6 +38,8 @@ spec:
           volumeMounts:
             - name: es-data
               mountPath: /usr/share/elasticsearch/data
+            - name: es-backup
+              mountPath: /data/es_snapshot_repository
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               subPath: elasticsearch.yml
@@ -58,6 +60,9 @@ spec:
         - name: es-data
           persistentVolumeClaim:
             claimName: es-pvc
+        - name: es-backup
+          persistentVolumeClaim:
+            claimName: es-backup-pvc
         - name: elasticsearch-config
           configMap:
             name: elasticsearch-config
@@ -72,6 +77,7 @@ data:
     xpack.security.enabled: true
     xpack.license.self_generated.type: basic
     network.host: 0.0.0.0
+    path.repo: ["/data/es_snapshot_repository"]
 
 ---
 # Elasticsearch Persistent Volume Claim
@@ -84,7 +90,21 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 100Gi
+      storage: 500Gi
+  storageClassName: do-block-storage-retain
+
+---
+# Elasticsearch Snapshot Repository Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: es-backup-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
   storageClassName: do-block-storage-retain
 
 ---

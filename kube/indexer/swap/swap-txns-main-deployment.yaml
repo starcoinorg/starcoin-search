@@ -51,11 +51,14 @@ spec:
             - name: DS_URL
               value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql
                   key: password
             - name: DB_SCHEMA
               value: "main"

@@ -31,11 +31,6 @@ spec:
               value: "0"
             - name: BULK_SIZE
               value: "100"
-            - name: STARCOIN_ES_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-pw-elastic
-                  key: password
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
@@ -43,7 +38,15 @@ spec:
             - name: STARCOIN_ES_PORT
               value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR

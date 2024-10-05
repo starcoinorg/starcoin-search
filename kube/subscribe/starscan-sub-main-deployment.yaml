@@ -27,11 +27,6 @@ spec:
               value: "main.0727"
             - name: BG_TASK_JOBS
               value: "clean_pending_txn"
-            - name: STARCOIN_ES_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-pw-elastic
-                  key: password
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
@@ -39,7 +34,15 @@ spec:
             - name: STARCOIN_ES_PORT
               value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
             - name: SWAP_API_URL
               value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR

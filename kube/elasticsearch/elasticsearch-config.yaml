@@ -1,0 +1,16 @@
+# Elasticsearch Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-config
+data:
+  elasticsearch.yml: |
+    xpack.security.enabled: true
+    xpack.license.self_generated.type: basic
+    network.host: 0.0.0.0
+    path.repo: ["/data/es_snapshot_repository"]
+    s3.client.default.endpoint: "s3.ap-northeast-1.amazonaws.com"
+    s3.client.default.protocol: https
+    s3.client.default.read_timeout: 50s
+    s3.client.default.max_retries: 3
+    s3.client.default.use_throttle_retries: true

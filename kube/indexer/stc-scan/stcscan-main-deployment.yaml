@@ -30,7 +30,7 @@ spec:
             - name: TXN_OFFSET
               value: "0"
             - name: BULK_SIZE
-              value: "1000"
+              value: "100"
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL

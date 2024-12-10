@@ -1,6 +1,6 @@
 package org.starcoin.indexer.handler;
 
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +13,7 @@ import org.starcoin.constant.StarcoinNetwork;
 import org.starcoin.indexer.service.SwapPoolStatService;
 import org.starcoin.indexer.service.SwapStatService;
 import org.starcoin.indexer.service.TokenStatService;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.starcoin.utils.SwapApiClient;
 
 import javax.annotation.PostConstruct;

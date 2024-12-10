@@ -1,0 +1,57 @@
+{
+  "mappings" : {
+    "properties" : {
+      "block_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "color" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "daa_score" : {
+        "type" : "long"
+      },
+      "height" : {
+        "type" : "long"
+      },
+      "height_group_index" : {
+        "type" : "long"
+      },
+      "in_virtual_selected_parent_chain" : {
+        "type" : "boolean"
+      },
+      "parent_ids" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "selected_parent_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
+      },
+      "timestamp" : {
+        "type" : "long"
+      }
+    }
+  }
+}

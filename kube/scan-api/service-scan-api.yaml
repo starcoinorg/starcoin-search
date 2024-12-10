@@ -4,6 +4,7 @@ metadata:
   labels:
     app: scan-api
   name: scan-api
+  namespace: starcoin-api
 spec:
   ports:
     - port: 80

@@ -3,6 +3,7 @@ package org.starcoin.scan.service;
 import com.alibaba.fastjson.JSON;
 import com.beust.jcommander.internal.Lists;
 import com.novi.serde.DeserializationError;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchRequest;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.starcoin.api.Result;
 import org.starcoin.bean.*;
 import org.starcoin.constant.Constant;
+import org.starcoin.scan.service.vo.TransactionWithEvent;
 import org.starcoin.types.AccountAddress;
 import org.starcoin.types.event.ProposalCreatedEvent;
 import org.starcoin.utils.ByteUtils;
@@ -96,21 +98,18 @@ public class TransactionService extends BaseService {
         //page size
         searchSourceBuilder.size(count);
         //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS && start_height > 0) {
-                offset = start_height - (page - 1) * count;
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
-        searchSourceBuilder.from(offset);
+        setBlockSearchBuildFrom(page, count, start_height, searchSourceBuilder);
+
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
-        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        SearchResponse searchResponse = null;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException e) {
+            logger.error("get txn err:", e);
+            return  Result.EmptyResult;
+        }
         return ServiceUtils.getSearchResult(searchResponse, TransactionWithEvent.class);
     }
 
@@ -128,16 +127,8 @@ public class TransactionService extends BaseService {
         //page size
         searchSourceBuilder.size(count);
         //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
-        searchSourceBuilder.from(offset);
+        setSearchBuildFrom(page, count, searchSourceBuilder);
+
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
@@ -160,17 +151,9 @@ public class TransactionService extends BaseService {
         }
         //page size
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
-        searchSourceBuilder.from(offset);
+        //set offset
+        setSearchBuildFrom(page, count, searchSourceBuilder);
+
         List<String> termHashes = new ArrayList<>();
         for (Event event : events.getContents()) {
             termHashes.add(event.getTransactionHash());
@@ -191,23 +174,47 @@ public class TransactionService extends BaseService {
 
         //page size
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS && start_height > 0) {
-                offset = start_height - (page - 1) * count;
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
-        searchSourceBuilder.from(offset);
+        //set offset
+        setBlockSearchBuildFrom(page, count, start_height, searchSourceBuilder);
+
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         searchRequest.source(searchSourceBuilder);
         searchSourceBuilder.trackTotalHits(true);
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         return ServiceUtils.getSearchResult(searchResponse, PendingTransaction.class);
+    }
+
+    static void setBlockSearchBuildFrom(int page, int count, int start_height, SearchSourceBuilder searchSourceBuilder) {
+        int offset = 0;
+        boolean shouldAfter = false;
+        if (page > 1) {
+            offset = (page - 1) * count;
+            if (offset >= ELASTICSEARCH_MAX_HITS && start_height > 0) {
+                offset = start_height - (page - 1) * count;
+                shouldAfter = true;
+            }
+        }
+        if(shouldAfter) {
+            searchSourceBuilder.searchAfter(new Object[]{offset});
+        }else {
+            searchSourceBuilder.from(offset);
+        }
+    }
+
+    static void setSearchBuildFrom(int page, int count, SearchSourceBuilder searchSourceBuilder) {
+        int offset = 0;
+        boolean shouldAfter = false;
+        if (page > 1) {
+            offset = (page - 1) * count;
+            if (offset >= ELASTICSEARCH_MAX_HITS) {
+                shouldAfter = true;
+            }
+        }
+        if(shouldAfter) {
+            searchSourceBuilder.searchAfter(new Object[]{offset});
+        }else {
+            searchSourceBuilder.from(offset);
+        }
     }
 
     public PendingTransaction getPending(String network, String id) throws IOException {
@@ -227,17 +234,9 @@ public class TransactionService extends BaseService {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         //page size
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-            if (offset >= ELASTICSEARCH_MAX_HITS) {
-                searchSourceBuilder.searchAfter(new Object[]{offset});
-            } else {
-                searchSourceBuilder.from(offset);
-            }
-        }
-        searchSourceBuilder.from(offset);
+        //set offset
+        setSearchBuildFrom(page, count, searchSourceBuilder);
+
         searchSourceBuilder.sort("timestamp", SortOrder.DESC);
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         if (typeTag != null && typeTag.length() > 0) {
@@ -387,12 +386,8 @@ public class TransactionService extends BaseService {
         SearchRequest searchRequest = new SearchRequest(getIndex(network, Constant.TRANSACTION_EVENT_INDEX));
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(count);
-        //begin offset
-        int offset = 0;
-        if (page > 1) {
-            offset = (page - 1) * count;
-        }
-        searchSourceBuilder.from(offset);
+        //set offset
+        setSearchBuildFrom(page, count, searchSourceBuilder);
 
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
         boolQuery.should(QueryBuilders.termQuery("tag_name", ServiceUtils.depositEvent));

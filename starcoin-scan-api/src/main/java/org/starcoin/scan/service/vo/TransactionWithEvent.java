@@ -1,4 +1,4 @@
-package org.starcoin.scan.service;
+package org.starcoin.scan.service.vo;
 
 import org.starcoin.bean.Event;
 import org.starcoin.bean.Transaction;

@@ -1,46 +1,54 @@
 package org.starcoin.indexer.handler;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import org.quartz.JobExecutionContext;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.starcoin.api.BlockRPCClient;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
 import org.starcoin.bean.BlockOffset;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 
-
-public class IndexerHandle extends QuartzJobBean {
-    private static final Logger logger = LoggerFactory.getLogger(IndexerHandle.class);
+public class LegacyMainIndexHandler {
+    private static final Logger logger = LoggerFactory.getLogger(LegacyMainIndexHandler.class);
 
     private BlockOffset localBlockOffset;
+
     private BlockHeader currentHandleHeader;
 
-    @Value("${starcoin.network}")
-    private String network;
-
-    @Value("${starcoin.indexer.bulk_size}")
-    private long bulkSize;
-
-    @Autowired
     private ElasticSearchHandler elasticSearchHandler;
 
-    @Autowired
     private TransactionRPCClient transactionRPCClient;
 
-    @Autowired
     private BlockRPCClient blockRPCClient;
 
-    @PostConstruct
+    private Long bulkSize;
+
+    public LegacyMainIndexHandler(
+            ElasticSearchHandler elasticSearchHandler,
+            TransactionRPCClient transactionRPCClient,
+            BlockRPCClient blockRPCClient,
+            Long bulkSize
+    ) {
+        this.elasticSearchHandler = elasticSearchHandler;
+        this.transactionRPCClient = transactionRPCClient;
+        this.blockRPCClient = blockRPCClient;
+        this.bulkSize = bulkSize;
+    }
+
+    public void initOffsetWith(Long height, String blockHash) throws JSONRPC2SessionException {
+        localBlockOffset = new BlockOffset(height, blockHash);
+        Block block = blockRPCClient.getBlockByHeight(height);
+        if (block != null) {
+            currentHandleHeader = block.getHeader();
+        } else {
+            logger.error("init offset block not exist on chain: {}", localBlockOffset);
+        }
+    }
+
     public void initOffset() {
         localBlockOffset = elasticSearchHandler.getRemoteOffset();
         //update current handle header
@@ -65,8 +73,8 @@ public class IndexerHandle extends QuartzJobBean {
         }
     }
 
-    @Override
-    protected void executeInternal(JobExecutionContext jobExecutionContext) {
+
+    public void execute() {
         //read current offset
         if (localBlockOffset == null || currentHandleHeader == null) {
 //            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
@@ -150,8 +158,11 @@ public class IndexerHandle extends QuartzJobBean {
                     logger.info("rollback handle ok: {}", localBlockOffset);
                     return; //退出当前任务，重新添加从分叉点之后的block
                 }
+
                 //set event
-                ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                blockList.add(block);
+
                 //update current header
                 currentHandleHeader = block.getHeader();
                 index++;
@@ -159,12 +170,13 @@ public class IndexerHandle extends QuartzJobBean {
             }
             //bulk execute
             elasticSearchHandler.bulk(blockList);
+
             //update offset
             localBlockOffset.setBlockHeight(currentHandleHeader.getHeight());
             localBlockOffset.setBlockHash(currentHandleHeader.getBlockHash());
             elasticSearchHandler.setRemoteOffset(localBlockOffset);
             logger.info("indexer update success: {}", localBlockOffset);
-        } catch (JSONRPC2SessionException | JsonProcessingException e) {
+        } catch (JSONRPC2SessionException e) {
             logger.error("chain header error:", e);
         }
     }

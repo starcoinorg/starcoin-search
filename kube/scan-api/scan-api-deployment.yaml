@@ -2,10 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: scan-api-deployment
+  namespace: starcoin-api
   labels:
     app: scan-api
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: scan-api
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: scan-api
-          image: starcoin/starcoin_scan:sha-3af1c2a
+          image: starcoin/starcoin_scan:scan_api_dag_2
           ports:
             - name: http
               containerPort: 8500
@@ -24,35 +25,42 @@ spec:
               containerPort: 5701
           env:
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
+              value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
-            - name: STARCOIN_ES_INDEX_VERSION
-              value: ".0727"
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-pw-elastic
+                  name: elasticsearch
                   key: password
-            - name: MAIN_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=main"
+            - name: STARCOIN_ES_INDEX_VERSION
+              value: ".0727"
             - name: DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
-            - name: BARNARD_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=barnard"
-            - name: HALLEY_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=halley"
-            - name: STARCOIN_USER_DS_URL
-              value: "jdbc:postgresql://starcoin-pg.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin?currentSchema=starcoin_user"
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql
                   key: password
+            # Maybe useless variables
+            - name: MAIN_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=main"
+            - name: BARNARD_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=barnard"
+            - name: HALLEY_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=halley"
+            - name: STARCOIN_USER_DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=starcoin_user"
 

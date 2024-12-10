@@ -7,8 +7,8 @@ import org.starcoin.api.StarcoinSubscriber;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.PendingTransaction;
 import org.starcoin.bean.PendingTransactionNotification;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.web3j.protocol.websocket.WebSocketService;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.net.ConnectException;
 import java.net.MalformedURLException;

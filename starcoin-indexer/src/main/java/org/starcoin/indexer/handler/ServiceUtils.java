@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.novi.bcs.BcsDeserializer;
 import com.novi.serde.Bytes;
 import com.novi.serde.DeserializationError;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -28,7 +29,6 @@ import org.starcoin.types.ScriptFunction;
 import org.starcoin.types.StructTag;
 import org.starcoin.types.TransactionPayload;
 import org.starcoin.utils.*;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -180,7 +180,7 @@ public class ServiceUtils {
                 if (tokenInfo != null) {
                     tokenCache.put(tokenCode, tokenInfo);
                 }
-            } catch (JSONRPC2SessionException | JsonProcessingException e) {
+            } catch (JSONRPC2SessionException e) {
                 logger.error("get token info error:", e);
             }
         }
@@ -198,7 +198,11 @@ public class ServiceUtils {
         return actualValue;
     }
 
-    public static Map<String[], Long[]> getTokenReserveFromState(StateRPCClient stateRPCClient, String contractAddress, String stateRoot) throws JSONRPC2SessionException {
+    public static Map<String[], Long[]> getTokenReserveFromState(
+            StateRPCClient stateRPCClient,
+            String contractAddress,
+            String stateRoot
+    ) throws JSONRPC2SessionException {
         ListResource resource = stateRPCClient.getState(contractAddress, true, stateRoot);
 //        System.out.println(resource);
         Map<String[], Long[]> poolReserves = new HashMap<>();
@@ -220,11 +224,19 @@ public class ServiceUtils {
         return poolReserves;
     }
 
-    static void addBlockToList(TransactionRPCClient transactionRPCClient, List<Block> blockList, Block block) throws JSONRPC2SessionException {
-        List<Transaction> transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
-        if (transactionList == null) {
+    public static void fetchTransactionsForBlock(TransactionRPCClient transactionRPCClient, Block block) throws JSONRPC2SessionException {
+        List<Transaction> transactionList;
+        try {
+            transactionList = transactionRPCClient.getBlockTransactions(block.getHeader().getBlockHash());
+        } catch (JSONRPC2SessionException e) {
+            logger.error("get block txn error:", e);
             return;
         }
+
+        if (transactionList == null || transactionList.isEmpty()) {
+            return;
+        }
+
         for (Transaction transaction : transactionList) {
             BlockMetadata metadata;
             Transaction userTransaction = transactionRPCClient.getTransactionByHash(transaction.getTransactionHash());
@@ -268,6 +280,6 @@ public class ServiceUtils {
             }
         }
         block.setTransactionList(transactionList);
-        blockList.add(block);
+        // blockList.add(block);
     }
 }

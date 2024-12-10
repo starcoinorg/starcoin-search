@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcoin-indexer-stcscan-repair-deployment
+  namespace: starcoin-halley
+  labels:
+    app: starcoin-indexer-stcscan-repair
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starcoin-indexer-stcscan-repair
+  template:
+    metadata:
+      labels:
+        app: starcoin-indexer-stcscan-repair
+    spec:
+      containers:
+        - name: starcoin-indexer-stcscan-repair
+          image: starcoin/starcoin_indexer:halley_fix_db_1
+          ports:
+            - containerPort: 8300
+          env:
+            - name: HOSTS
+              value: "halley.seed.starcoin.org"
+            - name: NETWORK
+              value: "halley.0727"
+            - name: BG_TASK_JOBS
+              value: "indexer,secondary,market_cap,txn_payload"
+            - name: BULK_SIZE
+              value: "80"
+            - name: STARCOIN_ES_URL
+              value: "elasticsearch.default.svc.cluster.local"
+            - name: TXN_OFFSET
+              value: "0"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "http"
+            - name: STARCOIN_ES_PORT
+              value: "9200"
+            - name: STARCOIN_ES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
+            - name: SWAP_API_URL
+              value: "https://swap-api.starswap.xyz"
+            - name: SWAP_CONTRACT_ADDR
+              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
+            - name: DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
+            - name: DB_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
+            - name: DB_SCHEMA
+              value: "halley"
+            - name: PROGRAM_ARGS
+              value: "auto_repair 1"
+          #valume:

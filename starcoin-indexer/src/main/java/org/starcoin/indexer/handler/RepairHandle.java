@@ -10,8 +10,7 @@ import org.starcoin.api.Result;
 import org.starcoin.api.TransactionRPCClient;
 import org.starcoin.bean.Block;
 import org.starcoin.bean.BlockHeader;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
-
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,7 +66,7 @@ public class RepairHandle {
                 logger.info("repair too fast: {}", startNumber);
                 return false;
             }
-        } catch (JSONRPC2SessionException | JsonProcessingException e) {
+        } catch (JSONRPC2SessionException e) {
             logger.error("get master error: ", e);
             return false;
         }
@@ -101,7 +100,8 @@ public class RepairHandle {
             if (esBlock == null) {
                 logger.warn("es block not exist: {}", block.getHeader().getHeight());
                 try {
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                    blockList.add(block);
                 } catch (JSONRPC2SessionException e) {
                     logger.error("add block err:", e);
                 }
@@ -110,7 +110,8 @@ public class RepairHandle {
             if (!block.getHeader().getBlockHash().equals(esBlock.getHeader().getBlockHash())) {
                 // fork block
                 try {
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, block);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, block);
+                    blockList.add(block);
                 } catch (JSONRPC2SessionException e) {
                     logger.error("add fix block err:", e);
                 }
@@ -142,7 +143,8 @@ public class RepairHandle {
                 if (!blockOnChain.getHeader().getBlockHash().equals(blockOnEs.getHeader().getBlockHash())) {
 //                update block
                     List<Block> blockList = new ArrayList<>();
-                    ServiceUtils.addBlockToList(transactionRPCClient, blockList, blockOnChain);
+                    ServiceUtils.fetchTransactionsForBlock(transactionRPCClient, blockOnChain);
+                    blockList.add(blockOnChain);
                     elasticSearchHandler.updateBlock(blockList);
                     logger.info("repair ok: {}", blockNumber);
                 } else {

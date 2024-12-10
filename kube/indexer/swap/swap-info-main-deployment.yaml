@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starswap-info-deployment
+  namespace: starcoin-main
+  labels:
+    app: starswap-info
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starswap-info
+  template:
+    metadata:
+      labels:
+        app: starswap-info
+    spec:
+      containers:
+        - name: starswap-info
+          image: starcoin/starcoin_indexer:sha-a66e9ab
+          ports:
+            - containerPort: 8300
+          env:
+            - name: HOSTS
+              value: "main.seed.starcoin.org"
+            - name: NETWORK
+              value: "main.0727"
+            - name: BG_TASK_JOBS
+              value: "swap_stats,price_hour,price_stat,swap_pool_fee_stat"
+            - name: TXN_OFFSET
+              value: "0"
+            - name: STARCOIN_ES_URL
+              value: "elasticsearch.default.svc.cluster.local"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "http"
+            - name: STARCOIN_ES_PORT
+              value: "9200"
+            - name: STARCOIN_ES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
+            - name: BULK_SIZE
+              value: "100"
+            - name: SWAP_API_URL
+              value: "https://swap-api.starswap.xyz"
+            - name: SWAP_CONTRACT_ADDR
+              value: "0x8c109349c6bd91411d6bc962e080c4a3"
+            - name: DS_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
+            - name: DB_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
+            - name: DB_SCHEMA
+              value: "main"
+            - name: PROGRAM_ARGS
+              value: ""

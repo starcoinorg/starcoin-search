@@ -8,7 +8,7 @@ import org.starcoin.api.ContractRPCClient;
 import org.starcoin.bean.ContractCall;
 import org.starcoin.bean.TokenPairTvl;
 import org.starcoin.bean.TokenTvlAmount;
-import org.starcoin.jsonrpc.client.JSONRPC2SessionException;
+import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

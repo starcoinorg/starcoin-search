@@ -45,8 +45,7 @@ spec:
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               subPath: elasticsearch.yml
-#            - name: s3-mount-point
-#              mountPath: /mnt/s3_mount
+
           env:
             - name: discovery.type
               value: single-node
@@ -60,25 +59,7 @@ spec:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
-            # S3 配置
-            - name: S3_CLIENT_DEFAULT_REGION
-              value: "ap-northeast-1"
-            - name: S3_CLIENT_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: access-key
-            - name: S3_CLIENT_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: secret-key
-          lifecycle:
-              postStart:
-                exec:
-                  command: ["/bin/bash", "-c", "/usr/share/elasticsearch/bin/elasticsearch-plugin list | grep -q repository-s3 || /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch repository-s3 && \
-                    echo ${S3_CLIENT_ACCESS_KEY} | /usr/share/elasticsearch/bin/elasticsearch-keystore add s3.client.default.access_key --stdin &&\
-                    echo ${S3_CLIENT_SECRET_KEY} | /usr/share/elasticsearch/bin/elasticsearch-keystore add s3.client.default.secret_key --stdin"]
+
       volumes:
         - name: es-data
           persistentVolumeClaim:

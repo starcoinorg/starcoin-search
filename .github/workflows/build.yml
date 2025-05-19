@@ -26,7 +26,7 @@ jobs:
           repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/starcoinorg/*" }]'
           servers: '[{ "id": "github", "username": "${{ github.actor }}", "password": "${{ secrets.GIT_PACKAGE_TOKEN }}" }]'
       - name: Cache Maven packages
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}

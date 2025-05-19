@@ -41,37 +41,49 @@ public class IndexerHandle extends QuartzJobBean {
     private BlockRPCClient blockRPCClient;
 
     @PostConstruct
-    public void initOffset() {
+    public void initOffset() throws JSONRPC2SessionException {
         localBlockOffset = elasticSearchHandler.getRemoteOffset();
-        //update current handle header
-        try {
-            if (localBlockOffset != null) {
-                Block block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
-                if (block != null) {
-                    currentHandleHeader = block.getHeader();
-                } else {
-                    logger.error("init offset block not exist on chain: {}", localBlockOffset);
-                }
 
+        // Case 1: Obtained
+        if (localBlockOffset != null) {
+            Block block = blockRPCClient.getBlockByHeight(localBlockOffset.getBlockHeight());
+            if (block != null) {
+                currentHandleHeader = block.getHeader();
             } else {
-                logger.warn("offset is null,init reset to genesis");
-                currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
-                localBlockOffset = new BlockOffset(0, currentHandleHeader.getBlockHash());
-                elasticSearchHandler.setRemoteOffset(localBlockOffset);
-                logger.info("init offset ok: {}", localBlockOffset);
+                logger.error("init offset block not exist on chain: {}", localBlockOffset);
             }
-        } catch (JSONRPC2SessionException e) {
-            logger.error("set current header error:", e);
+            return;
         }
+
+        // Case 2: Unable to obtain
+        logger.warn("offset is null,init reset to genesis");
+        currentHandleHeader = blockRPCClient.getBlockByHeight(0).getHeader();
+        localBlockOffset = new BlockOffset(0, currentHandleHeader.getBlockHash());
+        elasticSearchHandler.setRemoteOffset(localBlockOffset);
+
+        logger.info("init offset ok: {}", localBlockOffset);
+
+        // Case 3: Throw an exception
     }
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) {
         //read current offset
         if (localBlockOffset == null || currentHandleHeader == null) {
-//            logger.warn("local offset error, reset it: {}, {}", localOffset, currentHandleHeader);
-            initOffset();
+            logger.warn("local offset error, reset it: {}, {}", localBlockOffset, currentHandleHeader);
+            try {
+                initOffset();
+            } catch (JSONRPC2SessionException e) {
+                logger.error("init offset error, {}", localBlockOffset, e);
+            }
+
+            if (localBlockOffset == null && network.compareToIgnoreCase("main") == 0) {
+                // Here as long as it is null, it means that the initialization failed, return and wait for the next processing
+                logger.error("Init offset error, skip and w");
+                return;
+            }
         }
+
         BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
         logger.info("current remote offset: {}", remoteBlockOffset);
         if (remoteBlockOffset == null) {

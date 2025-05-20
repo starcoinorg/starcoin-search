@@ -171,9 +171,9 @@ spec:
     - Ingress
   ingress:
     - from:
-      - namespaceSelector:
-         matchLabels:
-          name: starcoin-api
+        - namespaceSelector:
+            matchLabels:
+              name: starcoin-api
 
 ---
 # Default namespace access for elasticsearch
@@ -190,7 +190,7 @@ spec:
     - Ingress
   ingress:
     - from:
-        - podSelector: {}
+        - podSelector: { }
       ports:
         - protocol: TCP
           port: 9200

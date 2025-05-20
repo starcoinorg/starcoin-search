@@ -30,7 +30,10 @@ spec:
             - name: BULK_SIZE
               value: "500"
             - name: STARCOIN_ES_USER
-              value: elastic
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
             - name: STARCOIN_ES_PWD
               valueFrom:
                 secretKeyRef:

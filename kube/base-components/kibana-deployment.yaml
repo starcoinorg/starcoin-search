@@ -34,9 +34,9 @@ spec:
               value: "http://elasticsearch.default.svc.cluster.local:9200"
             - name: ES_USERNAME
               valueFrom:
-               secretKeyRef:
-                 name: elasticsearch
-                 key: username
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
             - name: ES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -55,7 +55,7 @@ data:
   kibana.yml: |
     server.name: kibana
     server.host: "0.0.0.0"
-    elasticsearch.hosts: ["http://elasticsearch.default.svc.cluster.local:9200"]
+    elasticsearch.hosts: [ "http://elasticsearch.default.svc.cluster.local:9200" ]
     elasticsearch.username: "${ES_USERNAME}"
     elasticsearch.password: "${ES_PASSWORD}"
 ---

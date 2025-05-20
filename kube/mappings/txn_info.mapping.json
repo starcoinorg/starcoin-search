@@ -1,28 +1,13 @@
 {
-  "mappings": {
-    "dynamic": "strict",
-    "properties": {
-      "timestamp": {
-        "type": "date"
-      },
-      "deleted": {
-        "type": "boolean"
-      },
-      "block_hash": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
-      },
-      "transaction_type": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+  "mappings" : {
+    "dynamic" : "strict",
+    "properties" : {
+      "block_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
           }
         }
       },
@@ -64,16 +49,22 @@
               }
             }
           },
-          "timestamp": {
-            "type": "date"
+          "parents_hash" : {
+            "type" : "text"
+          },
+          "timestamp" : {
+            "type" : "date"
           },
           "uncles": {
             "type": "long"
           }
         }
       },
-      "block_number": {
-        "type": "long"
+      "block_number" : {
+        "type" : "long"
+      },
+      "deleted" : {
+        "type" : "boolean"
       },
       "event_root_hash": {
         "type": "text",
@@ -114,20 +105,20 @@
           "event_seq_number": {
             "type": "long"
           },
-          "transaction_hash": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "transaction_global_index" : {
+            "type" : "long"
+          },
+          "transaction_hash" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
-          "transaction_index": {
-            "type": "long"
-          },
-          "transaction_global_index": {
-            "type": "long"
+          "transaction_index" : {
+            "type" : "long"
           },
           "type_tag": {
             "type": "text",
@@ -161,9 +152,15 @@
           }
         }
       },
-      "status_content": {
-        "type": "object",
-        "dynamic": true
+      "status_content" : {
+        "type" : "object",
+        "dynamic" : true
+      },
+      "timestamp" : {
+        "type" : "date"
+      },
+      "transaction_global_index" : {
+        "type" : "long"
       },
       "transaction_hash": {
         "type": "text",
@@ -177,8 +174,14 @@
       "transaction_index": {
         "type": "long"
       },
-      "transaction_global_index": {
-        "type": "long"
+      "transaction_type" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
+          }
+        }
       },
       "user_transaction": {
         "properties": {
@@ -266,8 +269,11 @@
                   }
                 }
               },
-              "sequence_number": {
-                "type": "long"
+              "sequence_number" : {
+                "type" : "long"
+              },
+              "decoded_payload":  {
+                "type" : "text"
               }
             }
           },

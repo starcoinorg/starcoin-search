@@ -1,31 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: scan-api-deployment
-  namespace: starcoin-api
+  name: starcoin-indexer-stcscan-repair-deployment
+  namespace: starcoin-halley
   labels:
-    app: scan-api
+    app: starcoin-indexer-stcscan-repair
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: scan-api
+      app: starcoin-indexer-stcscan-repair
   template:
     metadata:
       labels:
-        app: scan-api
+        app: starcoin-indexer-stcscan-repair
     spec:
       containers:
-        - name: scan-api
-          image: starcoin/starcoin_scan:scan_api_dag_2
+        - name: starcoin-indexer-stcscan-repair
+          image: starcoin/starcoin_indexer:halley_fix_db_1
           ports:
-            - name: http
-              containerPort: 8500
-            - name: multicast
-              containerPort: 5701
+            - containerPort: 8300
           env:
+            - name: HOSTS
+              value: "halley.seed.starcoin.org"
+            - name: NETWORK
+              value: "halley.0727"
+            - name: BG_TASK_JOBS
+              value: "indexer,secondary,market_cap,txn_payload"
+            - name: BULK_SIZE
+              value: "80"
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
+            - name: TXN_OFFSET
+              value: "0"
             - name: STARCOIN_ES_PROTOCOL
               value: "http"
             - name: STARCOIN_ES_PORT
@@ -40,8 +47,10 @@ spec:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
-            - name: STARCOIN_ES_INDEX_VERSION
-              value: ".0727"
+            - name: SWAP_API_URL
+              value: "https://swap-api.starswap.xyz"
+            - name: SWAP_CONTRACT_ADDR
+              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
               value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
@@ -54,13 +63,8 @@ spec:
                 secretKeyRef:
                   name: postgresql
                   key: password
-            # Maybe useless variables
-            - name: MAIN_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=main"
-            - name: BARNARD_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=barnard"
-            - name: HALLEY_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=halley"
-            - name: STARCOIN_USER_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=starcoin_user"
-
+            - name: DB_SCHEMA
+              value: "halley"
+            - name: PROGRAM_ARGS
+              value: "auto_repair 1"
+          #valume:

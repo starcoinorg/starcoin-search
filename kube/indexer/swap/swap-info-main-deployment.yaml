@@ -1,29 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: scan-api-deployment
-  namespace: starcoin-api
+  name: starswap-info-deployment
+  namespace: starcoin-main
   labels:
-    app: scan-api
+    app: starswap-info
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: scan-api
+      app: starswap-info
   template:
     metadata:
       labels:
-        app: scan-api
+        app: starswap-info
     spec:
       containers:
-        - name: scan-api
-          image: starcoin/starcoin_scan:scan_api_dag_2
+        - name: starswap-info
+          image: starcoin/starcoin_indexer:sha-a66e9ab
           ports:
-            - name: http
-              containerPort: 8500
-            - name: multicast
-              containerPort: 5701
+            - containerPort: 8300
           env:
+            - name: HOSTS
+              value: "main.seed.starcoin.org"
+            - name: NETWORK
+              value: "main.0727"
+            - name: BG_TASK_JOBS
+              value: "swap_stats,price_hour,price_stat,swap_pool_fee_stat"
+            - name: TXN_OFFSET
+              value: "0"
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
@@ -40,8 +45,12 @@ spec:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
-            - name: STARCOIN_ES_INDEX_VERSION
-              value: ".0727"
+            - name: BULK_SIZE
+              value: "100"
+            - name: SWAP_API_URL
+              value: "https://swap-api.starswap.xyz"
+            - name: SWAP_CONTRACT_ADDR
+              value: "0x8c109349c6bd91411d6bc962e080c4a3"
             - name: DS_URL
               value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
@@ -54,13 +63,7 @@ spec:
                 secretKeyRef:
                   name: postgresql
                   key: password
-            # Maybe useless variables
-            - name: MAIN_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=main"
-            - name: BARNARD_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=barnard"
-            - name: HALLEY_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=halley"
-            - name: STARCOIN_USER_DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin?currentSchema=starcoin_user"
-
+            - name: DB_SCHEMA
+              value: "main"
+            - name: PROGRAM_ARGS
+              value: ""

@@ -1,0 +1,21 @@
+# The PV of ElasticSearch is created with the following configuration
+
+# VolumeSnapshotClass
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: do-snapshot-class
+driver: dobs.csi.digitalocean.com
+deletionPolicy: Retain
+
+---
+
+# VolumeSnapshot
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: es-pv-snapshot
+spec:
+  volumeSnapshotClassName: do-snapshot-class
+  source:
+    persistentVolumeClaimName: es-pvc

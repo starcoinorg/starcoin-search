@@ -1,0 +1,28 @@
+# elasticsearch-snapshot-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: es-snapshot-pv
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: do-block-storage-retain
+  hostPath:
+    path: /data/elasticsearch-snapshots
+
+---
+# elasticsearch-snapshot-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: es-snapshot-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: do-block-storage-retain

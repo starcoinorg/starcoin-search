@@ -1,0 +1,74 @@
+# kibana-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.17.0
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          ports:
+            - containerPort: 5601
+          volumeMounts:
+            - name: kibana-config
+              mountPath: /usr/share/kibana/config/kibana.yml
+              subPath: kibana.yml
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch.default.svc.cluster.local:9200"
+            - name: ES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: ES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
+      volumes:
+        - name: kibana-config
+          configMap:
+            name: kibana-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-config
+data:
+  kibana.yml: |
+    server.name: kibana
+    server.host: "0.0.0.0"
+    elasticsearch.hosts: [ "http://elasticsearch.default.svc.cluster.local:9200" ]
+    elasticsearch.username: "${ES_USERNAME}"
+    elasticsearch.password: "${ES_PASSWORD}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  type: NodePort
+  selector:
+    app: kibana
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+      nodePort: 31000

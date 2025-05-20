@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starcoin-indexer-deployment
+  name: starcoin-indexer-stcscan-deployment
   namespace: starcoin-proxima
   labels:
-    app: starcoin-indexer
+    app: starcoin-indexer-stcscan
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: starcoin-indexer
+      app: starcoin-indexer-stcscan
   template:
     metadata:
       labels:
-        app: starcoin-indexer
+        app: starcoin-indexer-stcscan
     spec:
       containers:
-        - name: starcoin-indexer
-          image: starcoin/starcoin_indexer:sha-3af1c2a
+        - name: starcoin-indexer-stcscan
+          image: starcoin/starcoin_indexer:sha-1223fc3
           ports:
             - containerPort: 8300
           env:
@@ -26,36 +26,42 @@ spec:
             - name: NETWORK
               value: "proxima.0727"
             - name: BG_TASK_JOBS
-              value: "indexer,secondary,market_cap,txn_payload,swap_stats"
+              value: "indexer,secondary,market_cap,txn_payload"
             - name: BULK_SIZE
               value: "80"
-            - name: STARCOIN_ES_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-pw-elastic
-                  key: password
             - name: STARCOIN_ES_URL
-              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+              value: "elasticsearch.default.svc.cluster.local"
             - name: TXN_OFFSET
               value: "0"
             - name: STARCOIN_ES_PROTOCOL
-              value: "https"
+              value: "http"
             - name: STARCOIN_ES_PORT
-              value: "443"
+              value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://database-1.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-starcoin-yu
+                  name: postgresql
                   key: password
             - name: DB_SCHEMA
               value: "proxima"

@@ -27,31 +27,37 @@ spec:
               value: "barnard"
             - name: BG_TASK_JOBS
               value: "clean_pending_txn"
-            - name: STARCOIN_ES_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-pw-elastic
-                  key: password
             - name: STARCOIN_ES_URL
-              value: "123.57.40.36"
+              value: "elasticsearch.default.svc.cluster.local"
             - name: STARCOIN_ES_PROTOCOL
               value: "http"
             - name: STARCOIN_ES_PORT
               value: "9200"
             - name: STARCOIN_ES_USER
-              value: elastic
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
             - name: SWAP_API_URL
               value: "https://swap-api.starcoin.org"
             - name: SWAP_CONTRACT_ADDR
               value: ""
             - name: DS_URL
-              value: "jdbc:postgresql://123.57.40.36:8432/starcoin"
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
             - name: DB_USER_NAME
-              value: "starcoin"
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
             - name: DB_PWD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-pw-starcoin
+                  name: postgresql
                   key: password
             - name: PROGRAM_ARGS
               value: "subscribe"

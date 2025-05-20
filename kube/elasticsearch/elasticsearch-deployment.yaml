@@ -1,0 +1,74 @@
+# elasticsearch-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      initContainers:
+        - name: init-permissions
+          image: busybox
+          command: [ "sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data" ]
+          volumeMounts:
+            - name: es-data
+              mountPath: /usr/share/elasticsearch/data
+      containers:
+        - name: elasticsearch
+          securityContext:
+            privileged: true
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "2"
+              memory: "6Gi"
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          volumeMounts:
+            - name: es-data
+              mountPath: /usr/share/elasticsearch/data
+            - name: es-backup
+              mountPath: /data/es_snapshot_repository
+            - name: elasticsearch-config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              subPath: elasticsearch.yml
+
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: ELASTIC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch
+                  key: password
+
+      volumes:
+        - name: es-data
+          persistentVolumeClaim:
+            claimName: es-pvc
+        - name: es-backup
+          persistentVolumeClaim:
+            claimName: es-backup-pvc
+        - name: elasticsearch-config
+          configMap:
+            name: elasticsearch-config
+#        - name: s3-mount-point
+#          emptyDir: {}

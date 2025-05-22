@@ -20,6 +20,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.ContentType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,11 @@ public class TransactionInfoHandleTest {
         ReflectionTestUtils.setField(transactionInfoHandle, "transactionRPCClient", transactionRPCClient);
         ReflectionTestUtils.setField(transactionInfoHandle, "globalIndex", 25349659L);
         ReflectionTestUtils.setField(transactionInfoHandle, "network", "main.0727");
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        realElasticsearchClient.close();
     }
 
     @Test

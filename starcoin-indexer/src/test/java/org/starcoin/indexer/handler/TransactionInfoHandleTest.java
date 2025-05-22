@@ -43,11 +43,15 @@ public class TransactionInfoHandleTest {
     @BeforeEach
     void setUp() throws IOException {
         MockitoAnnotations.initMocks(this);
-        
+
         // Create real Elasticsearch client with authentication
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+
+        // Get credentials from environment variables or properties file
+        String username = System.getenv("ES_USERNAME") != null ? System.getenv("ES_USERNAME") : "elastic";
+        String password = System.getenv("ES_PASSWORD") != null ? System.getenv("ES_PASSWORD") : "testpassword";
         credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials("elastic", "starcoin345611"));
+                new UsernamePasswordCredentials(username, password));
 
         // Add request interceptor to log raw request data
         HttpRequestInterceptor requestInterceptor = (request, context) -> {

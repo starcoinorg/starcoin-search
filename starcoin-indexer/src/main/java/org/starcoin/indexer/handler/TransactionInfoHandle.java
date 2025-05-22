@@ -31,8 +31,10 @@ public class TransactionInfoHandle {
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionInfoHandle.class);
     private final RestHighLevelClient client;
+
     @Value("${starcoin.indexer.txn_offset}")
     private long globalIndex;
+
     @Value("${starcoin.network}")
     private String network;
 
@@ -52,7 +54,7 @@ public class TransactionInfoHandle {
                 long index = globalIndex;
                 BulkRequest bulkRequest = new BulkRequest();
                 for (Transaction transaction: transactionList) {
-                    addUpdateRequest(transaction.getTransactionHash(), transaction.getTransactionGlobalIndex(), bulkRequest);
+                    handleSingleTransaction(transaction, bulkRequest);
                     if(index > transaction.getTransactionGlobalIndex()) {
                         index = transaction.getTransactionGlobalIndex();
                     }
@@ -65,6 +67,11 @@ public class TransactionInfoHandle {
         } catch (Exception e) {
             logger.error("transaction info handle err:", e);
         }
+    }
+
+    // New method for handling single transaction
+    protected void handleSingleTransaction(Transaction transaction, BulkRequest bulkRequest) {
+        addUpdateRequest(transaction.getTransactionHash(), transaction.getTransactionGlobalIndex(), bulkRequest);
     }
 
     //get transaction range from offset
@@ -125,10 +132,13 @@ public class TransactionInfoHandle {
                 builder.field("transaction_global_index", globalIndex);
             }
             builder.endObject();
-            IndexRequest indexRequest = new IndexRequest(Constant.TRANSACTION_INDEX);
+
+            String esTransactionInfosIndex = ServiceUtils.getIndex(network, Constant.TRANSACTION_INDEX);
+
+            IndexRequest indexRequest = new IndexRequest(esTransactionInfosIndex);
             indexRequest.id(id).source(builder);
             UpdateRequest updateRequest = new UpdateRequest();
-            updateRequest.index(Constant.TRANSACTION_INDEX);
+            updateRequest.index(esTransactionInfosIndex);
             updateRequest.id(id);
             updateRequest.doc(builder);
             updateRequest.upsert(indexRequest);

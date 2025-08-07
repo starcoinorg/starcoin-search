@@ -11,41 +11,41 @@
           }
         }
       },
-      "block_metadata": {
-        "properties": {
-          "author": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+      "block_metadata" : {
+        "properties" : {
+          "author" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
-          "author_auth_key": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "author_auth_key" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
-          "chain_id": {
-            "type": "long"
+          "chain_id" : {
+            "type" : "long"
           },
-          "number": {
-            "type": "long"
+          "number" : {
+            "type" : "long"
           },
-          "parent_gas_used": {
-            "type": "long"
+          "parent_gas_used" : {
+            "type" : "long"
           },
-          "parent_hash": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "parent_hash" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
@@ -55,8 +55,8 @@
           "timestamp" : {
             "type" : "date"
           },
-          "uncles": {
-            "type": "long"
+          "uncles" : {
+            "type" : "long"
           }
         }
       },
@@ -66,44 +66,44 @@
       "deleted" : {
         "type" : "boolean"
       },
-      "event_root_hash": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+      "event_root_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
           }
         }
       },
-      "events": {
-        "type": "nested",
-        "properties": {
-          "block_hash": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+      "events" : {
+        "type" : "nested",
+        "properties" : {
+          "block_hash" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
-          "block_number": {
-            "type": "long"
+          "block_number" : {
+            "type" : "long"
           },
-          "data": {
-            "type": "text"
+          "data" : {
+            "type" : "text"
           },
-          "event_key": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "event_key" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           },
-          "event_seq_number": {
-            "type": "long"
+          "event_seq_number" : {
+            "type" : "long"
           },
           "transaction_global_index" : {
             "type" : "long"
@@ -120,35 +120,35 @@
           "transaction_index" : {
             "type" : "long"
           },
-          "type_tag": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "type_tag" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           }
         }
       },
-      "gas_used": {
-        "type": "long"
+      "gas_used" : {
+        "type" : "long"
       },
-      "state_root_hash": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+      "state_root_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
           }
         }
       },
-      "status": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+      "status" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
           }
         }
       },
@@ -162,17 +162,17 @@
       "transaction_global_index" : {
         "type" : "long"
       },
-      "transaction_hash": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+      "transaction_hash" : {
+        "type" : "text",
+        "fields" : {
+          "keyword" : {
+            "type" : "keyword",
+            "ignore_above" : 256
           }
         }
       },
-      "transaction_index": {
-        "type": "long"
+      "transaction_index" : {
+        "type" : "long"
       },
       "transaction_type" : {
         "type" : "text",
@@ -183,49 +183,49 @@
           }
         }
       },
-      "user_transaction": {
-        "properties": {
-          "authenticator": {
-            "properties": {
-              "Ed25519": {
-                "properties": {
-                  "public_key": {
-                    "type": "text",
-                    "fields": {
-                      "keyword": {
-                        "type": "keyword",
-                        "ignore_above": 256
+      "user_transaction" : {
+        "properties" : {
+          "authenticator" : {
+            "properties" : {
+              "Ed25519" : {
+                "properties" : {
+                  "public_key" : {
+                    "type" : "text",
+                    "fields" : {
+                      "keyword" : {
+                        "type" : "keyword",
+                        "ignore_above" : 256
                       }
                     }
                   },
-                  "signature": {
-                    "type": "text",
-                    "fields": {
-                      "keyword": {
-                        "type": "keyword",
-                        "ignore_above": 256
+                  "signature" : {
+                    "type" : "text",
+                    "fields" : {
+                      "keyword" : {
+                        "type" : "keyword",
+                        "ignore_above" : 256
                       }
                     }
                   }
                 }
               },
-              "MultiEd25519": {
-                "properties": {
-                  "public_key": {
-                    "type": "text",
-                    "fields": {
-                      "keyword": {
-                        "type": "keyword",
-                        "ignore_above": 256
+              "MultiEd25519" : {
+                "properties" : {
+                  "public_key" : {
+                    "type" : "text",
+                    "fields" : {
+                      "keyword" : {
+                        "type" : "keyword",
+                        "ignore_above" : 256
                       }
                     }
                   },
-                  "signature": {
-                    "type": "text",
-                    "fields": {
-                      "keyword": {
-                        "type": "keyword",
-                        "ignore_above": 256
+                  "signature" : {
+                    "type" : "text",
+                    "fields" : {
+                      "keyword" : {
+                        "type" : "keyword",
+                        "ignore_above" : 256
                       }
                     }
                   }
@@ -233,39 +233,39 @@
               }
             }
           },
-          "raw_txn": {
-            "properties": {
-              "chain_id": {
-                "type": "long"
+          "raw_txn" : {
+            "properties" : {
+              "chain_id" : {
+                "type" : "long"
               },
-              "expiration_timestamp_secs": {
-                "type": "date",
-                "format": "epoch_second"
+              "expiration_timestamp_secs" : {
+                "type" : "date",
+                "format" : "epoch_second"
               },
-              "gas_token_code": {
-                "type": "text",
-                "fields": {
-                  "keyword": {
-                    "type": "keyword",
-                    "ignore_above": 256
+              "gas_token_code" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
                   }
                 }
               },
-              "gas_unit_price": {
-                "type": "long"
+              "gas_unit_price" : {
+                "type" : "long"
               },
-              "max_gas_amount": {
-                "type": "long"
+              "max_gas_amount" : {
+                "type" : "long"
               },
-              "payload": {
-                "type": "text"
+              "payload" : {
+                "type" : "text"
               },
-              "sender": {
-                "type": "text",
-                "fields": {
-                  "keyword": {
-                    "type": "keyword",
-                    "ignore_above": 256
+              "sender" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
                   }
                 }
               },
@@ -277,12 +277,12 @@
               }
             }
           },
-          "transaction_hash": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
+          "transaction_hash" : {
+            "type" : "text",
+            "fields" : {
+              "keyword" : {
+                "type" : "keyword",
+                "ignore_above" : 256
               }
             }
           }
@@ -291,4 +291,3 @@
     }
   }
 }
-

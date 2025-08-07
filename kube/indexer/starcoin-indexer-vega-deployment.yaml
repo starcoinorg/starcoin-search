@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcoin-indexer-deployment
+  namespace: starcoin-vega
+  labels:
+    app: starcoin-indexer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starcoin-indexer
+  template:
+    metadata:
+      labels:
+        app: starcoin-indexer
+    spec:
+      containers:
+        - name: starcoin-indexer
+          image: starcoin/starcoin_indexer:halley_fix_db_2
+          ports:
+            - containerPort: 8300
+          env:
+            - name: HOSTS
+              value: "vega.seed.starcoin.org"
+            - name: NETWORK
+              value: "vega.0727"
+            - name: BG_TASK_JOBS
+              value: "indexer,secondary,market_cap,txn_payload,swap_stats,txn_global_idx_update"
+            - name: BULK_SIZE
+              value: "80"
+            - name: STARCOIN_ES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-pw-elastic
+                  key: password
+            - name: STARCOIN_ES_URL
+              value: "search-starcoin-es2-47avtmhexhbg7qtynzebcnnu64.ap-northeast-1.es.amazonaws.com"
+            - name: TXN_OFFSET
+              value: "0"
+            - name: STARCOIN_ES_PROTOCOL
+              value: "https"
+            - name: STARCOIN_ES_PORT
+              value: "443"
+            - name: STARCOIN_ES_USER
+              value: elastic
+            - name: SWAP_API_URL
+              value: "https://swap-api.starswap.xyz"
+            - name: SWAP_CONTRACT_ADDR
+              value: "0xbd7e8be8fae9f60f2f5136433e36a091"
+            - name: DS_URL
+              value: "jdbc:postgresql://database-1.c0bz9kehdvnb.ap-northeast-1.rds.amazonaws.com/starcoin"
+            - name: DB_USER_NAME
+              value: "starcoin"
+            - name: DB_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-starcoin-yu
+                  key: password
+            - name: DB_SCHEMA
+              value: "vega"
+            - name: PROGRAM_ARGS
+              value: ""
+          #valume:

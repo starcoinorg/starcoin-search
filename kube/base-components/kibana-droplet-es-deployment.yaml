@@ -1,0 +1,75 @@
+# kibana-droplet-es-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-droplet-es
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana-droplet-es
+  template:
+    metadata:
+      labels:
+        app: kibana-droplet-es
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.17.0
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          ports:
+            - containerPort: 5601
+          volumeMounts:
+            - name: kibana-config
+              mountPath: /usr/share/kibana/config/kibana.yml
+              subPath: kibana.yml
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "https://10.104.0.12:9200"
+            - name: ES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-droplet
+                  key: username
+            - name: ES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-droplet
+                  key: password
+      volumes:
+        - name: kibana-config
+          configMap:
+            name: kibana-droplet-es-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-droplet-es-config
+data:
+  kibana.yml: |
+    server.name: kibana
+    server.host: "0.0.0.0"
+    elasticsearch.hosts: [ "http://10.104.0.12:9200" ]
+    elasticsearch.username: "${ES_USERNAME}"
+    elasticsearch.password: "${ES_PASSWORD}"
+    elasticsearch.ssl.verificationMode: none
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-droplet-es-service
+spec:
+  type: NodePort
+  selector:
+    app: kibana-droplet-es
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+      nodePort: 31110

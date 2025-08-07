@@ -154,7 +154,7 @@
       },
       "status_content" : {
         "type" : "object",
-        "dynamic" : "true"
+        "dynamic" : true
       },
       "timestamp" : {
         "type" : "date"

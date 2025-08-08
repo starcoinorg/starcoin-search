@@ -32,9 +32,9 @@ spec:
             - name: BULK_SIZE
               value: "80"
             - name: STARCOIN_ES_URL
-              value: "elasticsearch.default.svc.cluster.local"
+              value: "10.104.0.12"
             - name: STARCOIN_ES_PROTOCOL
-              value: "http"
+              value: "https"
             - name: STARCOIN_ES_PORT
               value: "9200"
             - name: STARCOIN_ES_USER
@@ -47,12 +47,14 @@ spec:
                 secretKeyRef:
                   name: elasticsearch
                   key: password
+            - name: ELASTICSEARCH_TRUSTSTORE_PATH
+              value: "/etc/elasticsearch/cert/truststore.jks"
             - name: SWAP_API_URL
               value: "https://swap-api.starswap.xyz"
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
+              value: "jdbc:postgresql://private-db-postgresql-sgp1-29237-do-user-13054015-0.h.db.ondigitalocean.com:25060/starcoin"
             - name: DB_USER_NAME
               valueFrom:
                 secretKeyRef:
@@ -67,3 +69,14 @@ spec:
               value: "barnard"
             - name: PROGRAM_ARGS
               value: ""
+          volumeMounts:
+            - name: es-cert-volume
+              mountPath: /etc/elasticsearch/cert
+              readOnly: true
+      volumes:
+        - name: es-cert-volume
+          secret:
+            secretName: es-truststore-secret
+            items:
+              - key: truststore.jks
+                path: truststore.jks

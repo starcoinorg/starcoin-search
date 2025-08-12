@@ -827,7 +827,7 @@ public class ElasticSearchHandler {
             transfer.setIdentifier(functionName);
             transfer.setReceiver(Hex.encode(function.args.get(0)));
             String amount = Hex.encode(function.args.get(1));
-            if (functionName.equals("peer_to_peer")) {
+            if (functionName.equals("peer_to_peer") && function.args.size() == 3) {
                 amount = Hex.encode(function.args.get(2));
             }
             transfer.setAmount(amount);

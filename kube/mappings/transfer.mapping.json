@@ -47,7 +47,7 @@
         }
       },
       "timestamp": {
-        "type": "date"
+        "type": "long"
       },
       "deleted": {
         "type": "boolean"

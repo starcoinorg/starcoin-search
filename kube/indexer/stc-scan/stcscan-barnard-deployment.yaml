@@ -52,7 +52,7 @@ spec:
             - name: SWAP_CONTRACT_ADDR
               value: "0xbd7e8be8fae9f60f2f5136433e36a091"
             - name: DS_URL
-              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/starcoin"
+              value: "jdbc:postgresql://private-db-postgresql-sgp1-29237-do-user-13054015-0.h.db.ondigitalocean.com:25060/starcoin"
             - name: DB_USER_NAME
               valueFrom:
                 secretKeyRef:

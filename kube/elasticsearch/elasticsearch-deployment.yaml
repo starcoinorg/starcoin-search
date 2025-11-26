@@ -40,7 +40,7 @@ spec:
           volumeMounts:
             - name: es-data
               mountPath: /usr/share/elasticsearch/data
-            - name: es-backup
+            - name: es-backup1
               mountPath: /data/es_snapshot_repository
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
@@ -64,9 +64,9 @@ spec:
         - name: es-data
           persistentVolumeClaim:
             claimName: es-pvc
-        - name: es-backup
+        - name: es-backup1
           persistentVolumeClaim:
-            claimName: es-backup-pvc
+            claimName: es-backup1-pvc
         - name: elasticsearch-config
           configMap:
             name: elasticsearch-config

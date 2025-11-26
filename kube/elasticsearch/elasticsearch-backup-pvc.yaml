@@ -1,12 +1,12 @@
-# Elasticsearch Persistent Volume Claim
+# Elasticsearch Snapshot Repository Persistent Volume Claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: es-pvc
+  name: es-backup1-pvc
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 500Gi
+      storage: 90Gi
   storageClassName: do-block-storage-retain

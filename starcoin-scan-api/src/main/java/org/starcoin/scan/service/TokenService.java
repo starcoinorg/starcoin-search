@@ -446,6 +446,7 @@ public class TokenService extends BaseService {
             }
         }
         result.setContents(statistics);
+        result.setTotal(searchResponse.getHits().getTotalHits().value);
         return result;
     }
 

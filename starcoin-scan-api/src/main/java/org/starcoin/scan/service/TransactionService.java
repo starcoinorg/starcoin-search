@@ -286,6 +286,7 @@ public class TransactionService extends BaseService {
             if (aggregation instanceof ParsedValueCount) {
                 tokenTransfer.setTransfers(((ParsedValueCount) aggregation).getValue());
                 tokenTransfer.setTypeTag(typeTag);
+                result.setTotal(searchResponse.getHits().getTotalHits().value);
                 result.setContents(Collections.singletonList(tokenTransfer));
             }
         } catch (IOException e) {

@@ -130,24 +130,12 @@ public class IndexerHandleTest {
         forkHeader.setParentHash("parentHash");
         forkBlock.setHeader(forkHeader);
 
-        // Create a master block that will be found during rollback
-        Block masterBlock = new Block();
-        BlockHeader masterHeader = new BlockHeader();
-        masterHeader.setHeight(99L);
-        masterHeader.setBlockHash("parentHash");
-        masterHeader.setParentHash("grandParentHash");
-        masterBlock.setHeader(masterHeader);
-
         // Setup mock behavior
         when(elasticSearchHandler.getRemoteOffset()).thenReturn(currentOffset);
         when(blockRPCClient.getBlockByHeight(100L)).thenReturn(forkBlock);
         when(blockRPCClient.getBlockByHeight(101L)).thenReturn(newBlock);
-        when(blockRPCClient.getBlockByHeight(99L)).thenReturn(masterBlock);
         when(blockRPCClient.getChainHeader()).thenReturn(chainHeader);
         when(elasticSearchHandler.getBlockContent(eq("oldHash"))).thenReturn(forkBlock);
-        when(elasticSearchHandler.getBlockContent(eq("parentHash"))).thenReturn(masterBlock);
-        when(blockRPCClient.getBlockByHash(eq("oldHash"))).thenReturn(forkBlock);
-        when(blockRPCClient.getBlockByHash(eq("parentHash"))).thenReturn(masterBlock);
 
         // Execute
         indexerHandle.initOffset();
@@ -245,4 +233,27 @@ public class IndexerHandleTest {
         verify(blockRPCClient, times(1)).getBlockByHeight(0L);
         verify(elasticSearchHandler, times(1)).setRemoteOffset(any(BlockOffset.class));
     }
-} 
+
+    @Test
+    public void testRecoveredOffsetDoesNotResetToGenesis() throws JSONRPC2SessionException {
+        BlockOffset recoveredOffset = new BlockOffset(31445103L, "recoveredHash");
+        BlockHeader recoveredHeader = new BlockHeader();
+        recoveredHeader.setHeight(31445103L);
+        recoveredHeader.setBlockHash("recoveredHash");
+
+        Block recoveredBlock = new Block();
+        recoveredBlock.setHeader(recoveredHeader);
+
+        when(elasticSearchHandler.getRemoteOffset()).thenReturn(null);
+        when(elasticSearchHandler.getLatestIndexedBlockOffset()).thenReturn(recoveredOffset);
+        when(blockRPCClient.getBlockByHeight(31445103L)).thenReturn(recoveredBlock);
+
+        indexerHandle.initOffset();
+
+        verify(elasticSearchHandler, times(1)).getRemoteOffset();
+        verify(elasticSearchHandler, times(1)).getLatestIndexedBlockOffset();
+        verify(blockRPCClient, times(2)).getBlockByHeight(31445103L);
+        verify(blockRPCClient, never()).getBlockByHeight(0L);
+        verify(elasticSearchHandler, times(1)).setRemoteOffset(recoveredOffset);
+    }
+}

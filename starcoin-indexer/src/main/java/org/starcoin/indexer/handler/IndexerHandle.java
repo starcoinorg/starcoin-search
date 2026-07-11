@@ -21,6 +21,7 @@ import java.util.List;
 
 public class IndexerHandle extends QuartzJobBean {
     private static final Logger logger = LoggerFactory.getLogger(IndexerHandle.class);
+    private static final long MIN_OFFSET_RECOVERY_GAP = 10_000L;
 
     private BlockOffset localBlockOffset;
     private BlockHeader currentHandleHeader;
@@ -42,7 +43,7 @@ public class IndexerHandle extends QuartzJobBean {
 
     @PostConstruct
     public void initOffset() throws JSONRPC2SessionException {
-        localBlockOffset = elasticSearchHandler.getRemoteOffset();
+        localBlockOffset = getRecoverableRemoteOffset();
 
         // Case 1: Obtained
         if (localBlockOffset != null) {
@@ -84,7 +85,13 @@ public class IndexerHandle extends QuartzJobBean {
             }
         }
 
-        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
+        BlockOffset remoteBlockOffset;
+        try {
+            remoteBlockOffset = getRecoverableRemoteOffset();
+        } catch (JSONRPC2SessionException e) {
+            logger.error("get recoverable remote offset error:", e);
+            return;
+        }
         logger.info("current remote offset: {}", remoteBlockOffset);
         if (remoteBlockOffset == null) {
             logger.warn("offset must not null, please check blocks.mapping!!");
@@ -179,5 +186,67 @@ public class IndexerHandle extends QuartzJobBean {
         } catch (JSONRPC2SessionException | JsonProcessingException e) {
             logger.error("chain header error:", e);
         }
+    }
+
+    private BlockOffset getRecoverableRemoteOffset() throws JSONRPC2SessionException {
+        BlockOffset remoteBlockOffset = elasticSearchHandler.getRemoteOffset();
+        if (remoteBlockOffset == null) {
+            return recoverRemoteOffset(remoteBlockOffset, "missing remote offset");
+        }
+
+        BlockHeader chainHeader;
+        try {
+            chainHeader = blockRPCClient.getChainHeader();
+        } catch (JsonProcessingException e) {
+            logger.warn("skip remote offset recovery, chain header parse error: remote={}", remoteBlockOffset, e);
+            return remoteBlockOffset;
+        }
+        if (chainHeader == null) {
+            logger.warn("skip remote offset recovery, chain header is null: remote={}", remoteBlockOffset);
+            return remoteBlockOffset;
+        }
+        long chainGap = chainHeader.getHeight() - remoteBlockOffset.getBlockHeight();
+        if (chainGap <= offsetRecoveryGap()) {
+            return remoteBlockOffset;
+        }
+
+        BlockOffset indexedOffset = elasticSearchHandler.getLatestIndexedBlockOffset();
+        if (indexedOffset == null) {
+            return remoteBlockOffset;
+        }
+        long indexedGap = indexedOffset.getBlockHeight() - remoteBlockOffset.getBlockHeight();
+        if (indexedGap > offsetRecoveryGap()) {
+            return recoverRemoteOffset(remoteBlockOffset, "stale remote offset");
+        }
+        return remoteBlockOffset;
+    }
+
+    private BlockOffset recoverRemoteOffset(BlockOffset remoteBlockOffset, String reason) throws JSONRPC2SessionException {
+        BlockOffset indexedOffset = elasticSearchHandler.getLatestIndexedBlockOffset();
+        if (indexedOffset == null) {
+            return remoteBlockOffset;
+        }
+
+        Block block = blockRPCClient.getBlockByHeight(indexedOffset.getBlockHeight());
+        if (block == null || block.getHeader() == null) {
+            logger.warn("skip remote offset recovery, indexed block not found on chain: remote={}, indexed={}",
+                    remoteBlockOffset, indexedOffset);
+            return remoteBlockOffset;
+        }
+        String chainBlockHash = block.getHeader().getBlockHash();
+        if (!indexedOffset.getBlockHash().equals(chainBlockHash)) {
+            logger.warn("skip remote offset recovery, indexed block hash mismatch: remote={}, indexed={}, chainHash={}",
+                    remoteBlockOffset, indexedOffset, chainBlockHash);
+            return remoteBlockOffset;
+        }
+
+        logger.warn("recover remote offset from indexed block, reason={}, remote={}, indexed={}",
+                reason, remoteBlockOffset, indexedOffset);
+        elasticSearchHandler.setRemoteOffset(indexedOffset);
+        return indexedOffset;
+    }
+
+    private long offsetRecoveryGap() {
+        return Math.max(MIN_OFFSET_RECOVERY_GAP, bulkSize * 100);
     }
 }

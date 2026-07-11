@@ -30,6 +30,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
@@ -147,12 +148,55 @@ public class ElasticSearchHandler {
             Object meta = data.getSourceAsMap().get("_meta");
             if (meta != null) {
                 Map<String, Object> tip = (Map<String, Object>) ((LinkedHashMap<String, Object>) meta).get("tip");
+                if (tip == null) {
+                    return null;
+                }
                 String blockHash = tip.get("block_hash").toString();
-                Integer blockHeight = (Integer) tip.get("block_number");
+                Number blockHeight = (Number) tip.get("block_number");
                 return new BlockOffset(blockHeight.longValue(), blockHash);
             }
         } catch (Exception e) {
             logger.error("get remote offset error:", e);
+        }
+        return null;
+    }
+
+    public BlockOffset getLatestIndexedBlockOffset() {
+        BlockOffset blockIdOffset = getLatestBlockOffset(blockIdsIndex, QueryBuilders.matchAllQuery());
+        if (blockIdOffset != null) {
+            return blockIdOffset;
+        }
+
+        BoolQueryBuilder contentQuery = QueryBuilders.boolQuery();
+        contentQuery.must(QueryBuilders.matchAllQuery());
+        contentQuery.mustNot(QueryBuilders.termQuery("deleted", true));
+        return getLatestBlockOffset(blockContentIndex, contentQuery);
+    }
+
+    private BlockOffset getLatestBlockOffset(String indexName, QueryBuilder queryBuilder) {
+        SearchRequest searchRequest = new SearchRequest(indexName);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(queryBuilder);
+        searchSourceBuilder.size(1);
+        searchSourceBuilder.timeout(TimeValue.timeValueSeconds(5));
+        searchSourceBuilder.sort("header.number", SortOrder.DESC);
+        searchSourceBuilder.fetchSource(new String[]{"header.number", "header.block_hash"}, null);
+        searchRequest.source(searchSourceBuilder);
+
+        try {
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            SearchHit[] hits = searchResponse.getHits().getHits();
+            if (hits.length == 0) {
+                return null;
+            }
+            Block block = JSON.parseObject(hits[0].getSourceAsString(), Block.class);
+            if (block == null || block.getHeader() == null || block.getHeader().getBlockHash() == null) {
+                logger.warn("latest indexed block source is invalid, index: {}, id: {}", indexName, hits[0].getId());
+                return null;
+            }
+            return new BlockOffset(block.getHeader().getHeight(), block.getHeader().getBlockHash());
+        } catch (Exception e) {
+            logger.error("get latest indexed block offset error, index: {}", indexName, e);
         }
         return null;
     }

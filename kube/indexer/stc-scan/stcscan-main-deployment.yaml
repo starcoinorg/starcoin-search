@@ -18,6 +18,9 @@ spec:
       containers:
         - name: starcoin-indexer-stcscan
           image: starcoin/starcoin_indexer:sha-3138496
+          resources:
+            requests:
+              memory: 768Mi
           ports:
             - containerPort: 8300
           env:

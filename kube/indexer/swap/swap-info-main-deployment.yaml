@@ -18,6 +18,9 @@ spec:
       containers:
         - name: starswap-info
           image: starcoin/starcoin_indexer:sha-a66e9ab
+          resources:
+            requests:
+              memory: 1Gi
           ports:
             - containerPort: 8300
           env:

@@ -18,6 +18,9 @@ spec:
       containers:
         - name: scan-api
           image: starcoin/starcoin_scan:scan_api_dag_2
+          resources:
+            requests:
+              memory: 768Mi
           ports:
             - name: http
               containerPort: 8500

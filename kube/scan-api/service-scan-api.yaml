@@ -13,6 +13,6 @@ spec:
       targetPort: 8500
   selector:
     app: scan-api
-  type: LoadBalancer
-status:
-  loadBalancer: { }
+  # Public traffic arrives through the shared web-entry load balancer
+  # (stcscan.io, api.stcscan.io, doapi.stcscan.io).
+  type: ClusterIP

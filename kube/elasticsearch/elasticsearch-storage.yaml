@@ -1,12 +1,14 @@
-# Elasticsearch Persistent Volume Claim
+# Elasticsearch data volume. 600Gi since 2026-11-17 (main + barnard indices, about 435Gi).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: es-pvc
+  name: es-data-600
+  namespace: default
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   resources:
     requests:
-      storage: 500Gi
+      storage: 600Gi
   storageClassName: do-block-storage-retain
+  volumeMode: Filesystem

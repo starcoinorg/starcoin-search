@@ -1,74 +1,100 @@
-# elasticsearch-deployment.yaml
+# Elasticsearch for stcscan. Data lives on the 600Gi es-data-600 PVC (moved from the 1Ti es-pvc on
+# 2026-11-17). The snapshot repository path is an emptyDir: path.repo must exist for ES to start;
+# mount a PVC there only while taking or restoring a snapshot.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: elasticsearch
+  namespace: default
 spec:
+  progressDeadlineSeconds: 600
   replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: elasticsearch
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         app: elasticsearch
     spec:
-      initContainers:
-        - name: init-permissions
-          image: busybox
-          command: [ "sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data" ]
-          volumeMounts:
-            - name: es-data
-              mountPath: /usr/share/elasticsearch/data
       containers:
-        - name: elasticsearch
-          securityContext:
-            privileged: true
-          image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
-          resources:
-            requests:
-              cpu: "1"
-              memory: "4Gi"
-            limits:
-              cpu: "2"
-              memory: "6Gi"
-          ports:
-            - containerPort: 9200
-              name: http
-            - containerPort: 9300
-              name: transport
-          volumeMounts:
-            - name: es-data
-              mountPath: /usr/share/elasticsearch/data
-            - name: es-backup1
-              mountPath: /data/es_snapshot_repository
-            - name: elasticsearch-config
-              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
-              subPath: elasticsearch.yml
-
-          env:
-            - name: discovery.type
-              value: single-node
-            - name: ELASTIC_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch
-                  key: username
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch
-                  key: password
-
+      - env:
+        - name: discovery.type
+          value: single-node
+        - name: ELASTIC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: elasticsearch
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+        imagePullPolicy: IfNotPresent
+        name: elasticsearch
+        ports:
+        - containerPort: 9200
+          name: http
+          protocol: TCP
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        resources:
+          limits:
+            cpu: '2'
+            memory: 3584Mi
+          requests:
+            cpu: '1'
+            memory: 3Gi
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: es-data
+        - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          name: elasticsearch-config
+          subPath: elasticsearch.yml
+        - mountPath: /data/es_snapshot_repository
+          name: es-snapshot-repo
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - chown -R 1000:1000 /usr/share/elasticsearch/data
+        image: busybox
+        imagePullPolicy: Always
+        name: init-permissions
+        resources:
+          limits:
+            cpu: '2'
+            memory: 3584Mi
+          requests:
+            cpu: '1'
+            memory: 3Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: es-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
       volumes:
-        - name: es-data
-          persistentVolumeClaim:
-            claimName: es-pvc
-        - name: es-backup1
-          persistentVolumeClaim:
-            claimName: es-backup1-pvc
-        - name: elasticsearch-config
-          configMap:
-            name: elasticsearch-config
-#        - name: s3-mount-point
-#          emptyDir: {}
+      - name: es-data
+        persistentVolumeClaim:
+          claimName: es-data-600
+      - configMap:
+          defaultMode: 420
+          name: elasticsearch-config
+        name: elasticsearch-config
+      - name: es-snapshot-repo
+        emptyDir: {}

@@ -26,6 +26,13 @@ spec:
               containerPort: 8500
             - name: multicast
               containerPort: 5701
+          # Keep the old pod serving during a rollout until the new one listens.
+          readinessProbe:
+            tcpSocket:
+              port: 8500
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
           env:
             - name: STARCOIN_ES_URL
               value: "elasticsearch.default.svc.cluster.local"
@@ -66,4 +73,23 @@ spec:
               value: "jdbc:postgresql://private-db-postgresql-sgp1-29237-do-user-13054015-0.h.db.ondigitalocean.com:25060/starcoin?currentSchema=halley"
             - name: STARCOIN_USER_DS_URL
               value: "jdbc:postgresql://private-db-postgresql-sgp1-29237-do-user-13054015-0.h.db.ondigitalocean.com:25060/starcoin?currentSchema=starcoin_user"
+            # Each datasource is a HikariDataSource bound from spring.datasource.<name>.
+            # The Hikari default (10 connections, all held idle) cost 40 Postgres
+            # connections. Barnard and halley do not run, but their beans must start.
+            - name: SPRING_DATASOURCE_MAIN_MAXIMUMPOOLSIZE
+              value: "10"
+            - name: SPRING_DATASOURCE_MAIN_MINIMUMIDLE
+              value: "2"
+            - name: SPRING_DATASOURCE_USERINFO_MAXIMUMPOOLSIZE
+              value: "4"
+            - name: SPRING_DATASOURCE_USERINFO_MINIMUMIDLE
+              value: "1"
+            - name: SPRING_DATASOURCE_BARNARD_MAXIMUMPOOLSIZE
+              value: "2"
+            - name: SPRING_DATASOURCE_BARNARD_MINIMUMIDLE
+              value: "0"
+            - name: SPRING_DATASOURCE_HALLEY_MAXIMUMPOOLSIZE
+              value: "2"
+            - name: SPRING_DATASOURCE_HALLEY_MINIMUMIDLE
+              value: "0"
 
